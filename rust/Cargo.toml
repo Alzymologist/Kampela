@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+	"qr_reader",
+	"siltti",
+]
