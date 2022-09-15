@@ -1,0 +1,42 @@
+namespace siltti {};
+
+dictionary Payload {
+    string? payload;
+};
+
+dictionary Frames {
+    u32 current;
+    u32 total;
+};
+
+interface Collection {
+    constructor();
+
+    [Throws=ErrorQr]
+    void clean();
+
+    [Throws=ErrorQr]
+    Payload process_frame(sequence<u8> raw_frame);
+
+    [Throws=ErrorQr]
+    Frames? frames();
+};
+
+[Error]
+enum ErrorQr {
+    "EmptyFrame",
+    "FountainDifferentLength",
+    "FountainFrameTooShort",
+    "FountainInterruptedByLegacy",
+    "FountainInterruptedByStatic",
+    "FountainPacketEmpty",
+    "LegacyDifferentLength",
+    "LegacyInterruptedByFountain",
+    "LegacyInterruptedByStatic",
+    "LegacySameOrderDifferentContent",
+    "LegacyTooShortNumberOfFrames",
+    "LegacyTooShortOrder",
+    "LegacyOrderTooHigh",
+    "LegacyZeroFrames",
+    "PoisonedLock",
+};
