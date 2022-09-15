@@ -1,0 +1,15 @@
+[package]
+name = "qr_reader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hex = "0.4.3"
+raptorq = "1.7.0"
+thiserror = "1.0.31"
+
+[lib]
+name = "qr_reader"
+crate-type = ["lib"]
