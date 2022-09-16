@@ -1,12 +1,17 @@
 package fi.zymologia.siltti
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
+import android.util.Log
+import android.widget.Toast
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.impl.utils.ContextUtil.getApplicationContext
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
@@ -26,9 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import fi.zymologia.siltti.uniffi.Collection
+import fi.zymologia.siltti.uniffi.Frames
+import fi.zymologia.siltti.uniffi.Payload
 
 val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 val REQUEST_CODE_PERMISSIONS = 10
@@ -48,19 +58,17 @@ fun KeepScreenOn() {
  * Main scanner screen. One of navigation roots.
  */
 @Composable
-fun ScanScreen(activity: Activity) {
-    // var collection = remember { Collection() }
-    // val frames: MutableState<Frames?> = remember { mutableStateOf(null)}
+fun ScanScreen() {
+    var collection = remember { Collection() }
+    val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val cameraProviderFuture =
         remember { ProcessCameraProvider.getInstance(context) }
 
-	/*
-	if (frames.value != null) {
-		KeepScreenOn()
-	}
-	*/
+    if (frames.value != null) {
+        KeepScreenOn()
+    }
 
     Column(
         Modifier
@@ -89,7 +97,7 @@ fun ScanScreen(activity: Activity) {
                     // This might be done more elegantly, if needed.
                     // But it's pretty obvious that the app needs camera
                     // and why; also it just works so far and code is tiny.
-                    handleCameraPermissions(activity)
+                    handleCameraPermissions(context.getActivity())
 
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
@@ -107,22 +115,21 @@ fun ScanScreen(activity: Activity) {
                             .build()
                             .apply {
                                 setAnalyzer(executor) { imageProxy ->
-									/* TODO
-									processFrame(
-										barcodeScanner,
-										imageProxy,
-										collection::processFrame
-									) {
-										try {
-											frames.value = collection.frames()
-										} catch (e: io.parity.signer.uniffi.ErrorQr) {
-											Toast.makeText(
-												context,
-												"QR scanner error: " + e.message,
-												Toast.LENGTH_LONG
-											).show()
-										}
-									}*/
+                                    processFrame(
+                                        barcodeScanner,
+                                        imageProxy,
+                                        collection::processFrame
+                                    ) {
+                                        try {
+                                            frames.value = collection.frames()
+                                        } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                                            Toast.makeText(
+                                                context,
+                                                "QR scanner error: " + e.message,
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
                                 }
                             }
 
@@ -146,32 +153,30 @@ fun ScanScreen(activity: Activity) {
             )
         }
 
-		/* TODO
-		Column(
-			verticalArrangement = Arrangement.Bottom,
-			modifier = Modifier.fillMaxSize()
-		) {
-			ScanProgressBar(
-				frames = frames,
-				resetScan = {
-					try {
-						collection.clean()
-						frames.value = collection.frames()
-					} catch (e: io.parity.signer.uniffi.ErrorQr) {
-						Toast
-							.makeText(
-								context,
-								"QR scanner reset error: " + e.message,
-								Toast.LENGTH_LONG
-							).show()
-					}
-				}
-			)
-		}*/
+        Column(
+            verticalArrangement = Arrangement.Bottom,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            ScanProgressBar(
+                frames = frames,
+                resetScan = {
+                    try {
+                        collection.clean()
+                        frames.value = collection.frames()
+                    } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                        Toast
+                            .makeText(
+                                context,
+                                "QR scanner reset error: " + e.message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                    }
+                }
+            )
+        }
     }
 }
 
-/* TODO
 /**
  * Barcode detecting function.
  * This uses experimental features
@@ -179,47 +184,47 @@ fun ScanScreen(activity: Activity) {
 @OptIn(ExperimentalUnsignedTypes::class)
 @SuppressLint("UnsafeOptInUsageError")
 fun processFrame(
-	barcodeScanner: BarcodeScanner,
-	imageProxy: ImageProxy,
-	submitFrame: (List<UByte>) -> Payload,
-	refreshFrames: () -> Unit
+    barcodeScanner: BarcodeScanner,
+    imageProxy: ImageProxy,
+    submitFrame: (List<UByte>) -> Payload,
+    refreshFrames: () -> Unit
 ) {
-	if (imageProxy.image == null) return
-	val inputImage = InputImage.fromMediaImage(
-		imageProxy.image!!,
-		imageProxy.imageInfo.rotationDegrees
-	)
+    if (imageProxy.image == null) return
+    val inputImage = InputImage.fromMediaImage(
+        imageProxy.image!!,
+        imageProxy.imageInfo.rotationDegrees
+    )
 
-	barcodeScanner.process(inputImage)
-		.addOnSuccessListener { barcodes ->
-			barcodes.forEach {
-				it?.rawBytes?.toUByteArray()?.toList()?.let { payload ->
-					try {
-						submitFrame(payload)
-					} catch (e: java.lang.Exception) { // TODO: specify error correctly
-						Toast.makeText(
-							MainActivity().applicationContext,
-							"QR parser error: " + e.message,
-							Toast.LENGTH_SHORT
-						).show()
-						null
-					}
-				}?.payload?.let { payload ->
-					// This is pressed only once, that's checked in rust backend
-					// by sending complete payload only once
-					TODO()
-				}
-				refreshFrames()
-			}
-		}
-		.addOnFailureListener {
-			Log.e("Scan failed", it.message.toString())
-		}
-		.addOnCompleteListener {
-			imageProxy.close()
-		}
+    barcodeScanner.process(inputImage)
+        .addOnSuccessListener { barcodes ->
+            barcodes.forEach {
+                it?.rawBytes?.toUByteArray()?.toList()?.let { payload ->
+                    try {
+                        submitFrame(payload)
+                    } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                        Toast.makeText(
+                            MainActivity().applicationContext,
+                            "QR parser error: " + e.message,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        null
+                    }
+                }?.payload?.let { payload ->
+                    // This is pressed only once, that's checked in rust backend
+                    // by sending complete payload only once
+                    TODO()
+                }
+                refreshFrames()
+            }
+        }
+        .addOnFailureListener {
+            Log.e("Scan failed", it.message.toString())
+        }
+        .addOnCompleteListener {
+            imageProxy.close()
+        }
 }
-*/
+
 fun allPermissionsGranted(activity: Activity) = REQUIRED_PERMISSIONS.all {
     ContextCompat.checkSelfPermission(
         activity,
@@ -235,4 +240,10 @@ fun handleCameraPermissions(activity: Activity) {
             REQUEST_CODE_PERMISSIONS
         )
     }
+}
+
+fun Context.getActivity(): Activity = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.getActivity()
+    else -> TODO()
 }

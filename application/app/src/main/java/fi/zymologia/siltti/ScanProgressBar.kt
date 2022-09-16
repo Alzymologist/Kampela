@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -15,7 +16,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-/*
+import fi.zymologia.siltti.uniffi.Frames
+
 @Composable
 fun ScanProgressBar(
     frames: State<Frames?>,
@@ -26,12 +28,12 @@ fun ScanProgressBar(
     frames.value?.let {
         Surface(
             color = MaterialTheme.colors.background,
-            shape = MaterialTheme.shapes.modal
+            shape = MaterialTheme.shapes.large
         ) {
             Column(
                 modifier = Modifier.padding(20.dp)
             ) {
-                HeadingOverline(text = "PARSING MULTIPART DATA")
+                Text("PARSING MULTIPART DATA")
                 Canvas(
                     modifier = Modifier
                         .height(24.dp)
@@ -56,18 +58,18 @@ fun ScanProgressBar(
                 Text(
                     "From " + it.current + " / " + it.total + " captured frames",
                     style = MaterialTheme.typography.subtitle1,
-                    color = MaterialTheme.colors.Text600
+                    color = MaterialTheme.colors.onPrimary
                 )
                 Text(
                     "Please hold still",
                     style = MaterialTheme.typography.subtitle2,
-                    color = MaterialTheme.colors.Text400
+                    color = MaterialTheme.colors.onPrimary
                 )
-                BigButton(
-                    text = "Start over",
-                    action = { resetScan() }
+                Button(
+                    content = {Text("Start over")},
+                    onClick = { resetScan() }
                 )
             }
         }
     }
-}*/
+}
