@@ -1,0 +1,20 @@
+[package]
+name = "database"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+frame-metadata = "15.0.0"
+hex = "0.4.3"
+parity-scale-codec = "3.2.1"
+sled = "0.34.7"
+sp-core = {version = "6.0.0", default-features = false, features = ["full_crypto"]}
+sp-runtime = "6.0.0"
+substrate_parser = "0.2.0"
+thiserror = "1.0.35"
+
+[lib]
+name = "database"
+crate-type = ["lib"]
