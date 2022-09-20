@@ -23,17 +23,17 @@ fun ScanProgressBar(
     frames: State<Frames?>,
     resetScan: () -> Unit
 ) {
-    val frontColor = MaterialTheme.colors.onSecondary
+    val frontColor = MaterialTheme.colors.onPrimary
 
     frames.value?.let {
         Surface(
-            color = MaterialTheme.colors.background,
+            color = MaterialTheme.colors.primary,
             shape = MaterialTheme.shapes.large
         ) {
             Column(
                 modifier = Modifier.padding(20.dp)
             ) {
-                Text("PARSING MULTIPART DATA")
+                Text("PARSING MULTIPART DATA", color = MaterialTheme.colors.onPrimary)
                 Canvas(
                     modifier = Modifier
                         .height(24.dp)
@@ -49,7 +49,7 @@ fun ScanProgressBar(
                         frontColor,
                         Offset.Zero.copy(x = 0.dp.toPx(), y = 8.dp.toPx()),
                         Size(
-                            //total is never zero
+                            // total is never zero
                             width = this.size.width * it.current.toFloat().div(it.total.toFloat()),
                             height = 8.dp.toPx()
                         )
@@ -66,7 +66,7 @@ fun ScanProgressBar(
                     color = MaterialTheme.colors.onPrimary
                 )
                 Button(
-                    content = {Text("Start over")},
+                    content = { Text("Start over") },
                     onClick = { resetScan() }
                 )
             }

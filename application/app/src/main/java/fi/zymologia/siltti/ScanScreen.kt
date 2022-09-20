@@ -14,12 +14,9 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -212,7 +209,11 @@ fun processFrame(
                 }?.payload?.let { payload ->
                     // This is pressed only once, that's checked in rust backend
                     // by sending complete payload only once
-                    TODO()
+                    Toast.makeText(
+                        MainActivity().applicationContext,
+                        payload,
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
                 refreshFrames()
             }
