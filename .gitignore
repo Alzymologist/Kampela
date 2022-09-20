@@ -24,3 +24,9 @@ fp-info-cache
 # Exported BOM files
 *.xml
 *.csv
+
+# Rust
+# Siltti compiled code
+/application/rust/target/
+# rustfmt
+**/*.rs.bk
