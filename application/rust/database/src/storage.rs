@@ -1,12 +1,14 @@
+//! Keys and corresponding values in companion database.
 use frame_metadata::{RuntimeMetadata, RuntimeMetadataV14};
 use parity_scale_codec::{Decode, Encode};
 use sled::IVec;
-use sp_core::{ByteArray, H256};
+use sp_core::H256;
 use sp_runtime::MultiSignature;
 use std::convert::TryInto;
 use substrate_parser::compacts::find_compact;
 
 use crate::error::Error;
+use crate::process_input::Encryption;
 
 pub struct MetadataKey(MetadataKeyContent);
 
@@ -64,52 +66,12 @@ pub struct MetadataStorage {
     pub value: MetadataValue,
 }
 
-pub enum Encryption {
-    Ed25519,
-    Sr25519,
-    Ecdsa,
-}
-
-impl Encryption {
-    pub fn from_symbol(symbol: u8) -> Result<Self, Error> {
-        match symbol {
-            0 => Ok(Encryption::Ed25519),
-            1 => Ok(Encryption::Sr25519),
-            2 => Ok(Encryption::Ecdsa),
-            _ => Err(Error::UnknownSigningAlgorithm),
-        }
-    }
-    pub fn key_length(&self) -> usize {
-        match &self {
-            Encryption::Ed25519 => sp_core::ed25519::Public::LEN,
-            Encryption::Sr25519 => sp_core::sr25519::Public::LEN,
-            Encryption::Ecdsa => sp_core::ecdsa::Public::LEN,
-        }
-    }
-    pub fn signature_length(&self) -> usize {
-        match &self {
-            Encryption::Ed25519 => 64,
-            Encryption::Sr25519 => 64,
-            Encryption::Ecdsa => 65,
-        }
-    }
-}
-
 impl MetadataStorage {
-    pub fn from_metadata_qr(mut payload: &[u8]) -> Result<Self, Error> {
-        let encryption = match payload.get(..3) {
-            Some(prelude) => {
-                if prelude[0] != 0x53 {
-                    return Err(Error::NotSubstrate);
-                }
-                if prelude[2] != 0x80 {
-                    return Err(Error::NotMetadataQr);
-                }
-                Encryption::from_symbol(prelude[1])?
-            }
-            None => return Err(Error::TooShort),
-        };
-        payload = match payload.get(3 + encryption.key_length()..) {
+    pub fn from_payload_prelude_cut(
+        mut payload: &[u8],
+        encryption: &Encryption,
+    ) -> Result<Self, Error> {
+        payload = match payload.get(encryption.key_length()..) {
             Some(a) => a,
             None => return Err(Error::TooShort),
         };

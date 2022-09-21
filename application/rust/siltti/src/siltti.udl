@@ -40,3 +40,9 @@ enum ErrorQr {
     "LegacyZeroFrames",
     "PoisonedLock",
 };
+
+[Enum]
+interface Action {
+    Success();
+    Transmit(sequence<sequence<u8>> packets);
+};
