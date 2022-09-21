@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+database = { path = "../database" }
 qr_reader = { path = "../qr_reader" }
 uniffi = { version = "0.18.0", features=["builtin-bindgen"] }
 

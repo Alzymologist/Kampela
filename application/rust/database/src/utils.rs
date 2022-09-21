@@ -1,3 +1,4 @@
+//! Basic utils for companion database.
 use sled::{open, Db, Tree};
 use sp_core::H256;
 
@@ -15,8 +16,7 @@ pub fn open_tree(database: &Db, tree_name: &[u8]) -> Result<Tree, Error> {
 /// Tree name for metadata storage
 pub const METADATA: &[u8] = b"metadata";
 
-pub fn write_meta(db_path: &str, metadata_payload: &[u8]) -> Result<(), Error> {
-    let metadata_storage = MetadataStorage::from_metadata_qr(metadata_payload)?;
+pub fn write_meta(db_path: &str, metadata_storage: MetadataStorage) -> Result<(), Error> {
     let database = open_db(db_path)?;
     let metadata_tree = open_tree(&database, METADATA)?;
     metadata_tree

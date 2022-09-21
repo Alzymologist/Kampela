@@ -9,6 +9,7 @@ edition = "2021"
 frame-metadata = "15.0.0"
 hex = "0.4.3"
 parity-scale-codec = "3.2.1"
+raptorq = "1.7.0"
 sled = "0.34.7"
 sp-core = {version = "6.0.0", default-features = false, features = ["full_crypto"]}
 sp-runtime = "6.0.0"

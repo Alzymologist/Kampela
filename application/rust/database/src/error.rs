@@ -1,3 +1,4 @@
+//! Errors occuring in companion.
 use sp_core::H256;
 
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
@@ -35,9 +36,15 @@ pub enum Error {
     #[error("Metadata in received QR payload is not V14 and is not supported.")]
     OnlyV14SupportedQr,
 
+    #[error("Input size too large to form NFC. Please file a ticket if you see this.")]
+    TooLargeInputForNFC,
+
     #[error("Received QR payload is too short.")]
     TooShort,
 
-    #[error("Unexpected signing algorithm.")]
-    UnknownSigningAlgorithm,
+    #[error("Unexpected payload type, 0x{}", hex::encode(&[0]))]
+    UnknownPayloadType(u8),
+
+    #[error("Unexpected signing algorithm, 0x{}", hex::encode(&[0]))]
+    UnknownSigningAlgorithm(u8),
 }
