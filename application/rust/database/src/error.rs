@@ -1,16 +1,30 @@
 //! Errors occuring in companion.
 use sp_core::H256;
 
+use crate::process_input::Encryption;
+
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum Error {
     #[error("Internal database error: {0}")]
     DbInternal(sled::Error),
 
-    #[error("Metadata storage value got damaged in the database and could not be decoded.")]
-    DecodeDbMetadataValue,
+    #[error("Mismatch in encryption in specs storage.")]
+    DbSpecsEncryptionMismatch { key: Encryption, value: Encryption },
+
+    #[error("Mismatch in genesis hash in specs storage.")]
+    DbSpecsHashMismatch { key: H256, value: H256 },
 
     #[error("Metadata storage key got damaged in the database and could not be decoded.")]
     DecodeDbMetadataKey,
+
+    #[error("Metadata storage value got damaged in the database and could not be decoded.")]
+    DecodeDbMetadataValue,
+
+    #[error("Specs storage key got damaged in the database and could not be decoded.")]
+    DecodeDbSpecsKey,
+
+    #[error("Specs storage value got damaged in the database and could not be decoded.")]
+    DecodeDbSpecsValue,
 
     #[error("Metadata from scanned QR could not be decoded.")]
     MetadataQrDecode,
@@ -24,6 +38,9 @@ pub enum Error {
     #[error("Metadata from scanned QR does not start with expected b`META` prefix.")]
     NoMetaPrefixQr,
 
+    #[error("No specs entries in the database.")]
+    NoSpecs(H256),
+
     #[error("Received QR payload does not have prelude corresponding to metadata.")]
     NotMetadataQr,
 
@@ -35,6 +52,9 @@ pub enum Error {
 
     #[error("Metadata in received QR payload is not V14 and is not supported.")]
     OnlyV14SupportedQr,
+
+    #[error("Specs from scanned QR could not be decoded.")]
+    SpecsQrDecode,
 
     #[error("Input size too large to form NFC. Please file a ticket if you see this.")]
     TooLargeInputForNFC,

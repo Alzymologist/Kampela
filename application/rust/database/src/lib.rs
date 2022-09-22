@@ -5,4 +5,3 @@ pub mod error;
 pub mod nfc_fountain;
 pub mod process_input;
 pub mod storage;
-pub mod utils;
