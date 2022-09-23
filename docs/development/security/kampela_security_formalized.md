@@ -292,16 +292,19 @@ In case of companion app (or actually any wallet's) breach, confidentiality dama
 
 ## Integrity
 
+6-I1
 Motivation: Trick user to export account with derivation path known only to attacker and then send assets there; blackmail to "reveal the secret"
 Attacker action: Send a derivation with non-visualizeable symbols into Kampela through corrupted companion app; trick user into removing this derivation after some use.
 Effort: Medium
 Incentive: High
 
+6-I2
 Motivation: Make user sign transaction by wrong address (same seed, different derivation).
 Attacker action: change public key in transaction to a different, corresponding to different derivation.
 Effort: Medium
 Incentive: Medium
 
+6-I3
 Motivation: Make user sign transaction different from one they were forming.
 Attacker action: change transaction core in transaction to a different one.
 Effort: Medium
@@ -309,6 +312,7 @@ Incentive: High
 
 ## Availability
 
+6-A1
 Motivation: Disable the Kampela
 Attacker action: Try to engage self-destruct mechanism, scramble derivations tree or physically damage the tool
 Effort: High
