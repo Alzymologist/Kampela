@@ -30,8 +30,8 @@ td {
     <th>Effort: High</th>
   </tr>
   <tr id="first">
-    <th  rowspan="15">Incentive: High</th>
-    <td  rowspan="15"></td>
+    <th  rowspan="16">Incentive: High</th>
+    <td  rowspan="16"></td>
     <td>3-I1 Observe pin entering, use pin later.
       <br>Counter:
       <br>(1) user instructions
@@ -74,7 +74,7 @@ td {
     <td>6-I3 Manipulate companion into swapping the transaction content.
       <br>Counter:
       <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
-      <br>(2) discourage blind signing
+      <br>(2) forbid blind signing
     </td>
     <td>1-I4 Take device already unlocked by user.
       <br>Counter:
@@ -85,35 +85,74 @@ td {
     </td>
   </tr>
   <tr>
-    <td  rowspan="11"></td>
+    <td  rowspan="12"></td>
     <td>2-I4 Swap secret unbeknownst to user, catch funds on account unrelated to user.
       <br>Counter:
       <br>(1) user is encouraged to freeze the secret (reminders, instructions)
+      <br>(2) once the secret is frozen, it could not be changed
     </td>
   </tr>
   <tr>
-    <td>2-I5 Coerce user to "fix" the secret, manipulate secret on entering, catch funds on account unrelated to user.</td>
+    <td>2-I5 Coerce user to "fix" the secret, manipulate secret on entering, catch funds on account unrelated to user.
+      <br>Counter: same as 2-I4
+      <br>Here we can only make Kampela somewhat uncomfortable to use when the secret is not frozen.
+    </td>
   </tr>
   <tr>
-    <td>3-I2 Make user sign a malicious transaction (sent with powerful transponder).</td>
+    <td>2-I6 Maliciously re-programm Kampela.
+      <br>Counter:
+      <br>(1) any changes in code can be loaded only if Kampela is opened up
+      <br>(2) Kampela body must be tamper-evident
+    </td>
   </tr>
   <tr>
-    <td>3-I4 Listen to device.</td>
+    <td>3-I2 Make user sign a malicious transaction (sent with powerful transponder).
+      <br>Counter:
+      <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
+      <br>(2) forbid blind signing
+      <br>(3) Kampela can receive data only from the introduced companion devices
+    </td>
   </tr>
   <tr>
-    <td>4-I1 Make user sign proxy (social).</td>
+    <td>3-I4 Listen to device.
+      <br>Research needed here. Noise from Kampela is expected to be minimal, but that must be checked.
+    </td>
   </tr>
   <tr>
-    <td>4-I3 Distribute malicious chain data.</td>
+    <td>4-I1 Make user sign proxy (social).
+      <br>Counter:
+      <br>(1) Kampela parses and shows the action of signing off account as a proxy.
+      <br>Not much Kampela itself can do against social manipulation.
+    </td>
   </tr>
   <tr>
-    <td>4-I4 Make user sign transaction blindly (social).</td>
+    <td>4-I3 Distribute malicious chain data.
+      <br>Counter:
+      <br>(1) user is encouraged to trust only reliable verifiers
+      <br>(2) user is encouraged to have as few verifiers total as possible to manage verifier info easily
+      <br>(3) malicious verifier, if public and broadcasting, can be pointed out by community
+      <br>(4) if the chain data used for transaction generation goes on chain, this becomes entirely obsolete
+    </td>
   </tr>
   <tr>
-    <td>5-I1 Steal secret (device emission).</td>
+    <td>4-I4 Make user sign transaction blindly (social).
+      <br> Counter:
+      <br>(1) forbid blind signing
+    </td>
   </tr>
   <tr>
-    <td>5-I2 Steal secret via damaged RNG.</td>
+    <td>5-I1 Steal secret (device swapped for a replica with emission).
+      <br> Counter (to demonstrate that the chip is genuine):
+      <br>(1) Kampela must be able to sign a verification challenge with its internal secret.
+      <br>Internal secret is intrinsic to a device and factory known only a public key from it.
+      <br>Maybe part of the internal is from chip itself and part is from Kampela assembly,
+      <br>so that the entire secret is not known unless the two cooperate to know it.
+    </td>
+  </tr>
+  <tr>
+    <td>5-I2 Steal secret via damaged RNG.
+      <br>Counter: same as 5-I1
+    </td>
   </tr>
   <tr>
     <td>5-I3 Steal secret via damaged crypto libraries in Kampela.</td>
@@ -162,4 +201,17 @@ td {
     <td></td>
     <td>3-A1 EMP.</td>
   </tr>
-</table> 
+</table>
+</body>
+There must be a set of checks for Kampela in place.
+
+1. Code/design are audited.
+2. Factory receives chips as designed.
+3. Assembly in factory is as designed.
+4. Firmware in factory is as designed.
+5. Assembly/hardware remains the same while in transit to user.
+6. Firmware same remains the same while in transit to user.
+7. Assembly/hardware can not be swapped quickly and discreetly while Kampela is with user.
+8. Firmware can not be swapped quickly and discreetly while Kampela is with user.
+
+</html>

@@ -95,6 +95,12 @@ Attacker action: Coerce user to remove secret. Enter wrong secret (by taking Kam
 Effort: High.
 Incentive: High.
 
+2-I6
+Motivation: Maliciously re-programm Kampela.
+Attacker action: Kampela is shortly taken from user, re-programmed (for example, to compromize the secret through defective randomness), returned to user.
+Effort: High.
+Incentive: High.
+
 ## Availability
 
 2-A1
