@@ -215,3 +215,13 @@ Base58 addresses, hex representation - could be ok to check that account is corr
 User may want to give the account the name on creating. How and where? And what will prompt user to remember the derivations at all? How to distinguish identical derivations from different Kampelas?
 
 Possible: create upon secret freezing the name for device. Keys would look like `DeviceName smth-smth` with `smth-smth` optionally entered by user on Kampela keyboard or rather the public part of derivation itself.
+
+# Do we allow to change the pin?
+
+Really?
+
+# When pin is entered?
+
+(1) when Kampela is just connected to companion phone
+(2) when command is already formed and sent through companion phone
+(3) right before the action (accept specs, create derivation, etc)

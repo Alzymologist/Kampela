@@ -45,7 +45,7 @@ td {
       <br>(2) allow limited (how severely?) number of attempts
       <br>(3) user responsibly creates, stores and safely uses the pin
       <br>Who, when and how sets the pin? User, right before setting up the secret.
-      <br>Changing or resetting the secret allows to change the pin.
+      <br>Changing or resetting the secret allows to change the pin if not yet frozen.
     </td>
   </tr>
   <tr>
@@ -79,10 +79,12 @@ td {
     </td>
     <td>1-I4 Take device already unlocked by user.
       <br>Counter:
-      <br>(1) demand pin second time when accessing secret
-      <br>(2) demand pin when adding data or signing transaction
+      <br>(1) Kampela is active for a very short time after disconnect with companion device,
+      <br>can add the switch that powers down the device if the field is lost.
+      <br>(2) demand pin second time when accessing secret
+      <br>(3) demand pin when adding data or signing transaction
       <br>This still leaves uncovered removal/swap of the specs and derivation. So:
-      <br>(3) allow device to receive any payloads only from the introduced companion devices
+      <br>(4) allow device to receive any payloads only from the introduced companion devices
     </td>
   </tr>
   <tr>
@@ -270,21 +272,5 @@ td {
     </td>
   </tr>
 </table>
-
-There must be a set of checks for Kampela in place.
-
-1. Code/design are audited, well, at least looked into, as any open source.
-2. Factory receives chips as designed.
-3. Assembly in factory is as designed.
-4. Firmware in factory is as designed.
-5. Assembly/hardware remains the same while in transit to user.
-6. Firmware same remains the same while in transit to user.
-7. Assembly/hardware can not be swapped quickly and discreetly while Kampela is with user.
-8. Firmware can not be swapped quickly and discreetly while Kampela is with user.
-
-Summary of secrets in Kampela.
-
-1. Part of chip own secret key, as set in chip factory.
-2. Part of chip own secret key, added in Kampela assembly factory. As the Kampela exits the Kampela assembly factory, the chip secret key is complete, and factory can record the Kampela public key. User checks that the chip is genuine by signing a challenge with chip secret key and verifying with public key known at Kampela factory. This covers S5 at least.
 </body>
 </html>
