@@ -16,7 +16,7 @@ android {
         versionName "1.0"
 
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'arm64-v8a', 'x86_64'
         }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -36,7 +36,7 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
     buildFeatures {
         compose true
@@ -49,7 +49,7 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
         jniLibs {
-            pickFirsts += ['lib/armeabi-v7a/libc++_shared.so', 'lib/arm64-v8a/libc++_shared.so', 'lib/x86/libc++_shared.so', 'lib/x86_64/libc++_shared.so']
+            pickFirsts += ['lib/arm64-v8a/libc++_shared.so', 'lib/x86_64/libc++_shared.so']
         }
     }
     ndkVersion '24.0.8215888'
@@ -74,7 +74,7 @@ cargo {
     module = "../rust/siltti"
     targetDirectory = "../rust/target"
     libname = "siltti"
-    targets = ["arm", "arm64", "x86_64"]
+    targets = ["arm64", "x86_64"]
     apiLevel = 21
     profile = 'release'
     extraCargoBuildArguments = ["--locked"]

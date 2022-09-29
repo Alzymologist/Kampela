@@ -6,7 +6,7 @@ use sp_core::{ByteArray, H256};
 use sp_runtime::{MultiSignature, MultiSigner};
 use std::convert::TryInto;
 
-use crate::error::Error;
+use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
 use crate::sign_with_companion::{SignedByCompanion, SignedData};
 use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
@@ -30,12 +30,12 @@ pub enum Encryption {
 }
 
 impl Encryption {
-    pub fn from_symbol(symbol: u8) -> Result<Self, Error> {
+    pub fn from_symbol(symbol: u8) -> Result<Self, ErrorCompanion> {
         match symbol {
             ENCRYPTION_ED25519 => Ok(Encryption::Ed25519),
             ENCRYPTION_SR25519 => Ok(Encryption::Sr25519),
             ENCRYPTION_ECDSA => Ok(Encryption::Ecdsa),
-            a => Err(Error::UnknownSigningAlgorithm(a)),
+            a => Err(ErrorCompanion::UnknownSigningAlgorithm(a)),
         }
     }
     pub fn key_length(&self) -> usize {
@@ -75,7 +75,7 @@ impl Transaction {
         encryption: &Encryption,
         db_path: &str,
         signed_data: Box<dyn SignedByCompanion>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorCompanion> {
         let signer = match payload.get(0..encryption.key_length()) {
             Some(public_key_slice) => {
                 payload = &payload[encryption.key_length()..];
@@ -91,7 +91,7 @@ impl Transaction {
                     ),
                 }
             }
-            None => return Err(Error::TooShort),
+            None => return Err(ErrorCompanion::TooShort),
         };
         if payload.len() >= H256::len_bytes() {
             let genesis_hash = H256(
@@ -112,13 +112,13 @@ impl Transaction {
                 signed_data,
             })
         } else {
-            Err(Error::TooShort)
+            Err(ErrorCompanion::TooShort)
         }
     }
     pub fn data(&self) -> Vec<u8> {
         self.core.encode()
     }
-    pub fn transmit(self) -> Result<Action, Error> {
+    pub fn transmit(self) -> Result<Action, ErrorCompanion> {
         let bytes = self.data();
         let signed_data = SignedData::new(self.signed_data);
         Ok(Action::TransmitSignable {
@@ -137,7 +137,7 @@ impl Bytes {
     pub fn from_payload_prelude_cut(
         payload: &[u8],
         encryption: &Encryption,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorCompanion> {
         match payload.get(0..encryption.key_length()) {
             Some(public_key_slice) => {
                 let bytes_uncut = payload[encryption.key_length()..].to_vec();
@@ -157,13 +157,13 @@ impl Bytes {
                     signer,
                 })
             }
-            None => Err(Error::TooShort),
+            None => Err(ErrorCompanion::TooShort),
         }
     }
     pub fn data(&self) -> Vec<u8> {
         self.encode()
     }
-    pub fn transmit(&self) -> Result<Action, Error> {
+    pub fn transmit(&self) -> Result<Action, ErrorCompanion> {
         let data = self.encode();
         // data must be signed here
         Ok(Action::TransmitBytes {
@@ -181,12 +181,12 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn new(mut payload: &[u8], db_path: &str, signed_data: Box<dyn SignedByCompanion>) -> Result<Self, Error> {
+    pub fn new(mut payload: &[u8], db_path: &str, signed_data: Box<dyn SignedByCompanion>) -> Result<Self, ErrorCompanion> {
         match payload.get(..3) {
             Some(prelude) => {
                 payload = &payload[3..];
                 if prelude[0] != PREFIX_SUBSTRATE {
-                    return Err(Error::NotSubstrate);
+                    return Err(ErrorCompanion::NotSubstrate);
                 }
                 let encryption = Encryption::from_symbol(prelude[1])?;
                 match prelude[2] {
@@ -212,10 +212,10 @@ impl Action {
                         specs_value.write_in_db(db_path)?;
                         Ok(action)
                     }
-                    a => Err(Error::UnknownPayloadType(a)),
+                    a => Err(ErrorCompanion::UnknownPayloadType(a)),
                 }
             }
-            None => Err(Error::TooShort),
+            None => Err(ErrorCompanion::TooShort),
         }
     }
 }

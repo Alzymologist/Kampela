@@ -42,12 +42,12 @@ enum ErrorQr {
 };
 
 interface Action {
-    [Throws=Error]
+    [Throws=ErrorCompanion]
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignedByCompanion signed_data);
 };
 
 [Error]
-enum Error {
+enum ErrorCompanion {
     "DbInternal",
     "DbSpecsEncryptionMismatch",
     "DbSpecsHashMismatch",

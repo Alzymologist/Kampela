@@ -7,16 +7,16 @@ use sp_runtime::{MultiSignature, MultiSigner};
 use std::convert::TryInto;
 use substrate_parser::compacts::find_compact;
 
-use crate::error::Error;
+use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
 use crate::process_input::{Action, Encryption};
 
-fn open_db(db_path: &str) -> Result<Db, Error> {
-    open(db_path).map_err(Error::DbInternal)
+fn open_db(db_path: &str) -> Result<Db, ErrorCompanion> {
+    open(db_path).map_err(ErrorCompanion::DbInternal)
 }
 
-fn open_tree(database: &Db, tree_name: &[u8]) -> Result<Tree, Error> {
-    database.open_tree(tree_name).map_err(Error::DbInternal)
+fn open_tree(database: &Db, tree_name: &[u8]) -> Result<Tree, ErrorCompanion> {
+    database.open_tree(tree_name).map_err(ErrorCompanion::DbInternal)
 }
 
 /// Tree name for metadata storage
@@ -36,10 +36,10 @@ impl MetadataKey {
     pub fn new(genesis_hash: H256) -> Self {
         Self(MetadataKeyContent { genesis_hash })
     }
-    pub fn from_db_key(database_key: &IVec) -> Result<Self, Error> {
+    pub fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
         Ok(Self(
             MetadataKeyContent::decode(&mut &database_key[..])
-                .map_err(|_| Error::DecodeDbMetadataKey)?,
+                .map_err(|_| ErrorCompanion::DecodeDbMetadataKey)?,
         ))
     }
     pub fn as_db_key(&self) -> Vec<u8> {
@@ -59,20 +59,20 @@ struct MetadataValueContent {
 }
 
 impl MetadataValue {
-    pub fn from_db_value(database_value: &IVec) -> Result<Self, Error> {
+    pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
         Ok(Self(
             MetadataValueContent::decode(&mut &database_value[..])
-                .map_err(|_| Error::DecodeDbMetadataValue)?,
+                .map_err(|_| ErrorCompanion::DecodeDbMetadataValue)?,
         ))
     }
-    pub fn read_from_db(db_path: &str, genesis_hash: H256) -> Result<Self, Error> {
+    pub fn read_from_db(db_path: &str, genesis_hash: H256) -> Result<Self, ErrorCompanion> {
         let database = open_db(db_path)?;
         let metadata_tree = open_tree(&database, METADATA)?;
         let metadata_key = MetadataKey::new(genesis_hash);
         match metadata_tree.get(metadata_key.as_db_key()) {
             Ok(Some(a)) => Self::from_db_value(&a),
-            Ok(None) => Err(Error::NoMetadata(genesis_hash)),
-            Err(e) => Err(Error::DbInternal(e)),
+            Ok(None) => Err(ErrorCompanion::NoMetadata(genesis_hash)),
+            Err(e) => Err(ErrorCompanion::DbInternal(e)),
         }
     }
     pub fn as_db_value(&self) -> Vec<u8> {
@@ -95,25 +95,25 @@ impl MetadataStorage {
     pub fn from_payload_prelude_cut(
         mut payload: &[u8],
         encryption: &Encryption,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorCompanion> {
         payload = match payload.get(encryption.key_length()..) {
             Some(a) => a,
-            None => return Err(Error::TooShort),
+            None => return Err(ErrorCompanion::TooShort),
         };
         let length_info =
-            find_compact::<u32>(payload).map_err(|_| Error::MetadataQrUnexpectedStructure)?;
+            find_compact::<u32>(payload).map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let meta_length = length_info.compact as usize;
         match length_info.start_next_unit {
             Some(start) => match payload.get(..start + meta_length) {
                 Some(meta_slice) => {
                     if !meta_slice.starts_with(b"META") {
-                        return Err(Error::NoMetaPrefixQr);
+                        return Err(ErrorCompanion::NoMetaPrefixQr);
                     }
                     let meta_decoded = RuntimeMetadata::decode(&mut &meta_slice[4..])
-                        .map_err(|_| Error::MetadataQrDecode)?;
+                        .map_err(|_| ErrorCompanion::MetadataQrDecode)?;
                     let metadata = match meta_decoded {
                         RuntimeMetadata::V14(metadata) => metadata,
-                        _ => return Err(Error::OnlyV14SupportedQr),
+                        _ => return Err(ErrorCompanion::OnlyV14SupportedQr),
                     };
                     payload = &payload[start + meta_length..];
                     match payload.get(..H256::len_bytes()) {
@@ -147,23 +147,23 @@ impl MetadataStorage {
                                         }),
                                     })
                                 }
-                                None => Err(Error::TooShort),
+                                None => Err(ErrorCompanion::TooShort),
                             }
                         }
-                        None => Err(Error::TooShort),
+                        None => Err(ErrorCompanion::TooShort),
                     }
                 }
-                None => Err(Error::TooShort),
+                None => Err(ErrorCompanion::TooShort),
             },
-            None => Err(Error::TooShort),
+            None => Err(ErrorCompanion::TooShort),
         }
     }
-    pub fn write_in_db(&self, db_path: &str) -> Result<(), Error> {
+    pub fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
         let database = open_db(db_path)?;
         let metadata_tree = open_tree(&database, METADATA)?;
         metadata_tree
             .insert(self.key.as_db_key(), self.value.as_db_value())
-            .map_err(Error::DbInternal)?;
+            .map_err(ErrorCompanion::DbInternal)?;
         Ok(())
     }
 }
@@ -183,9 +183,9 @@ impl SpecsKey {
             genesis_hash,
         })
     }
-    pub fn from_db_key(database_key: &IVec) -> Result<Self, Error> {
+    pub fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
         Ok(Self(
-            SpecsKeyContent::decode(&mut &database_key[..]).map_err(|_| Error::DecodeDbSpecsKey)?,
+            SpecsKeyContent::decode(&mut &database_key[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsKey)?,
         ))
     }
     pub fn as_db_key(&self) -> Vec<u8> {
@@ -222,17 +222,17 @@ pub struct SpecsValueContent {
 }
 
 impl SpecsValue {
-    pub fn from_db_value(database_value: &IVec) -> Result<Self, Error> {
+    pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
         Ok(Self(
             SpecsValueContent::decode(&mut &database_value[..])
-                .map_err(|_| Error::DecodeDbSpecsValue)?,
+                .map_err(|_| ErrorCompanion::DecodeDbSpecsValue)?,
         ))
     }
     pub fn read_from_db(
         db_path: &str,
         encryption: Encryption,
         genesis_hash: H256,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorCompanion> {
         let database = open_db(db_path)?;
         let specs_tree = open_tree(&database, SPECS)?;
         let specs_key = SpecsKey::new(encryption, genesis_hash);
@@ -240,21 +240,21 @@ impl SpecsValue {
             Ok(Some(a)) => {
                 let specs_value = Self::from_db_value(&a)?;
                 if specs_value.specs().encryption != encryption {
-                    return Err(Error::DbSpecsEncryptionMismatch {
+                    return Err(ErrorCompanion::DbSpecsEncryptionMismatch {
                         key: encryption,
                         value: specs_value.specs().encryption,
                     });
                 }
                 if specs_value.specs().genesis_hash != genesis_hash {
-                    return Err(Error::DbSpecsHashMismatch {
+                    return Err(ErrorCompanion::DbSpecsHashMismatch {
                         key: genesis_hash,
                         value: specs_value.specs().genesis_hash,
                     });
                 }
                 Ok(specs_value)
             }
-            Ok(None) => Err(Error::NoSpecs(genesis_hash)),
-            Err(e) => Err(Error::DbInternal(e)),
+            Ok(None) => Err(ErrorCompanion::NoSpecs(genesis_hash)),
+            Err(e) => Err(ErrorCompanion::DbInternal(e)),
         }
     }
     pub fn as_db_value(&self) -> Vec<u8> {
@@ -272,7 +272,7 @@ impl SpecsValue {
     pub fn from_payload_prelude_cut(
         mut payload: &[u8],
         encryption: &Encryption,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorCompanion> {
         let specs_signer = match payload.get(0..encryption.key_length()) {
             Some(public_key_slice) => {
                 payload = &payload[encryption.key_length()..];
@@ -288,16 +288,16 @@ impl SpecsValue {
                     ),
                 }
             }
-            None => return Err(Error::TooShort),
+            None => return Err(ErrorCompanion::TooShort),
         };
         let length_info =
-            find_compact::<u32>(payload).map_err(|_| Error::MetadataQrUnexpectedStructure)?;
+            find_compact::<u32>(payload).map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
         match length_info.start_next_unit {
             Some(start) => match payload.get(..start + encoded_specs_length) {
                 Some(encoded_specs_slice) => {
                     let specs = Specs::decode(&mut &encoded_specs_slice[..])
-                        .map_err(|_| Error::SpecsQrDecode)?;
+                        .map_err(|_| ErrorCompanion::SpecsQrDecode)?;
                     payload = &payload[start + encoded_specs_length..];
                     match payload.get(..encryption.signature_length()) {
                         Some(signature_slice) => {
@@ -318,15 +318,15 @@ impl SpecsValue {
                                 specs_signature,
                             }))
                         }
-                        None => Err(Error::TooShort),
+                        None => Err(ErrorCompanion::TooShort),
                     }
                 }
-                None => Err(Error::TooShort),
+                None => Err(ErrorCompanion::TooShort),
             },
-            None => Err(Error::TooShort),
+            None => Err(ErrorCompanion::TooShort),
         }
     }
-    pub fn write_in_db(&self, db_path: &str) -> Result<(), Error> {
+    pub fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
         let database = open_db(db_path)?;
         let specs_tree = open_tree(&database, SPECS)?;
         specs_tree
@@ -334,13 +334,13 @@ impl SpecsValue {
                 SpecsKey::new(self.specs().encryption, self.specs().genesis_hash).as_db_key(),
                 self.as_db_value(),
             )
-            .map_err(Error::DbInternal)?;
+            .map_err(ErrorCompanion::DbInternal)?;
         Ok(())
     }
     pub fn data(&self) -> Vec<u8> {
         self.0.encode()
     }
-    pub fn transmit(&self) -> Result<Action, Error> {
+    pub fn transmit(&self) -> Result<Action, ErrorCompanion> {
         let data = self.0.encode();
         // data must be signed here
         Ok(Action::TransmitSpecs {

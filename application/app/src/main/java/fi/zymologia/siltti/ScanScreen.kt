@@ -59,7 +59,7 @@ fun KeepScreenOn() {
  */
 @Composable
 fun ScanScreen() {
-    var collection = remember { Collection() }
+    val collection = remember { Collection() }
     val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current

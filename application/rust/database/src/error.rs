@@ -4,7 +4,7 @@ use sp_core::H256;
 use crate::process_input::Encryption;
 
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
-pub enum Error {
+pub enum ErrorCompanion {
     #[error("Internal database error: {0}")]
     DbInternal(sled::Error),
 
