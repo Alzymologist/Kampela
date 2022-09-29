@@ -36,9 +36,8 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import fi.zymologia.siltti.uniffi.*
 import fi.zymologia.siltti.uniffi.Collection
-import fi.zymologia.siltti.uniffi.Frames
-import fi.zymologia.siltti.uniffi.Payload
 
 val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 val REQUEST_CODE_PERMISSIONS = 10
@@ -59,7 +58,7 @@ fun KeepScreenOn() {
  */
 @Composable
 fun ScanScreen() {
-    var collection = remember { Collection() }
+    val collection = remember { Collection() }
     val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
@@ -140,7 +139,9 @@ fun ScanScreen() {
                                                 context,
                                                 barcodeScanner,
                                                 imageProxy,
-                                                { appState = Mode.TX },
+                                                { transmittable: List<List<UByte>> ->
+                                                    appState = Mode.TX
+                                                },
                                                 collection::processFrame
                                             ) {
                                                 try {
@@ -227,7 +228,7 @@ fun processFrame(
     context: Context,
     barcodeScanner: BarcodeScanner,
     imageProxy: ImageProxy,
-    startTransmission: () -> Unit,
+    startTransmission: (List<List<UByte>>) -> Unit,
     submitFrame: (List<UByte>) -> Payload,
     refreshFrames: () -> Unit
 ) {
@@ -259,7 +260,19 @@ fun processFrame(
                         "success!",
                         Toast.LENGTH_SHORT
                     ).show()
-                    startTransmission()
+                    try {
+                        Action(payload, "null", signedData = Signer()).asTransmittable()?.let { transmittable ->
+                            startTransmission(transmittable)
+                        }
+                        // TODO: cleanup
+                    } catch (e: ErrorCompanion) {
+                        Toast
+                            .makeText(
+                                context,
+                                "Payload parsing error: " + e.message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                    }
                 }
                 refreshFrames()
             }
@@ -299,4 +312,10 @@ enum class Mode {
     Scan,
     Address,
     TX,
+}
+
+class Signer: SignedByCompanion {
+    override fun sign(data: List<UByte>): List<UByte> {
+        return data // TODO
+    }
 }

@@ -148,7 +148,7 @@ impl Collection {
                 *collection = CollectionBody::init(raw_frame)?;
                 if let CollectionBody::Ready { payload } = &*collection {
                     Ok(Payload {
-                        payload: Some(hex::encode(payload)),
+                        payload: Some(payload.to_owned()),
                     })
                 } else {
                     Ok(Payload { payload: None })
@@ -159,7 +159,7 @@ impl Collection {
                 *collection = CollectionBody::add_frame(raw_frame, multi.to_owned())?;
                 if let CollectionBody::Ready { payload } = &*collection {
                     Ok(Payload {
-                        payload: Some(hex::encode(payload)),
+                        payload: Some(payload.to_owned()),
                     })
                 } else {
                     Ok(Payload { payload: None })
@@ -237,7 +237,7 @@ struct LegacyMultiContent {
 
 /// Object to move output through uniffi
 pub struct Payload {
-    pub payload: Option<String>,
+    pub payload: Option<Vec<u8>>,
 }
 
 /// Object to move number of frames through uniffi

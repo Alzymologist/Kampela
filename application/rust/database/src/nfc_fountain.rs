@@ -6,18 +6,19 @@
 
 use std::convert::TryFrom;
 
-use crate::error::Error;
+use crate::error::ErrorCompanion;
 
 /// NFC payload size, in bytes. Must be transferrable in single `transceive`
 /// operation.
 pub const NFC_PACKET_SIZE: u16 = 256;
 
 /// Form a set of `Vec<u8>` limited length NFC payloads from `&[u8]` input
-pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, Error> {
+pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
     // Input length. Reasonable input data is expected to fit in `u32`.
     let input_length = match u32::try_from(input.len()) {
         Ok(a) => a,
-        Err(_) => return Err(Error::TooLargeInputForNFC),
+        Err(_) => return Err(ErrorCompanion
+        ::TooLargeInputForNFC),
     };
 
     // Number of repair packets.
