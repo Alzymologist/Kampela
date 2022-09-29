@@ -218,4 +218,13 @@ impl Action {
             None => Err(ErrorCompanion::TooShort),
         }
     }
+
+    pub fn as_transmittable(&self) -> Option<Vec<Vec<u8>>> {
+        match &self {
+            Action::Success => None,
+            Action::TransmitBytes{packets} => Some(packets.to_owned()),
+            Action::TransmitSignable{packets} => Some(packets.to_owned()),
+            Action::TransmitSpecs{packets} => Some(packets.to_owned()),
+        }
+    }
 }

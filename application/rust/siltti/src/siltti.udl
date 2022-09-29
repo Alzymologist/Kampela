@@ -1,7 +1,7 @@
 namespace siltti {};
 
 dictionary Payload {
-    string? payload;
+    sequence<u8>? payload;
 };
 
 dictionary Frames {
@@ -44,6 +44,8 @@ enum ErrorQr {
 interface Action {
     [Throws=ErrorCompanion]
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignedByCompanion signed_data);
+    
+    sequence<sequence<u8>>? as_transmittable();
 };
 
 [Error]
