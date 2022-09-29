@@ -8,6 +8,7 @@ use std::convert::TryInto;
 
 use crate::error::Error;
 use crate::nfc_fountain::pack_nfc;
+use crate::sign_with_companion::{SignedByCompanion, SignedData};
 use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;
@@ -53,8 +54,14 @@ impl Encryption {
     }
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct Transaction {
+    core: TransactionCore,
+    signed_data: Box<dyn SignedByCompanion>,
+}
+
+#[derive(Debug, Decode, Encode, Eq, PartialEq)]
+pub struct TransactionCore {
     genesis_hash: H256,
     meta_v14: RuntimeMetadataV14,
     meta_signature: MultiSignature,
@@ -67,6 +74,7 @@ impl Transaction {
         mut payload: &[u8],
         encryption: &Encryption,
         db_path: &str,
+        signed_data: Box<dyn SignedByCompanion>,
     ) -> Result<Self, Error> {
         let signer = match payload.get(0..encryption.key_length()) {
             Some(public_key_slice) => {
@@ -94,21 +102,27 @@ impl Transaction {
             let metadata_value = MetadataValue::read_from_db(db_path, genesis_hash)?;
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
             Ok(Self {
-                genesis_hash,
-                meta_v14: metadata_value.metadata(),
-                meta_signature: metadata_value.signature(),
-                signable_transaction,
-                signer,
+                core: TransactionCore{
+                    genesis_hash,
+                    meta_v14: metadata_value.metadata(),
+                    meta_signature: metadata_value.signature(),
+                    signable_transaction,
+                    signer,
+                },
+                signed_data,
             })
         } else {
             Err(Error::TooShort)
         }
     }
-    pub fn transmit(&self) -> Result<Action, Error> {
-        let data = self.encode();
-        // data must be signed here
+    pub fn data(&self) -> Vec<u8> {
+        self.core.encode()
+    }
+    pub fn transmit(self) -> Result<Action, Error> {
+        let bytes = self.data();
+        let signed_data = SignedData::new(self.signed_data);
         Ok(Action::TransmitSignable {
-            packets: pack_nfc(&data)?,
+            packets: pack_nfc(&signed_data.sign(bytes))?,
         })
     }
 }
@@ -146,6 +160,9 @@ impl Bytes {
             None => Err(Error::TooShort),
         }
     }
+    pub fn data(&self) -> Vec<u8> {
+        self.encode()
+    }
     pub fn transmit(&self) -> Result<Action, Error> {
         let data = self.encode();
         // data must be signed here
@@ -164,7 +181,7 @@ pub enum Action {
 }
 
 impl Action {
-    pub fn new(mut payload: &[u8], db_path: &str) -> Result<Self, Error> {
+    pub fn new(mut payload: &[u8], db_path: &str, signed_data: Box<dyn SignedByCompanion>) -> Result<Self, Error> {
         match payload.get(..3) {
             Some(prelude) => {
                 payload = &payload[3..];
@@ -175,7 +192,7 @@ impl Action {
                 match prelude[2] {
                     a if ID_SIGNABLE.contains(&a) => {
                         let transaction =
-                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
+                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path, signed_data)?;
                         transaction.transmit()
                     }
                     ID_BYTES => {

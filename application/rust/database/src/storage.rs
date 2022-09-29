@@ -337,6 +337,9 @@ impl SpecsValue {
             .map_err(Error::DbInternal)?;
         Ok(())
     }
+    pub fn data(&self) -> Vec<u8> {
+        self.0.encode()
+    }
     pub fn transmit(&self) -> Result<Action, Error> {
         let data = self.0.encode();
         // data must be signed here

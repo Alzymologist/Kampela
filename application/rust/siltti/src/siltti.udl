@@ -43,7 +43,7 @@ enum ErrorQr {
 
 interface Action {
     [Throws=Error]
-    constructor([ByRef] sequence<u8> payload, [ByRef] string db_path);
+    constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignedByCompanion signed_data);
 };
 
 [Error]
@@ -69,4 +69,13 @@ enum Error {
     "TooShort",
     "UnknownPayloadType",
     "UnknownSigningAlgorithm",
+};
+
+callback interface SignedByCompanion {
+    sequence<u8> sign([ByRef] sequence<u8> data);
+};
+
+interface SignedData {
+    constructor(SignedByCompanion signed_data);
+    sequence<u8> sign(sequence<u8> data);
 };
