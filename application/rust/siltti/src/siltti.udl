@@ -41,8 +41,41 @@ enum ErrorQr {
     "PoisonedLock",
 };
 
-[Enum]
 interface Action {
-    Success();
-    Transmit(sequence<sequence<u8>> packets);
+    [Throws=Error]
+    constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignedByCompanion signed_data);
+};
+
+[Error]
+enum Error {
+    "DbInternal",
+    "DbSpecsEncryptionMismatch",
+    "DbSpecsHashMismatch",
+    "DecodeDbMetadataKey",
+    "DecodeDbMetadataValue",
+    "DecodeDbSpecsKey",
+    "DecodeDbSpecsValue",
+    "MetadataQrDecode",
+    "MetadataQrUnexpectedStructure",
+    "NoMetadata",
+    "NoMetaPrefixQr",
+    "NoSpecs",
+    "NotMetadataQr",
+    "NotSubstrate",
+    "NotTransactionQr",
+    "OnlyV14SupportedQr",
+    "SpecsQrDecode",
+    "TooLargeInputForNFC",
+    "TooShort",
+    "UnknownPayloadType",
+    "UnknownSigningAlgorithm",
+};
+
+callback interface SignedByCompanion {
+    sequence<u8> sign([ByRef] sequence<u8> data);
+};
+
+interface SignedData {
+    constructor(SignedByCompanion signed_data);
+    sequence<u8> sign(sequence<u8> data);
 };
