@@ -8,7 +8,7 @@ use std::convert::TryInto;
 
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
-use crate::sign_with_companion::{SignatureMaker, SignByCompanion};
+use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
 use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;

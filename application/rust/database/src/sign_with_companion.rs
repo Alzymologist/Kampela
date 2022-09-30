@@ -20,9 +20,10 @@ impl SignatureMaker {
     }
     pub fn signed_data(&self, encoded_data: Vec<u8>) -> Vec<u8> {
         let companion_signature = self.signature_maker.make_signature(encoded_data.to_owned());
-        TransferData{
+        TransferData {
             encoded_data,
             companion_signature,
-        }.encode()
+        }
+        .encode()
     }
 }
