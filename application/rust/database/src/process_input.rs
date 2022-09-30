@@ -8,7 +8,7 @@ use std::convert::TryInto;
 
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
-use crate::sign_with_companion::{SignedByCompanion, SignedData};
+use crate::sign_with_companion::{SignatureMaker, SignByCompanion};
 use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;
@@ -151,7 +151,7 @@ pub enum Action {
 #[derive(Debug)]
 pub struct Transmittable {
     content: TransmittableContent,
-    signed_data: Box<dyn SignedByCompanion>,
+    signature_maker: Box<dyn SignByCompanion>,
 }
 
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
@@ -163,9 +163,9 @@ pub enum TransmittableContent {
 
 impl Transmittable {
     pub fn into_packets(self) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
-        let bytes = self.content.encode();
-        let signed_data = SignedData::new(self.signed_data);
-        pack_nfc(&signed_data.sign(bytes))
+        let encoded_data = self.content.encode();
+        let signature_maker = SignatureMaker::new(self.signature_maker);
+        pack_nfc(&signature_maker.signed_data(encoded_data))
     }
 }
 
@@ -173,7 +173,7 @@ impl Action {
     pub fn new(
         mut payload: &[u8],
         db_path: &str,
-        signed_data: Box<dyn SignedByCompanion>,
+        signature_maker: Box<dyn SignByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
         match payload.get(..3) {
             Some(prelude) => {
@@ -188,7 +188,7 @@ impl Action {
                             Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
                         let transmittable = Transmittable {
                             content: TransmittableContent::SignableTransaction(transaction),
-                            signed_data,
+                            signature_maker,
                         };
                         Ok(Self::Transmit(transmittable.into_packets()?))
                     }
@@ -196,7 +196,7 @@ impl Action {
                         let bytes = Bytes::from_payload_prelude_cut(payload, &encryption)?;
                         let transmittable = Transmittable {
                             content: TransmittableContent::Bytes(bytes),
-                            signed_data,
+                            signature_maker,
                         };
                         Ok(Self::Transmit(transmittable.into_packets()?))
                     }
@@ -212,7 +212,7 @@ impl Action {
                         specs_value.write_in_db(db_path)?;
                         let transmittable = Transmittable {
                             content: TransmittableContent::Specs(specs_value),
-                            signed_data,
+                            signature_maker,
                         };
                         Ok(Self::Transmit(transmittable.into_packets()?))
                     }

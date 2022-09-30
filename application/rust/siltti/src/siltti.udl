@@ -43,7 +43,7 @@ enum ErrorQr {
 
 interface Action {
     [Throws=ErrorCompanion]
-    constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignedByCompanion signed_data);
+    constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignByCompanion signature_maker);
     
     sequence<sequence<u8>>? as_transmittable();
 };
@@ -73,11 +73,11 @@ enum ErrorCompanion {
     "UnknownSigningAlgorithm",
 };
 
-callback interface SignedByCompanion {
-    sequence<u8> sign([ByRef] sequence<u8> data);
+callback interface SignByCompanion {
+    sequence<u8> make_signature([ByRef] sequence<u8> data);
 };
 
-interface SignedData {
-    constructor(SignedByCompanion signed_data);
-    sequence<u8> sign(sequence<u8> data);
+interface SignatureMaker {
+    constructor(SignByCompanion signature_maker);
+    sequence<u8> signed_data(sequence<u8> encoded_data);
 };
