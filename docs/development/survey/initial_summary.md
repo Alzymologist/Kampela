@@ -34,7 +34,6 @@ Other hardware storage tools mentioned were:
 - Ledger/Ledger Nano
 - Trezor
 - AirGap Wallet
-- Metamask (clearly erroneous entry, yet clearly from a proficient user within Substrate ecosystem, not a developer though)
 
 ## Derivations usage
 
