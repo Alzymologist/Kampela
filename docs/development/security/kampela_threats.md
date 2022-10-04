@@ -144,7 +144,7 @@ td {
     </td>
   </tr>
   <tr>
-    <td>4-I6 Install damaged firmware on Kampela suring the update.
+    <td>4-I6 Install damaged firmware on Kampela during the update.
       <br> Counter:
       <br>(1) block updates except in Kampela "hacker edition" (that is not expected to be used for real secrets)
     </td>
