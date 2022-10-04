@@ -64,7 +64,7 @@ One of the key demands for key managers noted from the feedback is a deep integr
 
 1. We need to keep collecting information. Fortunately, the project is organized in a way that we could easily keep collecting data and reevaluating analysis till the end, relying on the latest information to plan the next stage.
 
-2. H1 seems to be confirmed. There is still hope that users would become more open and willing to cooperate as project moves through milestones 3 and 4 delivering more tangible and visualizeable results and we will suddenly have more high quality information.
+2. H1 seems to be confirmed. There is still hope that users would become more open and willing to cooperate as project moves through milestones 3 and 4 delivering more tangible and visualizable results and we will suddenly have more high quality information.
 
 3. 4 competing well-known systems were identified. We should learn from those systems, try to adapt their strong sides and fix their shortcomings.
 
