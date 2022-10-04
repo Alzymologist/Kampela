@@ -66,7 +66,7 @@ One of the key demands for key managers noted from the feedback is a deep integr
 
 2. H1 seems to be confirmed. There is still hope that users would become more open and willing to cooperate as project moves through milestones 3 and 4 delivering more tangible and visualizable results and we will suddenly have more high quality information.
 
-3. 4 competing well-known systems were identified. We should learn from those systems, try to adapt their strong sides and fix their shortcomings.
+3. 4 competing well-known key management systems were identified. We should learn from those systems, try to adapt their strong sides and fix their shortcomings.
 
 4. We should limit the need to update devices. Ideally they should be usable at all times and in case of global breach just be recalled or replaced at users' expence.
 
