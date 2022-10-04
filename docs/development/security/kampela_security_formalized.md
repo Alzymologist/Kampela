@@ -375,6 +375,17 @@ Effort: High
 Incentive: Medium
 
 
+4-I6
+
+Motivation: Compromise device firmware during an update, expose data and assets.
+
+Attacker action: Publish/propose Kampela update that would install damaged/incorrect firmware into Kampela. User may sign transactions they did not agree to, or create addresses they did not wish to. Attacks may occur only if certain conditions are met, and thus be difficult to detect.
+
+Effort: High
+
+Incentive: High
+
+
 ## Availability
 
 4-A1

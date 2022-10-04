@@ -29,8 +29,8 @@ td {
     <th>Effort: High</th>
   </tr>
   <tr id="first">
-    <th  rowspan="19">Incentive: High</th>
-    <td  rowspan="19"></td>
+    <th  rowspan="20">Incentive: High</th>
+    <td  rowspan="20"></td>
     <td>3-I1 Observe pin entering, use pin later.
       <br>Counter:
       <br>(1) user instructions
@@ -95,7 +95,7 @@ td {
     </td>
   </tr>
   <tr>
-    <td  rowspan="14"></td>
+    <td  rowspan="15"></td>
     <td>2-I5 Coerce user to "fix" the secret, manipulate secret on entering, catch funds on account unrelated to user.
       <br>Counter: same as 2-I4
       <br>Here we can only make Kampela somewhat uncomfortable to use when the secret is not frozen.
@@ -141,6 +141,12 @@ td {
     <td>4-I4 Make user sign transaction blindly (social).
       <br> Counter:
       <br>(1) forbid blind signing
+    </td>
+  </tr>
+  <tr>
+    <td>4-I6 Install damaged firmware on Kampela suring the update.
+      <br> Counter:
+      <br>(1) block updates except in Kampela "hacker edition" (that is not expected to be used for real secrets)
     </td>
   </tr>
   <tr>
