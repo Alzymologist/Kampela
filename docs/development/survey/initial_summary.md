@@ -58,7 +58,7 @@ Users care about whole system being opensource.
 
 Users mentioned that they value mechanical robustness and quality of build.
 
-One of key demands for key managers noted from the feedback is deep integration into existing wallets. Apparently many features of the networks are slowly becoming available in wallets as development proceeds, placing any additional barriers in their wake like keeping a separate client app up to date would only reduce usability of Kampela to minimal and introduce whole lot of new threats caused by extra code maintenance.
+One of the key demands for key managers noted from the feedback is a deep integration into existing wallets, as opposed to making a new app. Wallets development naturally lags behind the chains development, and adding more complexity on top of that would significantly decrease the usability of Kampela.
 
 # Conclusions
 
