@@ -181,6 +181,35 @@ Pros:
 Cons:
 - accidentally or maliciously remove good derivation and there was no backup
 
+
+## Decision 9. Software updates possibilities
+Should Kampela be designed with software updates in mind? Even with prior testing, there is a chance that significant vulnerabilities or bugs will be found following the Kampela release.
+
+Pros:
+- it is possible to fix vulnerabilities and bugs after the release.
+
+Cons:
+- software updates introduce a new attack vector.
+- we need a separate external program to handle the software updates.
+
+Suggestion: forbid firmware updates, except in "hacker edition" (the one for user to play with and modify).
+
+
+## Decision 10. Port for charging, debugging, and keyboard connection 
+Kampela must be supplied by energy in one way or another. NFC charging is an option, but the device used for routine NFC communications (e.g. mobile phone) in general will not be able to charge Kampela. It will also be impractical to buy an NFC charging device just to charge Kampela.
+
+Pros:
+- easy to charge
+- easy to get data from and into the device, especially useful while in development.
+
+Cons:
+- introduces a new attack vector. The user must make sure to not use a malicious cable.
+- more sophisticated hardware and software
+
+Suggestion: absolutely no data ports, this negates the whole point of the air-gapped device. Charging must be sufficient through NFC, and Kampela should not be alive/active more than a few seconds after NFC data transfer.
+
+Keyboard for entering all secrets must be Kampela's own one, secrets must not be transferred in any way. Non-secret information could be entered on the phone and transferred to Kampela through NFC.
+
 # Proposed design draft.
 
 Kampela stores secret protected by pin.
