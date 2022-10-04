@@ -68,7 +68,7 @@ One of the key demands for key managers noted from the feedback is a deep integr
 
 3. 4 competing well-known key management systems were identified. We should learn from those systems, try to adapt their strong sides and fix their shortcomings.
 
-4. We should limit the need to update devices. Ideally they should be usable at all times and in case of global breach just be recalled or replaced at users' expence.
+4. We should limit the need to update firmware or perform any complicated metadata updates. Ideally Kampela should be usable at all times and in case of global breach just be recalled or replaced by users.
 
 5. We should focus on standard communication protocol and integration into existing wallets (at least Nova who actively collaborates and helped us gather data for this report). We could also synergize this project into our proposal in making for a functionality-centered wallet project Kiondo.
 
