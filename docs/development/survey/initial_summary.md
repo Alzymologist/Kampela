@@ -42,7 +42,7 @@ Out of all respondents, 8/24 claimed not to use derivations, 4/24 did not know w
 
 Out of users within Substrate ecosystem, 3/15 responded that they do not use derivations, and 3/15 refused to tell. One user in that group did not know what derivations are.
 
-No significant corellation was observed between user role in ecosystem and use of derivations. This is certainly due to lack of data, but it is also quite clear that there are 1-address developer users and multiadress stakeholders.
+No significant correlation was observed between user role in ecosystem and use of derivations. This is certainly due to lack of data, but it is also quite clear that there are 1-address developer users and multiadress stakeholders.
 
 ## Suggestions
 
