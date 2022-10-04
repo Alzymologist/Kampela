@@ -72,7 +72,7 @@ One of the key demands for key managers noted from the feedback is a deep integr
 
 5. We should focus on standard communication protocol and integration into existing wallets (at least Nova who actively collaborates and helped us gather data for this report). We could also synergize this project into our proposal in making for a functionality-centered wallet project Kiondo.
 
-6. We should remember to include banana split protocol on-board
+6. We should remember to include banana split recovery protocol on-board.
 
 7. Users do not seem to differentiate by roles in ecosystem, but rather by their technical skill and threat models. We should reconsider user types classification. Fortunately, we have a list of user desires, and we can collect more data on this later, since we have a couple of milestones ahead before complete prototype design.
 
