@@ -29,9 +29,9 @@ Motivation: Stalk or expose the user.
 
 Attacker action: Get all public keys, including the ones the user hides from wide public, stalk user through polkascan.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Medium.
+Incentive: Medium
 
 
 ## Integrity
@@ -43,36 +43,36 @@ Motivation: Get access to user identities and assets.
 
 Attacker action: Read secret phrase. Attacker must break through authentification.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 1-I2
 
 Attacker action: Carefully disassemble the device, read secret with advanced instrumentation.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 1-I3
 
 Attacker action: Proxy account control. Attacker must break through authentification.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 1-I4
 
 Attacker action: Attacker takes the device after it is unlocked by user.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 ## Availability
@@ -100,9 +100,9 @@ Motivation: Get the secret phrase.
 
 Attacker action: Break pincode by observing physical state of the Kampela (scratched buttons, etc).
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 2-I2
@@ -111,9 +111,9 @@ Motivation: Swap chain specs so that later transactions are parsed incorrectly a
 
 Attacker action: Send chain specs NFC payload, accept it.
 
-Effort: High.
+Effort: High
 
-Incentive: Medium.
+Incentive: Medium
 
 
 2-I3
@@ -122,9 +122,9 @@ Motivation: Swap chain verifier so that later compromised metadata is fed to Kam
 
 Attacker action: Send chain specs NFC payload with new verifier, accept it.
 
-Effort: High.
+Effort: High
 
-Incentive: Medium.
+Incentive: Medium
 
 
 2-I4
@@ -133,9 +133,9 @@ Motivation: Seed phrase swap.
 
 Attacker action: Change seed phrase, user generates wrong public key in companion and uses it to accept assets. Attacker must break through authentification.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 2-I5
@@ -144,9 +144,9 @@ Motivation: Seed phrase swap.
 
 Attacker action: Coerce user to remove secret. Enter wrong secret (by taking Kampela shortly). User then generates wrong public key in companion and uses it to accept assets.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 2-I6
@@ -155,9 +155,9 @@ Motivation: Maliciously re-programm Kampela.
 
 Attacker action: Kampela is shortly taken from user, re-programmed (for example, to compromize the secret through defective randomness), returned to user.
 
-Effort: High.
+Effort: High
 
-Incentive: High.
+Incentive: High
 
 
 ## Availability
@@ -168,9 +168,9 @@ Motivation: Destroy or block device.
 
 Attacker action: Physically break device or enter wrong pin multiple times.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Low.
+Incentive: Low
 
 
 2-A2
@@ -179,9 +179,9 @@ Motivation: Temporarily stagger user activity.
 
 Attacker action: Delete or damage seed.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Low.
+Incentive: Low
 
 
 2-A3
@@ -190,9 +190,9 @@ Motivation: Temporarily stagger user activity.
 
 Attacker action: Remove one or more user addresses manually.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Low.
+Incentive: Low
 
 
 2-A4
@@ -201,9 +201,9 @@ Motivation: Temporarily stagger user activity.
 
 Attacker action: Remove one or more chain specs manually.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Low.
+Incentive: Low
 
 
 2-A5
@@ -212,9 +212,9 @@ Motivation: Block user assets.
 
 Attacker action: Copy derivation path, remove address manually, if user does not have backup, assets on address are blocked.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Medium.
+Incentive: Medium
 
 
 # 3 Kampela in close proximity (watched over shoulder)
@@ -230,7 +230,7 @@ Motivation: Peek at user's transaction.
 
 Attacker action: Look over the shoulder or tap NFC field, it would probably be visible on other devices as well.
 
-Effort: Medium
+Effort: Low
 
 Incentive: Low
 
@@ -302,9 +302,9 @@ Motivation: Break device from a distance
 
 Attacker action: EMP.
 
-Effort: Medium.
+Effort: Medium
 
-Incentive: Low.
+Incentive: Low
 
 Note. Breaking may be unintentional, for example, burning circuits with too high signal (supermarket anti-theft etc).
 

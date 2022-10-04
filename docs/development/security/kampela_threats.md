@@ -21,8 +21,6 @@ td {
 
 <h2>Effort vs incentive, summarized</h2>
 
-<p>Soft and comfortable straw people right here, but someone has to start.</p>
-
 <table>
   <tr>
     <th></th>
@@ -31,8 +29,8 @@ td {
     <th>Effort: High</th>
   </tr>
   <tr id="first">
-    <th  rowspan="16">Incentive: High</th>
-    <td  rowspan="16"></td>
+    <th  rowspan="19">Incentive: High</th>
+    <td  rowspan="19"></td>
     <td>3-I1 Observe pin entering, use pin later.
       <br>Counter:
       <br>(1) user instructions
@@ -49,11 +47,9 @@ td {
     </td>
   </tr>
   <tr>
-    <td>4-I6 Manipulate companion into making derivation with path unknown to user, ransom.
+    <td>5-I3 User creates address in planted Kampela with unknown secret, attacker gets funds.
       <br>Counter:
-      <br>(1) make Kampela store all created derivations
-      <br>(2) demand pin (and second factor?) when removing derivation from Kampela
-      <br>(3) encourage user to backup derivations (how?)
+      <br>(1) personalized Kampela
     </td>
     <td>1-I2 Disassemble device, read secret instrumentally.
       <br>Counter:
@@ -62,20 +58,19 @@ td {
     </td>
   </tr>
   <tr>
-    <td>6-I1 Manipulate companion into making derivation with unreadable symbols in path and/or unknown to user, ransom.
+    <td>5-A1 User creates address in planted Kampela with unknown secret, attacker demands ransom.
       <br>Counter:
-      <br>(1) make Kampela store all created derivations
-      <br>(2) additionally display derivation path as set of hex characters from Kampela
+      <br>(1) personalized Kampela
     </td>
     <td>1-I3 Proxy address by breaking the pin.
       <br>Counter: same as 1-I1/2-I1
     </td>
   </tr>
   <tr>
-    <td>6-I3 Manipulate companion into swapping the transaction content.
+    <td>6-I1 Manipulate companion into making derivation with unreadable symbols in path and/or unknown to user, ransom.
       <br>Counter:
-      <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
-      <br>(2) forbid blind signing
+      <br>(1) make Kampela store all created derivations
+      <br>(2) additionally display derivation path as set of hex characters from Kampela
     </td>
     <td>1-I4 Take device already unlocked by user.
       <br>Counter:
@@ -88,7 +83,11 @@ td {
     </td>
   </tr>
   <tr>
-    <td  rowspan="12"></td>
+    <td>6-I3 Manipulate companion into swapping the transaction content.
+      <br>Counter:
+      <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
+      <br>(2) forbid blind signing
+    </td>
     <td>2-I4 Swap secret unbeknownst to user, catch funds on account unrelated to user.
       <br>Counter:
       <br>(1) user is encouraged to freeze the secret (reminders, instructions)
@@ -96,6 +95,7 @@ td {
     </td>
   </tr>
   <tr>
+    <td  rowspan="14"></td>
     <td>2-I5 Coerce user to "fix" the secret, manipulate secret on entering, catch funds on account unrelated to user.
       <br>Counter: same as 2-I4
       <br>Here we can only make Kampela somewhat uncomfortable to use when the secret is not frozen.
@@ -144,34 +144,62 @@ td {
     </td>
   </tr>
   <tr>
-    <td>5-I1 Steal secret (device swapped for a replica with emission).
+    <td>5-I1 Plant malicious Kampela replica instead of used Kampela, make user re-enter the secret, steal or expose or misuse it.
+      <br> Counter:
+      <br>(1) user instructions - secret re-entry must be highly suspicious
+      <br>(2) personalize Kampela
+      <br>(3) introduce Kampela to the companion device, so that the companion device also would
+      <br> have to be swapped in this case or will notify user of the Kampela swap
+    </td>
+  </tr>
+  <tr>
+    <td>5-I2 Plant malicious Kampela that demands pin and retranslates it, steal the original Kampela, get both the Kampela and the pin.
+      <br> Counter:
+      <br>(1) personalize Kampela
+      <br>(2) introduce Kampela to the companion device, so that the companion device also would
+      <br> have to be swapped in this case or will notify user of the Kampela swap (flimsy,
+      <br> because responsive part is removeable from Kampela, Kampela itself is silent)
+    </td>
+  </tr>
+  <tr>
+    <td>7-I1 Replica with retranslator to steal the secret.
       <br> Counter (to demonstrate that the chip is genuine):
-      <br>(1) Kampela must be able to sign a verification challenge with its internal secret.
+      <br>(1) checkable genuine chip:
+      <br>Kampela must be able to sign a verification challenge with its internal secret.
       <br>Internal secret is intrinsic to a device and factory known only a public key from it.
       <br>Maybe part of the internal is from chip itself and part is from Kampela assembly,
       <br>so that the entire secret is not known unless the two cooperate to know it.
+      <br>(2) visibly intact casing
+      <br>(3) QA and traceability if manufacturer goes rogue
     </td>
   </tr>
   <tr>
-    <td>5-I2 Steal secret via damaged RNG.
-      <br>Counter: same as 5-I1
+    <td>7-I2 Replica with damaged RNG.
+      <br>Counter:
+      <br>(1) checkable genuine chip, see 7-I1
     </td>
   </tr>
   <tr>
-    <td>5-I3 Steal secret via damaged crypto libraries in Kampela.
+    <td>7-I3 Replica with damaged crypto libraries.
       <br>Counter:
       <br>(1) sign reproducible builds, check signature on-board, etc.
     </td>
   </tr>
   <tr>
-    <td>5-I4 Steal secret by swapping the device twice.
+    <td>7-I4 Replica with malicious firmware.
+      <br>Counter:
+      <br>(1) use stable build, check build signature
+    </td>
+  </tr>
+  <tr>
+    <td>7-I5 Steal secret stored in damaged device.
       <br>Counter:
       <br>(1) verify chip authenticity
     </td>
   </tr>
   <tr id="first">
-    <th  rowspan="4">Incentive: Medium</th>
-    <td  rowspan="4"></td>
+    <th  rowspan="5">Incentive: Medium</th>
+    <td  rowspan="5"></td>
     <td>1-C1 and 2-C1 Stalk user after discovering all public keys.
       <br>Counter:
       <br>(1) pin is needed to unlock the Kampela - not helps if already unlocked device is taken
@@ -205,17 +233,24 @@ td {
     </td>
   </tr>
   <tr>
-    <td>6-I2 Sign with wrong public key (wrong derivation).
+    <td>5-C1 Plant replica Kampela with a tracking device.
       <br>Counter:
-      <br>(1) Kampela displays and user is expected to check the signing address
+      <br>(1) personalized Kampela
     </td>
-    <td>3-I3 Bytes and collision.
+    <td>4-I5 Bytes and collision.
       <br>Counter:
       <br>(1) display message and hexadecimal payload to protect from outrageously
       <br> suspicious messages (possibly with undisplayable symbols highlighted)
       <br>(2) hope that at some point upstream will implement context for signing
       <br>But really this boils down to too much effort for questionable profit.
     </td>
+  </tr>
+  <tr>
+    <td>6-I2 Sign with wrong public key (wrong derivation).
+      <br>Counter:
+      <br>(1) Kampela displays and user is expected to check the signing address
+    </td>
+    <td></td>
   </tr>
   <tr id="first">
     <th  rowspan="5">Incentive: Low</th>
@@ -244,10 +279,9 @@ td {
     <td rowspan="4"></td>
   </tr>
   <tr>
-    <td>4-C1 Discover log or public keys through the app.
+    <td>4-A1 Trick user to break Kampela.
       <br>Counter:
-      <br>(1) app may have an association of some public keys; separate app is suggested for Super Secret Derivation;
-      <br>(2) log for each public key is already on-chain and public
+      <br>(1) Backups. And cheap enough Kampela.
     </td>
     <td>2-A3 Delete address.
       <br>Counter:
@@ -255,9 +289,10 @@ td {
     </td>
   </tr>
   <tr>
-    <td>4-A1 Trick user to break Kampela.
+    <td>6-C1 Discover log or public keys through the app.
       <br>Counter:
-      <br>(1) Backups. And cheap enough Kampela.
+      <br>(1) app may have an association of some public keys; separate app is suggested for Super Secret Derivation;
+      <br>(2) log for each public key is already on-chain and public
     </td>
     <td>2-A4 Delete specs.
       <br>Counter:

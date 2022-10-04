@@ -210,6 +210,12 @@ Suggestion: absolutely no data ports, this negates the whole point of the air-ga
 
 Keyboard for entering all secrets must be Kampela's own one, secrets must not be transferred in any way. Non-secret information could be entered on the phone and transferred to Kampela through NFC.
 
+## Decision 11. How to personalize Kampela?
+
+Stickers, watermarks, user drawings. This should be encouraged to make swap less possible.
+
+Also, Kampela may be transparent (casing made from transparent or semi-transparent plastic) so that user can see that the device is not tampered with.
+
 # Proposed design draft.
 
 Kampela stores secret protected by pin.
