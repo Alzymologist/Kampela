@@ -74,6 +74,6 @@ One of the key demands for key managers noted from the feedback is a deep integr
 
 6. We should remember to include banana split recovery protocol on-board.
 
-7. Users do not seem to differentiate by roles in ecosystem, but rather by their technical skill and threat models. We should reconsider user types classification. Fortunately, we have a list of user desires, and we can collect more data on this later, since we have a couple of milestones ahead before complete prototype design.
+7. Users do not seem to differentiate by roles in ecosystem, but rather by their technical skill and expected attack routes. We should reconsider user types classification. Fortunately, we have a list of user desires, and we can collect more data on this later, since we have a couple of milestones ahead before complete prototype design.
 
 8. Users need to be forced to see the manual. Indeed, with hardware distribution, we could include instruction manual printouts with delivered package and make people want to read it. At the same time, large fraction of tutorials should be devoted to companion apps - wallets, we should come up with strategy on improving their clarity or at least somehow facilitate it.
