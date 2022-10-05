@@ -210,11 +210,31 @@ Suggestion: absolutely no data ports, this negates the whole point of the air-ga
 
 Keyboard for entering all secrets must be Kampela's own one, secrets must not be transferred in any way. Non-secret information could be entered on the phone and transferred to Kampela through NFC.
 
+
 ## Decision 11. How to personalize Kampela?
 
 Stickers, watermarks, user drawings. This should be encouraged to make swap less possible.
 
 Also, Kampela may be transparent (casing made from transparent or semi-transparent plastic) so that user can see that the device is not tampered with.
+
+
+## Decision 12. End of life protocol
+
+Must destroy device memory.
+
+Can be activated only in physical contact. Quickly. But not accidentally.
+
+Not through the companion and definitely not remotely.
+
+Exact details must be decided based on specific components.
+
+
+## Decision 13. Kampela got lost or was for some time unaccounted for
+
+1. If user has lost Kampela, it must be assumed that the secret got exposed in the worst possible way. User must secure secret-associated assets ASAP on their own.
+
+2. If user has lost and then found Kampela, it must be assumed to be tampered with. Kampela with unknown history must be disposed of properly (see the end of life protocol), due to a number of possible attacks involving device swap.
+
 
 # Proposed design draft.
 
