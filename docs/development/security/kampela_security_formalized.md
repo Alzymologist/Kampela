@@ -474,7 +474,7 @@ Incentive: High
 
 # 6 Companion device compromised
 
-Base effort: Medium
+Base effort: Low
 
 An important note here is that a relatively simple way to perform this would be to swap the companion device. Thus, we should rely on companion device's authentication mechanisms and probably Kampela's ability to authenticate companion device and notify the user.
 
@@ -523,6 +523,17 @@ Motivation: Make user sign transaction different from one they were forming.
 Attacker action: change transaction core in transaction to a different one.
 
 Effort: Medium
+
+Incentive: High
+
+
+6-I4
+
+Motivation: Steal user secret when it is loaded from shards (SSS protocol).
+
+Attacker action: compromised phone camera sends all images to attacker. Each shard scan contains also the recovery phrase, thus the attacker would have all the data needed.
+
+Effort: Low
 
 Incentive: High
 

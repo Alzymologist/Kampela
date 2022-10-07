@@ -30,7 +30,11 @@ td {
   </tr>
   <tr id="first">
     <th  rowspan="20">Incentive: High</th>
-    <td  rowspan="20"></td>
+    <td>6-I4 Steal camera data and get all information needed to recover user secret from the
+      <br>shards (SSS) - QRs and secret phrase (usually written on the same paper)
+      <br>Counter:
+      <br>(1) user instructions: do not flash the secret phrase into the camera
+    </td>
     <td>3-I1 Observe pin entering, use pin later.
       <br>Counter:
       <br>(1) user instructions
@@ -47,6 +51,7 @@ td {
     </td>
   </tr>
   <tr>
+    <td  rowspan="19"></td>
     <td>5-I3 User creates address in planted Kampela with unknown secret, attacker gets funds.
       <br>Counter:
       <br>(1) personalized Kampela
@@ -118,7 +123,7 @@ td {
   </tr>
   <tr>
     <td>3-I4 Listen to device.
-      <br>Research needed here. Noise from Kampela is expected to be minimal, but that must be checked.
+      <br>Research needed here. Noise from Kampela's inner circuit is expected to be minimal, but that must be checked.
     </td>
   </tr>
   <tr>
@@ -208,7 +213,7 @@ td {
     <td  rowspan="5"></td>
     <td>1-C1 and 2-C1 Stalk user after discovering all public keys.
       <br>Counter:
-      <br>(1) pin is needed to unlock the Kampela - not helps if already unlocked device is taken
+      <br>(1) pin is needed to unlock the Kampela
       <br>(2) user is encouraged to delete Super Secret Derivations and keep them backed up elsewhere
     </td>
     <td>2-I2 Swap specs (steal Kampela).
@@ -266,7 +271,8 @@ td {
     </td>
     <td>2-A1 Destroy or block Kampela.
       <br>Counter:
-      <br>Back up secrets and derivations safely. Make Kampela sufficiently cheap to be replaceable.
+      <br>(1) back up secrets and derivations safely
+      <br>(2) make Kampela sufficiently cheap to be replaceable
     </td>
     <td>6-A1 Engage through companion self-destruction, derivations damage or tool damage.
       <br>Counter:
