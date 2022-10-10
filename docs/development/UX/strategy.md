@@ -2,11 +2,16 @@
 
 ## Comfort of use
 
-The device should be pleasant to use. Users would have to hold it together with phone and flip this stack over, probably several times. We should not add unnecessary difficulties on top of that. Things like metadata management should happen automatically and without users' help.
+The device should be pleasant to use. Users would have to hold the phone and the Kampela as a stack and operate on it simultaneously. We should not add unnecessary difficulties on top of that. Things like metadata management should happen automatically and without users' help.
+
+Stack configuration must be researched and determined. Possible options are:
+- flip: Kampela screen is on the opposite side of the phone screen
+- slide: Kampela screen is visible either under or over the phone screen
+- book: Kampela screen is to the side of the phone screen
 
 ## Friction
 
-Similar to approach taken in Parity Signer development, certain things that are allowed but only should be done with care should result in friction. All transactions must be read and explicitly confirmed before the secret storage access. Removal/change of trust sources should be sufficiently difficult to stop users from doing it mindlessly.
+Similar to approach taken in Parity Signer development, certain allowed actions that require extra attention should result in friction. All transactions must be read and explicitly confirmed before accessing the secret storage. Removal/change of trust sources should be sufficiently difficult to stop users from doing it mindlessly.
 
 ## Forbidden actions
 
@@ -18,7 +23,7 @@ Users should be ready to get a new Kampela if something goes wrong. There should
 
 ## Personalization
 
-Kampelas should be highly personizeable, probably in subtle ways. It should be trivial to observe that the device was swapped.
+Kampelas should be highly personizable, probably in subtle ways. It should be trivial for owner to observe that the device was swapped.
 
 ## Few buttons
 
@@ -26,7 +31,7 @@ Due to power and computational limitation, on-board controls would be inevitably
 
 ## Device versions
 
-Users would not have access to device firmware (except for development model probably). Some options that could only be set once (post-setup seed backup, verifier change, derivations enablement) could be factory-set so that there are just many different models of Kampela available for customers.
+Users will not have access to device firmware (except for development model probably). Users may want to select own settings during the Kampela initialization (allow secret backup, allow verifier to be changed, block more than one derivation per device). These could be also factory-set so that there are just many different models of Kampela available for customers.
 
 ## Signer ecosystem
 
@@ -34,5 +39,7 @@ Kampela should fit nicely within Parity Signer ecosystem and - where possible - 
 
 ## Utilize first use moment
 
-The user would be really vigilant only once - on first use. Thus we should utilize this unique moment, minimize amount of annoying attentios-diluting things and maximize educational impact.
+The user will be really vigilant only once - on first use. Thus we should utilize this unique moment, minimize amount of annoying attention diluting things and maximize educational impact.
+## Manuals
 
+Kampela must be accompanied with sufficient instructions and manuals, possibly even in printed form.
