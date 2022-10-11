@@ -40,6 +40,7 @@ Kampela should fit nicely within Parity Signer ecosystem and - where possible - 
 ## Utilize first use moment
 
 The user will be really vigilant only once - on first use. Thus we should utilize this unique moment, minimize amount of annoying attention diluting things and maximize educational impact.
+
 ## Manuals
 
 Kampela must be accompanied with sufficient instructions and manuals, possibly even in printed form.
