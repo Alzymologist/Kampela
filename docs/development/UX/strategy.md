@@ -9,6 +9,8 @@ Stack configuration must be researched and determined. Possible options are:
 - slide: Kampela screen is visible either under or over the phone screen
 - book: Kampela screen is to the side of the phone screen
 
+UI decisions on device shape and handling should be made based on live user tests with device mock models or prototypes.
+
 ## Friction
 
 Similar to approach taken in Parity Signer development, certain allowed actions that require extra attention should result in friction. All transactions must be read and explicitly confirmed before accessing the secret storage. Removal/change of trust sources should be sufficiently difficult to stop users from doing it mindlessly.
