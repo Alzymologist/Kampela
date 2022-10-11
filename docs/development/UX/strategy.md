@@ -25,7 +25,7 @@ Users should be ready to get a new Kampela if something goes wrong. There should
 
 ## Personalization
 
-Kampelas should be highly personizable, probably in subtle ways. It should be trivial for owner to observe that the device was swapped.
+Kampelas should be highly personalizable, probably in subtle ways. It should be trivial for owner to observe that the device was swapped.
 
 ## Few buttons
 
