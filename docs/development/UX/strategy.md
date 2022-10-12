@@ -1,3 +1,13 @@
+# UX overview
+
+The Kampela system consists of Kampela itself and optionally removable NFC token independent from the device but required for authorization and operation of the tool.
+
+For proper signing operation, a hot wallet is required for input and output. In general, these could be two different wallets, the only requirement is that these are brought into network connection within reasonable time before and after transaction signing. In best case scenario there is just one duplex hot wallet.
+
+An optional encoding device could be used if the input hot wallet does not support NFC interfacing.
+
+Thus, we have 3-6 devices that should stay in close proximity of each other, within close distance from external network for Substrate access and user, that handles these devices.
+
 # UX strategy
 
 ## Comfort of use
