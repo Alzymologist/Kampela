@@ -9,11 +9,13 @@
 - Inner circuit produces minimal noise.
 - Build signature is checked on-board.
 - Self-destruction can be initiated on Kampela only locally, no api for remote one or one through companion device.
+- Self-destruction must be available without the detachable token or any other authorization.
 
 ## Firmware
 - Kampela stores all derivations created on it.
 - Kampela is able to display derivation path as hex combination.
 - All incoming data must be parsed in Kampela and displayed to user.
+- Signatures for all verifiable data must be checked on Kampela.
 - Forbid blind signing.
 - Sufficiently complex pin.
 - Limit the number of pin entering attempts before Kampela is irreparably blocked.
@@ -23,7 +25,6 @@
 - Freeze the secret.
 - Request pin when introducing a new companion device.
 - Message parsing displays both text and hex, with highlighted suspicious symbols in hex.
-
 
 ## Supply chain
 - Trustworthy and mass-produced crypto chip.

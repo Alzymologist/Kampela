@@ -77,6 +77,8 @@ Incentive: High
 
 ## Availability
 
+Note. If user loses whether the detachable token, or Kampela, or both, the availability is inevitably lost.
+
 
 # 2 Kampela in direct access, briefly (stolen and returned, device remains the same)
 

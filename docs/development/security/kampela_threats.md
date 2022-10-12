@@ -136,10 +136,12 @@ td {
   <tr>
     <td>4-I3 Distribute malicious chain data.
       <br>Counter:
-      <br>(1) user is encouraged to trust only reliable verifiers
-      <br>(2) user is encouraged to have as few verifiers total as possible to manage verifier info easily
-      <br>(3) malicious verifier, if public and broadcasting, can be pointed out by community
-      <br>(4) if the chain data used for transaction generation goes on chain, this becomes entirely obsolete
+      <br>(1) metadata is transferred to Kampela together with signature; signature is checked on Kampela and must
+      <br>correspond to the verifier already known to Kampela
+      <br>(2) user is encouraged to trust only reliable verifiers
+      <br>(3) user is encouraged to have as few verifiers total as possible to manage verifier info easily
+      <br>(4) malicious verifier, if public and broadcasting, can be pointed out by community
+      <br>(5) if the chain data used for transaction generation goes on chain, this becomes entirely obsolete
     </td>
   </tr>
   <tr>
