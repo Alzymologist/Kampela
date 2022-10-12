@@ -56,3 +56,8 @@ The user will be really vigilant only once - on first use. Thus we should utiliz
 ## Manuals
 
 Kampela must be accompanied with sufficient instructions and manuals, possibly even in printed form.
+
+## Migration
+
+When migrating between devices, secret information should be entered anew, since there is no interdevice communication channel (and should not be). All non-secret information could be transferred through NFC from hot wallet; we need to establish the derivation export protocol akin to one used in Signer for batch derivation import, but with broader functionality to make migration as simple as possible (even though inevitably difficult due to seed phrase re-entry at least; see Friction section above).
+
