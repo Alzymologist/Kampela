@@ -6,14 +6,14 @@ Integrity breaches are considered entirely unacceptable. Base incentive: High.
 Confidentiality breaches are highly undesirable. Base incentive: Medium.
 Availability breaches could be tolerated. Base incentive: Low.
 
-Note: availability failures might be used as basis for blackmailing attack though, where, even though the secrets are safe (considering that user did indeed follow backup protocol), financial damage could occur. (think big brute holding your device and demanding a dollar to give it back; for a small enough sum, this transaction might happen regardless of whether Kampela is still operational or even actually returned upon payment). This is not very different from similar attacks elsewhere and would not be considered here much, as only user's wits could protect from these.
+Note: availability failures might be used as basis for blackmailing attack though, where, even though the secrets are safe (considering that user did indeed follow backup protocol), financial damage could occur. Think big brute holding your device and demanding a dollar to give it back; for a small enough sum, this transaction might happen regardless of whether Kampela is still operational or even actually returned upon payment. This is not very different from similar attacks elsewhere and would not be considered here much, as only user's wits could protect from these.
 
-There is one special case, where the user is tricked into using account with derivation path known only to attacker; here the legal user and an attacker share components to unlocking the account and would have to negotiate. Here, though, the secret is actully compromized in one signature or public key generation event; thus technically this is an integrity breach (much like signing a single malicious proxy call to delegate full control to attacker). Attacks where public key is substituted outside of Kampela are out of scope here.
+There is one special case, where the user is tricked into using account with derivation path known only to attacker; here the legal user and an attacker share components to unlocking the account and would have to negotiate. Here, though, the secret is actually compromized in one signature or public key generation event; thus technically this is an integrity breach (much like signing a single malicious proxy call to delegate full control to attacker). Attacks where public key is substituted outside of Kampela are out of scope here.
 
 
 # 1 Kampela in direct access, for unlimited period of time (stolen, found, etc)
 
-Note 1. If attacker knows the pin code, the game is over, attacker same as has the secret phrase. Assume here they don't have the pin.
+Note 1. If an attacker knows the pin code, the game is over, it is the same as if the attacker has the secret phrase. We will assume that the attacker does not have the pin.
 
 Note 2. User must follow end-of-life disposal protocol, otherwise normal use will end up here.
 
