@@ -10,9 +10,12 @@ From Parity Signer's development, it is know that:
 
 1. All users are generally extremely secretive and unwilling to share their usage information, even privately and for common good
 2. There are 3 general groups of users:
-2.1. **"Stakeholder":** casual user with 1 key per device that only uses it for authorizations and multisignatures when managing large assets.
-2.2. **"Power user":** has many accounts and complex derivation schemes, uses many features at once. Every setup is unique and significantly different from others.
-2.3. **"Hacker":** wants to use cryptowallet with security features overriden, modify it, does not want safeduards.
+
+   2.1. **"Stakeholder":** casual user with 1 key per device that only uses it for authorizations and multisignatures when managing large assets.
+
+   2.2. **"Power user":** has many accounts and complex derivation schemes, uses many features at once. Every setup is unique and significantly different from others.
+
+   2.3. **"Hacker":** wants to use cryptowallet with security features overriden, modify it, does not want safeduards.
 
 # Data collection
 
