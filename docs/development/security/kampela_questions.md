@@ -181,6 +181,61 @@ Pros:
 Cons:
 - accidentally or maliciously remove good derivation and there was no backup
 
+
+## Decision 9. Software updates possibilities
+Should Kampela be designed with software updates in mind? Even with prior testing, there is a chance that significant vulnerabilities or bugs will be found following the Kampela release.
+
+Pros:
+- it is possible to fix vulnerabilities and bugs after the release.
+
+Cons:
+- software updates introduce a new attack vector.
+- we need a separate external program to handle the software updates.
+
+Suggestion: forbid firmware updates, except in "hacker edition" (the one for user to play with and modify).
+
+
+## Decision 10. Port for charging, debugging, and keyboard connection 
+Kampela must be supplied by energy in one way or another. NFC charging is an option, but the device used for routine NFC communications (e.g. mobile phone) in general will not be able to charge Kampela. It will also be impractical to buy an NFC charging device just to charge Kampela.
+
+Pros:
+- easy to charge
+- easy to get data from and into the device, especially useful while in development.
+
+Cons:
+- introduces a new attack vector. The user must make sure to not use a malicious cable.
+- more sophisticated hardware and software
+
+Suggestion: absolutely no data ports, this negates the whole point of the air-gapped device. Charging must be sufficient through NFC, and Kampela should not be alive/active more than a few seconds after NFC data transfer.
+
+Keyboard for entering all secrets must be Kampela's own one, secrets must not be transferred in any way. Non-secret information could be entered on the phone and transferred to Kampela through NFC.
+
+
+## Decision 11. How to personalize Kampela?
+
+Stickers, watermarks, user drawings. This should be encouraged to make swap less possible.
+
+Also, Kampela may be transparent (casing made from transparent or semi-transparent plastic) so that user can see that the device is not tampered with.
+
+
+## Decision 12. End of life protocol
+
+Must destroy device memory.
+
+Can be activated only in physical contact. Quickly. But not accidentally.
+
+Not through the companion and definitely not remotely.
+
+Exact details must be decided based on specific components.
+
+
+## Decision 13. Kampela got lost or was for some time unaccounted for
+
+1. If user has lost Kampela, it must be assumed that the secret got exposed in the worst possible way. User must secure secret-associated assets ASAP on their own.
+
+2. If user has lost and then found Kampela, it must be assumed to be tampered with. Kampela with unknown history must be disposed of properly (see the end of life protocol), due to a number of possible attacks involving device swap.
+
+
 # Proposed design draft.
 
 Kampela stores secret protected by pin.
@@ -215,3 +270,13 @@ Base58 addresses, hex representation - could be ok to check that account is corr
 User may want to give the account the name on creating. How and where? And what will prompt user to remember the derivations at all? How to distinguish identical derivations from different Kampelas?
 
 Possible: create upon secret freezing the name for device. Keys would look like `DeviceName smth-smth` with `smth-smth` optionally entered by user on Kampela keyboard or rather the public part of derivation itself.
+
+# Do we allow to change the pin?
+
+Really?
+
+# When pin is entered?
+
+(1) when Kampela is just connected to companion phone
+(2) when command is already formed and sent through companion phone
+(3) right before the action (accept specs, create derivation, etc)
