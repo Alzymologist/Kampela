@@ -10,6 +10,7 @@
 - Build signature is checked on-board.
 - Self-destruction can be initiated on Kampela only locally, no api for remote one or one through companion device.
 - Self-destruction must be available without the detachable token or any other authorization.
+- We need to make sure that NFC can provide stable and full energization of the circuit. Undefined behavior due to power surges or lack of energy should be ruled out. We might consider using a small energy storage to provide short-term power supply stability.
 
 ## Firmware
 - Kampela stores all derivations created on it.
