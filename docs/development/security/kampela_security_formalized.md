@@ -1,5 +1,5 @@
 Kampela protects only user secrets, user assets, and user identity.
-This text concerns only the effect of various attacks on user.
+This text deals only with the effects of various attacks on user.
 Attacks are ranged by proximity of the potential attacker to Kampela device.
 
 Integrity breaches are considered entirely unacceptable. Base incentive: High.
@@ -386,6 +386,17 @@ Attacker action: Publish/propose Kampela update that would install damaged/incor
 Effort: High
 
 Incentive: High
+
+
+4-I7
+
+Motivation: Make user sign a wrong message.
+
+Attacker action: Compose "sign_message" content with utf-8 symbols that are not printable and/or are metasymbols (reverse text direction, move caret, etc.), so user reads and signs different messages.
+
+Effort: Medium
+
+Incentive: Low
 
 
 ## Availability

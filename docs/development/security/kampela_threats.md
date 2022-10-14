@@ -1,24 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-table, th {
-  border: 2px solid black;
-  border-collapse: collapse;
-}
-td {
-  border: 1px solid black;
-  border-right: 2px solid black;
-  border-collapse: collapse;
-}
-#first td {
-  border-top: 2px solid black;
-  border-collapse: collapse;
-}
-</style>
-</head>
-<body>
-
 <h2>Effort vs incentive, summarized</h2>
 
 <table>
@@ -266,7 +245,7 @@ td {
     <td></td>
   </tr>
   <tr id="first">
-    <th  rowspan="5">Incentive: Low</th>
+    <th  rowspan="6">Incentive: Low</th>
     <td>3-C1 Observe user transaction.
       <br>Transactions are on chain anyways, only trouble is association of address with user.
       <br>See 1-C1/2-C1.
@@ -290,7 +269,7 @@ td {
       <br>(1) user is encouraged to back up the secret
       <br>(2) freeze secret into memory
     </td>
-    <td rowspan="4"></td>
+    <td rowspan="5"></td>
   </tr>
   <tr>
     <td>4-A1 Trick user to break Kampela.
@@ -314,12 +293,16 @@ td {
     </td>
   </tr>
   <tr>
-    <td></td>
+    <td rowspan="2"></td>
     <td>3-A1 EMP.
       <br>Counter:
       <br>(1) Backups. And cheap enough Kampela.
     </td>
   </tr>
+  <tr>
+    <td>4-I7 Message with not printable symbols and/or metasymbols
+      <br>Counter:
+      <br>(1) display message and hexadecimal payload, and possibly highlight undisplayable symbols
+    </td>
+  </tr>
 </table>
-</body>
-</html>
