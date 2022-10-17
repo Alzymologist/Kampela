@@ -261,7 +261,7 @@ fun processFrame(
                         Toast.LENGTH_SHORT
                     ).show()
                     try {
-                        Action(payload, "null", signedData = Signer()).asTransmittable()?.let { transmittable ->
+                        Action(payload, "null", Signer()).asTransmittable()?.let { transmittable ->
                             startTransmission(transmittable)
                         }
                         // TODO: cleanup
@@ -314,8 +314,8 @@ enum class Mode {
     TX,
 }
 
-class Signer: SignedByCompanion {
-    override fun sign(data: List<UByte>): List<UByte> {
+class Signer : SignByCompanion {
+    override fun makeSignature(data: List<UByte>): List<UByte> {
         return data // TODO
     }
 }
