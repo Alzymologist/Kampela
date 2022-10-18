@@ -8,7 +8,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import fi.zymologia.siltti.ui.theme.SilttiTheme
 
@@ -17,6 +16,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         System.loadLibrary("siltti")
         val activity = this
+
+        val dbName = this.filesDir.toString()
         setContent {
             SilttiTheme {
                 // A surface container using the 'background' color from the theme
@@ -24,18 +25,17 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    ScanScreen()
+                    ScanScreen(dbName)
                 }
             }
         }
     }
 }
 
-
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     SilttiTheme {
-        ScanScreen()
+        ScanScreen("stub")
     }
 }
