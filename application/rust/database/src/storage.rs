@@ -105,9 +105,9 @@ impl MetadataStorage {
             .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let meta_length = length_info.compact as usize;
         match length_info.start_next_unit {
-            Some(start) => match payload.get(..start + meta_length) {
+            Some(start) => match payload.get(start..start + meta_length) {
                 Some(meta_slice) => {
-                    if !meta_slice.starts_with(b"meta") {
+                    if !meta_slice.starts_with(&[109, 101, 116, 97]) {
                         return Err(ErrorCompanion::NoMetaPrefixQr);
                     }
                     let meta_decoded = RuntimeMetadata::decode(&mut &meta_slice[4..])
@@ -291,7 +291,7 @@ impl SpecsValue {
             .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
         match length_info.start_next_unit {
-            Some(start) => match payload.get(..start + encoded_specs_length) {
+            Some(start) => match payload.get(start..start + encoded_specs_length) {
                 Some(encoded_specs_slice) => {
                     let specs = Specs::decode(&mut &encoded_specs_slice[..])
                         .map_err(|_| ErrorCompanion::SpecsQrDecode)?;

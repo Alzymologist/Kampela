@@ -35,7 +35,7 @@ pub enum ErrorCompanion {
     #[error("No metadata entries for genesis hash {} in the database.", hex::encode(.0))]
     NoMetadata(H256),
 
-    #[error("Metadata from scanned QR does not start with expected b`META` prefix.")]
+    #[error("Metadata from scanned QR does not start with expected b`meta` prefix.")]
     NoMetaPrefixQr,
 
     #[error("No specs entries in the database.")]

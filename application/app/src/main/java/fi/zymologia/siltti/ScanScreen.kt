@@ -151,11 +151,11 @@ fun ScanScreen(dbName: String) {
                                                 {
                                                     try {
                                                         frames.value = collection.frames()
-                                                    } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                                                    } catch (e: ErrorQr) {
                                                         Toast.makeText(
                                                             context,
                                                             "QR scanner error: " + e.message,
-                                                            Toast.LENGTH_LONG
+                                                            Toast.LENGTH_SHORT
                                                         ).show()
                                                     }
                                                 },
@@ -211,7 +211,7 @@ fun ScanScreen(dbName: String) {
                             .makeText(
                                 context,
                                 "QR scanner reset error: " + e.message,
-                                Toast.LENGTH_LONG
+                                Toast.LENGTH_SHORT
                             ).show()
                     }
                 }
@@ -259,6 +259,7 @@ fun processFrame(
                             "QR parser error: " + e.message,
                             Toast.LENGTH_SHORT
                         ).show()
+                        clean()
                         null
                     }
                 }?.payload?.let { payload ->
@@ -266,6 +267,7 @@ fun processFrame(
                     // by sending complete payload only once
                     try {
                         clean()
+                        Log.e("payload content", payload.toString())
                         val action = Action(payload, dbName, Signer())
                         action.asTransmittable()?.let { transmittable ->
                             startTransmission(transmittable)
@@ -275,7 +277,7 @@ fun processFrame(
                             .makeText(
                                 context,
                                 "Payload parsing error: " + e.message,
-                                Toast.LENGTH_LONG
+                                Toast.LENGTH_SHORT
                             ).show()
                     }
                 }
