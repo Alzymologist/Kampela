@@ -35,20 +35,14 @@ pub enum ErrorCompanion {
     #[error("No metadata entries for genesis hash {} in the database.", hex::encode(.0))]
     NoMetadata(H256),
 
-    #[error("Metadata from scanned QR does not start with expected b`META` prefix.")]
+    #[error("Metadata from scanned QR does not start with expected b`meta` prefix.")]
     NoMetaPrefixQr,
 
     #[error("No specs entries in the database.")]
     NoSpecs(H256),
 
-    #[error("Received QR payload does not have prelude corresponding to metadata.")]
-    NotMetadataQr,
-
     #[error("Received QR payload is not a Substrate one.")]
     NotSubstrate,
-
-    #[error("Received QR payload is not a signable transaction.")]
-    NotTransactionQr,
 
     #[error("Metadata in received QR payload is not V14 and is not supported.")]
     OnlyV14SupportedQr,

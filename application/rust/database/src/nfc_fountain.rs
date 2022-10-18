@@ -17,8 +17,7 @@ pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
     // Input length. Reasonable input data is expected to fit in `u32`.
     let input_length = match u32::try_from(input.len()) {
         Ok(a) => a,
-        Err(_) => return Err(ErrorCompanion
-        ::TooLargeInputForNFC),
+        Err(_) => return Err(ErrorCompanion::TooLargeInputForNFC),
     };
 
     // Number of repair packets.
