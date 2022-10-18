@@ -107,7 +107,7 @@ impl MetadataStorage {
         match length_info.start_next_unit {
             Some(start) => match payload.get(..start + meta_length) {
                 Some(meta_slice) => {
-                    if !meta_slice.starts_with(b"META") {
+                    if !meta_slice.starts_with(b"meta") {
                         return Err(ErrorCompanion::NoMetaPrefixQr);
                     }
                     let meta_decoded = RuntimeMetadata::decode(&mut &meta_slice[4..])
