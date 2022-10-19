@@ -1,5 +1,7 @@
 ## Ledger insides
 
+### Known images
+
 official website:
 
 <https://support.ledger.com/hc/article_attachments/4406450402961/LedgerNanoX_PCB_rev1.jpg>
@@ -12,7 +14,7 @@ official website:
 
 better quality pic: <https://twitter.com/walletfail/status/1129328479865065473>
 
-## Recognizeable details
+### Recognizeable details
 
 1. <https://www.mouser.fi/ProductDetail/STMicroelectronics/STM32WB55CCU6?qs=vLWxofP3U2waGkUGKmQZWQ%3D%3D>
 
@@ -39,6 +41,8 @@ Also, see this: <https://thenextweb.com/news/ledger-nano-s-hack-cryptocurrency>
 
 ## PUF chips
 
+### Maxim
+
 Maxim provides a number of PUF chips:
 
 - <https://datasheets.maximintegrated.com/en/ds/MAX32520.pdf> microcontroller to combine secret storage and calculations
@@ -47,6 +51,60 @@ Maxim provides a number of PUF chips:
 
 - <https://datasheets.maximintegrated.com/en/ds/DS28E50.pdf> secure verifiable storage, with SHA-3; calculate pairs externally;
 
-Note. How good is PUF actually? (i.e. how much enthropy it really provides? what about these articles claiming PUF can be predicted? what kind of PUF is there after all - check the patent?)
+### Silabs
 
-So far was unable to find any other PUF chips.
+Silabs provides MCUs with PUF:
+
+<https://www.silabs.com/documents/public/data-sheets/efm32pg23-datasheet.pdf>
+
+(B model)
+
+### Microchip
+
+<https://www.microchip.com/en-us/products/security/secure-mpus>
+
+Microchip claims PUF in MPUs. Some undisclosed tamper protection with docs available apparently only through NDA.
+Datasheets discuss only anti-tamper pins.
+
+### NXP
+
+<https://www.nxp.com/docs/en/fact-sheet/P71D321.pdf>
+
+PUF claimed, need to check actual datasheets.
+
+### Notes
+
+1. We do not protect the user secret after it was decoded from side channel attacks, because at this point it could be read on backup.
+We only protect from the unauthorized decoding itself.
+
+2. How good is PUF actually? (i.e. how much enthropy it really provides? what about these articles claiming PUF can be predicted? what kind of PUFs are there after all in each case?)
+
+## Other security ICs
+
+### Infineon
+
+1. <https://www.infineon.com/cms/en/product/security-smart-card-solutions/cipurse-products/>
+Some chips, for example, CIPURSE have NFC interface, not acceptable.
+
+2. Government ID applications chips have EAL6+ certification.
+
+<https://www.mouser.fi/datasheet/2/196/Infineon_OPTIGA_TRUST_M_SLS32AIA_DataSheet_v03_00_-1927815.pdf>
+
+None of the chips boast PUF.
+Datasheets claim "tamper proof NVM". Need additional info on that.
+
+3. Trusted computing modules have EAL4+
+
+<https://www.mouser.fi/datasheet/2/196/Infineon_OPTIGA_TPM_SLB_9673_FW26_DataSheet_v01_01-3006843.pdf>
+
+### STMicroelectronics
+
+<https://www.st.com/en/secure-mcus/secure-hardware-platforms.html>
+
+There is a number of MCUs certified with EAL6+, but no PUF actively presented.
+
+## Other notes
+
+<https://trustedcomputinggroup.org/membership/certification/>
+
+TCG appears to provide good indication of interoperability, but the criteria are quite obscure.
