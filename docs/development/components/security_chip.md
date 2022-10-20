@@ -66,11 +66,27 @@ Silabs provides MCUs with PUF:
 Microchip claims PUF in MPUs. Some undisclosed tamper protection with docs available apparently only through NDA.
 Datasheets discuss only anti-tamper pins.
 
+- <https://ww1.microchip.com/downloads/aemDocuments/documents/CPG/ProductDocuments/ProductBrief/CEC173x_Data_Brief.pdf> PUF specifically claimed here
+
+- FPGA <https://www.microchip.com/en-us/products/fpgas-and-plds/system-on-chip-fpgas/polarfire-soc-fpgas>
+
 ### NXP
 
-<https://www.nxp.com/docs/en/fact-sheet/P71D321.pdf>
+- <https://www.nxp.com/docs/en/fact-sheet/P71D321.pdf> PUF claimed, need to check actual datasheets.
 
-PUF claimed, need to check actual datasheets.
+- <https://www.nxp.com/docs/en/data-sheet/LPC540xx.pdf>
+
+- <https://www.nxp.com/docs/en/data-sheet/LPC54018JxM-LPC54S018JxM.pdf>
+
+- <https://www.nxp.com/docs/en/data-sheet/LPC55S0x_LPC550x_DS.pdf>
+
+- <https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S1x_LPC551x_DS.pdf> (USB)
+
+- <https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S2x_LPC552x_DS.pdf> (USB)
+
+- <https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S6x_DS.pdf> (USB)
+
+Document on usage: <https://www.nxp.com/docs/en/application-note/AN12324.pdf>
 
 ### Notes
 
