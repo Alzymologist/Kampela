@@ -61,14 +61,17 @@ fun KeepScreenOn() {
  * Main scanner screen. One of navigation roots.
  */
 @Composable
-fun ScanScreen(dbName: String) {
+fun ScanScreen(
+    dbName: String,
+    transmitCallback: (List<ByteArray>) -> Unit
+) {
     val collection = remember { Collection() }
     val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val cameraProviderFuture =
         remember { ProcessCameraProvider.getInstance(context) }
-    var appState by remember { mutableStateOf(Mode.Scan) }
+    var appState by remember { mutableStateOf(Mode.TX) }
 
     if (frames.value != null) {
         KeepScreenOn()
@@ -145,6 +148,11 @@ fun ScanScreen(dbName: String) {
                                                 barcodeScanner,
                                                 imageProxy,
                                                 { transmittable: List<List<UByte>> ->
+                                                    transmitCallback(
+                                                        transmittable.map {
+                                                            it.toUByteArray().toByteArray()
+                                                        }
+                                                    )
                                                     appState = Mode.TX
                                                 },
                                                 collection::processFrame,
@@ -187,6 +195,7 @@ fun ScanScreen(dbName: String) {
                     Button(
                         onClick = {
                             collection.clean()
+                            transmitCallback(emptyList())
                             appState = Mode.Scan
                         }
                     ) {
