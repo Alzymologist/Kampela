@@ -226,7 +226,10 @@ fun ScanScreen(
                 }
             )
             Button(
-                onClick = { appState = Mode.Address }
+                onClick = {
+                    transmitCallback(emptyList())
+                    appState = Mode.Address
+                }
             ) {
                 Text("Create address")
             }
