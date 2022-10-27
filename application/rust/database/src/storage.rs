@@ -207,7 +207,6 @@ pub struct Specs {
     pub genesis_hash: H256,
     pub logo: String,
     pub name: String,
-    pub order: u8,
     pub path_id: String,
     pub secondary_color: String,
     pub title: String,

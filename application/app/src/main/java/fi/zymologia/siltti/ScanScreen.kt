@@ -71,7 +71,7 @@ fun ScanScreen(
     val context = LocalContext.current
     val cameraProviderFuture =
         remember { ProcessCameraProvider.getInstance(context) }
-    var appState by remember { mutableStateOf(Mode.TX) }
+    var appState by remember { mutableStateOf(Mode.Scan) }
 
     if (frames.value != null) {
         KeepScreenOn()
