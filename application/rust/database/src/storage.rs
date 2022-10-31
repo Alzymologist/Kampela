@@ -8,15 +8,16 @@ use std::convert::TryInto;
 use substrate_parser::compacts::find_compact;
 
 use crate::error::ErrorCompanion;
-use crate::nfc_fountain::pack_nfc;
-use crate::process_input::{Action, Encryption};
+use crate::process_input::Encryption;
 
 fn open_db(db_path: &str) -> Result<Db, ErrorCompanion> {
     open(db_path).map_err(ErrorCompanion::DbInternal)
 }
 
 fn open_tree(database: &Db, tree_name: &[u8]) -> Result<Tree, ErrorCompanion> {
-    database.open_tree(tree_name).map_err(ErrorCompanion::DbInternal)
+    database
+        .open_tree(tree_name)
+        .map_err(ErrorCompanion::DbInternal)
 }
 
 /// Tree name for metadata storage
@@ -100,13 +101,13 @@ impl MetadataStorage {
             Some(a) => a,
             None => return Err(ErrorCompanion::TooShort),
         };
-        let length_info =
-            find_compact::<u32>(payload).map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
+        let length_info = find_compact::<u32>(payload)
+            .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let meta_length = length_info.compact as usize;
         match length_info.start_next_unit {
-            Some(start) => match payload.get(..start + meta_length) {
+            Some(start) => match payload.get(start..start + meta_length) {
                 Some(meta_slice) => {
-                    if !meta_slice.starts_with(b"META") {
+                    if !meta_slice.starts_with(&[109, 101, 116, 97]) {
                         return Err(ErrorCompanion::NoMetaPrefixQr);
                     }
                     let meta_decoded = RuntimeMetadata::decode(&mut &meta_slice[4..])
@@ -185,7 +186,8 @@ impl SpecsKey {
     }
     pub fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
         Ok(Self(
-            SpecsKeyContent::decode(&mut &database_key[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsKey)?,
+            SpecsKeyContent::decode(&mut &database_key[..])
+                .map_err(|_| ErrorCompanion::DecodeDbSpecsKey)?,
         ))
     }
     pub fn as_db_key(&self) -> Vec<u8> {
@@ -212,10 +214,8 @@ pub struct Specs {
     pub unit: String,
 }
 
-pub struct SpecsValue(SpecsValueContent);
-
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub struct SpecsValueContent {
+pub struct SpecsValue {
     specs: Specs,
     specs_signer: MultiSigner,
     specs_signature: MultiSignature,
@@ -223,10 +223,7 @@ pub struct SpecsValueContent {
 
 impl SpecsValue {
     pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
-        Ok(Self(
-            SpecsValueContent::decode(&mut &database_value[..])
-                .map_err(|_| ErrorCompanion::DecodeDbSpecsValue)?,
-        ))
+        Self::decode(&mut &database_value[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsValue)
     }
     pub fn read_from_db(
         db_path: &str,
@@ -258,16 +255,16 @@ impl SpecsValue {
         }
     }
     pub fn as_db_value(&self) -> Vec<u8> {
-        self.0.encode()
+        self.encode()
     }
     pub fn specs(&self) -> Specs {
-        self.0.specs.to_owned()
+        self.specs.to_owned()
     }
     pub fn signature(&self) -> MultiSignature {
-        self.0.specs_signature.to_owned()
+        self.specs_signature.to_owned()
     }
     pub fn signer(&self) -> MultiSigner {
-        self.0.specs_signer.to_owned()
+        self.specs_signer.to_owned()
     }
     pub fn from_payload_prelude_cut(
         mut payload: &[u8],
@@ -290,11 +287,11 @@ impl SpecsValue {
             }
             None => return Err(ErrorCompanion::TooShort),
         };
-        let length_info =
-            find_compact::<u32>(payload).map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
+        let length_info = find_compact::<u32>(payload)
+            .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
         match length_info.start_next_unit {
-            Some(start) => match payload.get(..start + encoded_specs_length) {
+            Some(start) => match payload.get(start..start + encoded_specs_length) {
                 Some(encoded_specs_slice) => {
                     let specs = Specs::decode(&mut &encoded_specs_slice[..])
                         .map_err(|_| ErrorCompanion::SpecsQrDecode)?;
@@ -312,11 +309,11 @@ impl SpecsValue {
                                     signature_slice.try_into().expect("stable known length"),
                                 ),
                             };
-                            Ok(Self(SpecsValueContent {
+                            Ok(Self {
                                 specs,
                                 specs_signer,
                                 specs_signature,
-                            }))
+                            })
                         }
                         None => Err(ErrorCompanion::TooShort),
                     }
@@ -336,15 +333,5 @@ impl SpecsValue {
             )
             .map_err(ErrorCompanion::DbInternal)?;
         Ok(())
-    }
-    pub fn data(&self) -> Vec<u8> {
-        self.0.encode()
-    }
-    pub fn transmit(&self) -> Result<Action, ErrorCompanion> {
-        let data = self.0.encode();
-        // data must be signed here
-        Ok(Action::TransmitSpecs {
-            packets: pack_nfc(&data)?,
-        })
     }
 }

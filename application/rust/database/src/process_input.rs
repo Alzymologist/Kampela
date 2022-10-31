@@ -8,7 +8,7 @@ use std::convert::TryInto;
 
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
-use crate::sign_with_companion::{SignedByCompanion, SignedData};
+use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
 use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;
@@ -54,14 +54,8 @@ impl Encryption {
     }
 }
 
-#[derive(Debug)]
-pub struct Transaction {
-    core: TransactionCore,
-    signed_data: Box<dyn SignedByCompanion>,
-}
-
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub struct TransactionCore {
+pub struct Transaction {
     genesis_hash: H256,
     meta_v14: RuntimeMetadataV14,
     meta_signature: MultiSignature,
@@ -74,7 +68,6 @@ impl Transaction {
         mut payload: &[u8],
         encryption: &Encryption,
         db_path: &str,
-        signed_data: Box<dyn SignedByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
         let signer = match payload.get(0..encryption.key_length()) {
             Some(public_key_slice) => {
@@ -102,28 +95,15 @@ impl Transaction {
             let metadata_value = MetadataValue::read_from_db(db_path, genesis_hash)?;
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
             Ok(Self {
-                core: TransactionCore{
-                    genesis_hash,
-                    meta_v14: metadata_value.metadata(),
-                    meta_signature: metadata_value.signature(),
-                    signable_transaction,
-                    signer,
-                },
-                signed_data,
+                genesis_hash,
+                meta_v14: metadata_value.metadata(),
+                meta_signature: metadata_value.signature(),
+                signable_transaction,
+                signer,
             })
         } else {
             Err(ErrorCompanion::TooShort)
         }
-    }
-    pub fn data(&self) -> Vec<u8> {
-        self.core.encode()
-    }
-    pub fn transmit(self) -> Result<Action, ErrorCompanion> {
-        let bytes = self.data();
-        let signed_data = SignedData::new(self.signed_data);
-        Ok(Action::TransmitSignable {
-            packets: pack_nfc(&signed_data.sign(bytes))?,
-        })
     }
 }
 
@@ -160,28 +140,41 @@ impl Bytes {
             None => Err(ErrorCompanion::TooShort),
         }
     }
-    pub fn data(&self) -> Vec<u8> {
-        self.encode()
-    }
-    pub fn transmit(&self) -> Result<Action, ErrorCompanion> {
-        let data = self.encode();
-        // data must be signed here
-        Ok(Action::TransmitBytes {
-            packets: pack_nfc(&data)?,
-        })
-    }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum Action {
     Success,
-    TransmitBytes { packets: Vec<Vec<u8>> },
-    TransmitSignable { packets: Vec<Vec<u8>> },
-    TransmitSpecs { packets: Vec<Vec<u8>> },
+    Transmit(Vec<Vec<u8>>),
+}
+
+#[derive(Debug)]
+pub struct Transmittable {
+    content: TransmittableContent,
+    signature_maker: Box<dyn SignByCompanion>,
+}
+
+#[derive(Debug, Decode, Encode, Eq, PartialEq)]
+pub enum TransmittableContent {
+    Bytes(Bytes),
+    SignableTransaction(Transaction),
+    Specs(SpecsValue),
+}
+
+impl Transmittable {
+    pub fn into_packets(self) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
+        let encoded_data = self.content.encode();
+        let signature_maker = SignatureMaker::new(self.signature_maker);
+        pack_nfc(&signature_maker.signed_data(encoded_data))
+    }
 }
 
 impl Action {
-    pub fn new(mut payload: &[u8], db_path: &str, signed_data: Box<dyn SignedByCompanion>) -> Result<Self, ErrorCompanion> {
+    pub fn new(
+        mut payload: &[u8],
+        db_path: &str,
+        signature_maker: Box<dyn SignByCompanion>,
+    ) -> Result<Self, ErrorCompanion> {
         match payload.get(..3) {
             Some(prelude) => {
                 payload = &payload[3..];
@@ -192,12 +185,20 @@ impl Action {
                 match prelude[2] {
                     a if ID_SIGNABLE.contains(&a) => {
                         let transaction =
-                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path, signed_data)?;
-                        transaction.transmit()
+                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
+                        let transmittable = Transmittable {
+                            content: TransmittableContent::SignableTransaction(transaction),
+                            signature_maker,
+                        };
+                        Ok(Self::Transmit(transmittable.into_packets()?))
                     }
                     ID_BYTES => {
                         let bytes = Bytes::from_payload_prelude_cut(payload, &encryption)?;
-                        bytes.transmit()
+                        let transmittable = Transmittable {
+                            content: TransmittableContent::Bytes(bytes),
+                            signature_maker,
+                        };
+                        Ok(Self::Transmit(transmittable.into_packets()?))
                     }
                     ID_METADATA => {
                         let metadata_storage =
@@ -208,9 +209,12 @@ impl Action {
                     ID_SPECS => {
                         let specs_value =
                             SpecsValue::from_payload_prelude_cut(payload, &encryption)?;
-                        let action = specs_value.transmit()?;
                         specs_value.write_in_db(db_path)?;
-                        Ok(action)
+                        let transmittable = Transmittable {
+                            content: TransmittableContent::Specs(specs_value),
+                            signature_maker,
+                        };
+                        Ok(Self::Transmit(transmittable.into_packets()?))
                     }
                     a => Err(ErrorCompanion::UnknownPayloadType(a)),
                 }
@@ -222,9 +226,7 @@ impl Action {
     pub fn as_transmittable(&self) -> Option<Vec<Vec<u8>>> {
         match &self {
             Action::Success => None,
-            Action::TransmitBytes{packets} => Some(packets.to_owned()),
-            Action::TransmitSignable{packets} => Some(packets.to_owned()),
-            Action::TransmitSpecs{packets} => Some(packets.to_owned()),
+            Action::Transmit(packets) => Some(packets.to_owned()),
         }
     }
 }

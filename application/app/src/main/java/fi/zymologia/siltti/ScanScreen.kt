@@ -6,6 +6,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Log
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
@@ -38,6 +40,8 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import fi.zymologia.siltti.uniffi.*
 import fi.zymologia.siltti.uniffi.Collection
+import java.security.KeyPairGenerator
+import java.security.Signature
 
 val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 val REQUEST_CODE_PERMISSIONS = 10
@@ -57,7 +61,7 @@ fun KeepScreenOn() {
  * Main scanner screen. One of navigation roots.
  */
 @Composable
-fun ScanScreen() {
+fun ScanScreen(dbName: String) {
     val collection = remember { Collection() }
     val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -137,23 +141,26 @@ fun ScanScreen() {
                                         setAnalyzer(executor) { imageProxy ->
                                             processFrame(
                                                 context,
+                                                dbName,
                                                 barcodeScanner,
                                                 imageProxy,
                                                 { transmittable: List<List<UByte>> ->
                                                     appState = Mode.TX
                                                 },
-                                                collection::processFrame
-                                            ) {
-                                                try {
-                                                    frames.value = collection.frames()
-                                                } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "QR scanner error: " + e.message,
-                                                        Toast.LENGTH_LONG
-                                                    ).show()
-                                                }
-                                            }
+                                                collection::processFrame,
+                                                {
+                                                    try {
+                                                        frames.value = collection.frames()
+                                                    } catch (e: ErrorQr) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "QR scanner error: " + e.message,
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                },
+                                                collection::clean
+                                            )
                                         }
                                     }
 
@@ -199,12 +206,12 @@ fun ScanScreen() {
                     try {
                         collection.clean()
                         frames.value = collection.frames()
-                    } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                    } catch (e: ErrorQr) {
                         Toast
                             .makeText(
                                 context,
                                 "QR scanner reset error: " + e.message,
-                                Toast.LENGTH_LONG
+                                Toast.LENGTH_SHORT
                             ).show()
                     }
                 }
@@ -226,11 +233,13 @@ fun ScanScreen() {
 @SuppressLint("UnsafeOptInUsageError")
 fun processFrame(
     context: Context,
+    dbName: String,
     barcodeScanner: BarcodeScanner,
     imageProxy: ImageProxy,
     startTransmission: (List<List<UByte>>) -> Unit,
     submitFrame: (List<UByte>) -> Payload,
-    refreshFrames: () -> Unit
+    refreshFrames: () -> Unit,
+    clean: () -> Unit
 ) {
     if (imageProxy.image == null) return
     val inputImage = InputImage.fromMediaImage(
@@ -244,33 +253,31 @@ fun processFrame(
                 it?.rawBytes?.toUByteArray()?.toList()?.let { payload ->
                     try {
                         submitFrame(payload)
-                    } catch (e: fi.zymologia.siltti.uniffi.ErrorQr) {
+                    } catch (e: ErrorQr) {
                         Toast.makeText(
                             context,
                             "QR parser error: " + e.message,
                             Toast.LENGTH_SHORT
                         ).show()
+                        clean()
                         null
                     }
                 }?.payload?.let { payload ->
                     // This is pressed only once, that's checked in rust backend
                     // by sending complete payload only once
-                    Toast.makeText(
-                        context,
-                        "success!",
-                        Toast.LENGTH_SHORT
-                    ).show()
                     try {
-                        Action(payload, "null", signedData = Signer()).asTransmittable()?.let { transmittable ->
+                        clean()
+                        Log.e("payload content", payload.toString())
+                        val action = Action(payload, dbName, Signer())
+                        action.asTransmittable()?.let { transmittable ->
                             startTransmission(transmittable)
                         }
-                        // TODO: cleanup
                     } catch (e: ErrorCompanion) {
                         Toast
                             .makeText(
                                 context,
                                 "Payload parsing error: " + e.message,
-                                Toast.LENGTH_LONG
+                                Toast.LENGTH_SHORT
                             ).show()
                     }
                 }
@@ -314,8 +321,28 @@ enum class Mode {
     TX,
 }
 
-class Signer: SignedByCompanion {
-    override fun sign(data: List<UByte>): List<UByte> {
-        return data // TODO
+class Signer : SignByCompanion {
+    override fun makeSignature(data: List<UByte>): List<UByte> {
+        val kpg = KeyPairGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_EC,
+            "AndroidKeyStore"
+        )
+        val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
+            "AndroidKeyStore",
+            KeyProperties.PURPOSE_SIGN
+        ).run {
+            setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            build()
+        }
+
+        kpg.initialize(parameterSpec)
+
+        val kp = kpg.generateKeyPair()
+        val s = Signature.getInstance("SHA256withECDSA").apply {
+            initSign(kp.private)
+            update(data.toUByteArray().toByteArray())
+        }
+        val signature: ByteArray = s.sign()
+        return signature.toUByteArray().toList() + kp.public.encoded.toUByteArray() // TODO
     }
 }

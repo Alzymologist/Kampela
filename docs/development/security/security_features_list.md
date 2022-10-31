@@ -10,6 +10,7 @@
 - Build signature is checked on-board.
 - Self-destruction can be initiated on Kampela only locally, no api for remote one or one through companion device.
 - Self-destruction must be available without the detachable token or any other authorization.
+- Casing of Kampela does not allow companion device camera to see the sensitive data screen.
 
 ## Firmware
 - Kampela stores all derivations created on it.
