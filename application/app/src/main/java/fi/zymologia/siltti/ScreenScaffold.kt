@@ -30,19 +30,9 @@ fun ScreenScaffold(
     dbName: String,
     transmitCallback: (List<ByteArray>) -> Unit
 ) {
-    val collection = remember { Collection() }
-    val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val context = LocalContext.current
-    val cameraProviderFuture =
-        remember { ProcessCameraProvider.getInstance(context) }
     var appState by remember { mutableStateOf(Mode.Scan) }
 
     val setAppState = { mode: Mode -> appState = mode }
-
-    if (frames.value != null) {
-        KeepScreenOn()
-    }
 
     Column(
         Modifier
@@ -55,21 +45,20 @@ fun ScreenScaffold(
             // TODO: use all the cores needed to make this smooth
             when (appState) {
                 Mode.Address -> {
-                    fi.zymologia.siltti.screens.NewAddress(setAppState)
+                    fi.zymologia.siltti.screens.NewAddress(
+                        setAppState,
+                        transmitCallback
+                    )
                 }
                 Mode.Scan -> {
                     ScanScreen(
-                        cameraProviderFuture,
                         dbName,
                         transmitCallback,
-                        setAppState,
-                        collection,
-                        frames,
-                        lifecycleOwner
+                        setAppState
                     )
                 }
                 Mode.TX -> {
-                    TXScreen(collection, transmitCallback, setAppState)
+                    TXScreen(transmitCallback, setAppState)
                 }
             }
         }
@@ -83,6 +72,7 @@ enum class Mode {
 }
 
 class Signer : SignByCompanion {
+    @OptIn(ExperimentalUnsignedTypes::class)
     override fun makeSignature(data: List<UByte>): List<UByte> {
         val kpg = KeyPairGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_EC,
