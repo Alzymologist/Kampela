@@ -399,6 +399,17 @@ Effort: Medium
 Incentive: Low
 
 
+4-I8
+
+Motivation: discover user pin code (device is later stolen to use the pincode and retrieve the secret).
+
+Attacker action: Kampela, when used, is close to the companion device, maybe attached, definitely in visible proximity. Compromized companion device may record pictures of user entering pin code, analyze sensor data or button sounds to deduce what buttons user is pressing when entering the pin code.
+
+Effort: Medium
+
+Incentive: High
+
+
 ## Availability
 
 4-A1

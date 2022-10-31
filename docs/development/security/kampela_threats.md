@@ -31,9 +31,12 @@
   </tr>
   <tr>
     <td  rowspan="19"></td>
-    <td>5-I3 User creates address in planted Kampela with unknown secret, attacker gets funds.
+    <td>4-I8 Get pincode via images/sensor data/sounds transferred to the attacker by
+      <br>a compromized companion device.
       <br>Counter:
-      <br>(1) personalized Kampela
+      <br>(1) shuffle sensor buttons to make any data except the visual one useless
+      <br>(2) comfortable and recommended configuration keeps the screen with the
+      <br>sensitive data off camera
     </td>
     <td>1-I2 Disassemble device, read secret instrumentally.
       <br>Counter:
@@ -42,7 +45,7 @@
     </td>
   </tr>
   <tr>
-    <td>5-A1 User creates address in planted Kampela with unknown secret, attacker demands ransom.
+    <td>5-I3 User creates address in planted Kampela with unknown secret, attacker gets funds.
       <br>Counter:
       <br>(1) personalized Kampela
     </td>
@@ -51,10 +54,9 @@
     </td>
   </tr>
   <tr>
-    <td>6-I1 Manipulate companion into making derivation with unreadable symbols in path and/or unknown to user, ransom.
+    <td>5-A1 User creates address in planted Kampela with unknown secret, attacker demands ransom.
       <br>Counter:
-      <br>(1) make Kampela store all created derivations
-      <br>(2) additionally display derivation path as set of hex characters from Kampela
+      <br>(1) personalized Kampela
     </td>
     <td>1-I4 Take device already unlocked by user.
       <br>Counter:
@@ -67,10 +69,10 @@
     </td>
   </tr>
   <tr>
-    <td>6-I3 Manipulate companion into swapping the transaction content.
+    <td>6-I1 Manipulate companion into making derivation with unreadable symbols in path and/or unknown to user, ransom.
       <br>Counter:
-      <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
-      <br>(2) forbid blind signing
+      <br>(1) make Kampela store all created derivations
+      <br>(2) additionally display derivation path as set of hex characters from Kampela
     </td>
     <td>2-I4 Swap secret unbeknownst to user, catch funds on account unrelated to user.
       <br>Counter:
@@ -79,13 +81,18 @@
     </td>
   </tr>
   <tr>
-    <td  rowspan="15"></td>
+    <td>6-I3 Manipulate companion into swapping the transaction content.
+      <br>Counter:
+      <br>(1) parse transaction on Kampela and display it to user, so that user signs definitely what was parsed
+      <br>(2) forbid blind signing
+    </td>
     <td>2-I5 Coerce user to "fix" the secret, manipulate secret on entering, catch funds on account unrelated to user.
       <br>Counter: same as 2-I4
       <br>Here we can only make Kampela somewhat uncomfortable to use when the secret is not frozen.
     </td>
   </tr>
   <tr>
+    <td  rowspan="14"></td>
     <td>2-I6 Maliciously re-programm Kampela.
       <br>Counter:
       <br>(1) any changes in code can be loaded only if Kampela is opened up
