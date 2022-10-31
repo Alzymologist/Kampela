@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    ScanScreen(
+                    ScreenScaffold(
                         dbName
                     ) { newData: List<ByteArray> ->
                         transmitData = newData
@@ -121,6 +121,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DefaultPreview() {
     SilttiTheme {
-        ScanScreen("stub", {})
+        ScreenScaffold("stub", {})
     }
 }
