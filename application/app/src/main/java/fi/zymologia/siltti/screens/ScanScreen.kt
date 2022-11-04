@@ -237,7 +237,7 @@ fun processFrame(
                     try {
                         clean()
                         Log.e("payload content", payload.toString())
-                        val action = Action(payload, dbName, Signer())
+                        val action = Action.newPayload(payload, dbName, Signer())
                         action.asTransmittable()?.let { transmittable ->
                             startTransmission(transmittable)
                         }
