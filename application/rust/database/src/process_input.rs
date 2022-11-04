@@ -6,6 +6,7 @@ use sp_core::{ByteArray, H256};
 use sp_runtime::{MultiSignature, MultiSigner};
 use std::convert::TryInto;
 
+use crate::derivation::DerivationInfo;
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
 use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
@@ -157,6 +158,7 @@ pub struct Transmittable {
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub enum TransmittableContent {
     Bytes(Bytes),
+    Derivation(DerivationInfo),
     SignableTransaction(Transaction),
     Specs(SpecsValue),
 }
@@ -170,7 +172,7 @@ impl Transmittable {
 }
 
 impl Action {
-    pub fn new(
+    pub fn new_payload(
         mut payload: &[u8],
         db_path: &str,
         signature_maker: Box<dyn SignByCompanion>,
@@ -221,6 +223,20 @@ impl Action {
             }
             None => Err(ErrorCompanion::TooShort),
         }
+    }
+
+    pub fn new_derivation(
+        chains: Vec<Vec<u8>>,
+        cut_path: String,
+        has_pwd: bool,
+        signature_maker: Box<dyn SignByCompanion>,
+    ) -> Result<Self, ErrorCompanion> {
+        let derivation = DerivationInfo::new(chains, cut_path, has_pwd);
+        let transmittable = Transmittable {
+            content: TransmittableContent::Derivation(derivation),
+            signature_maker,
+        };
+        Ok(Self::Transmit(transmittable.into_packets()?))
     }
 
     pub fn as_transmittable(&self) -> Option<Vec<Vec<u8>>> {
