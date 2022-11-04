@@ -4,7 +4,10 @@ use parity_scale_codec::{Decode, Encode};
 use sled::{open, Db, IVec, Tree};
 use sp_core::H256;
 use sp_runtime::{MultiSignature, MultiSigner};
-use std::convert::TryInto;
+use std::{
+    convert::TryInto,
+    sync::{Arc, RwLock},
+};
 use substrate_parser::compacts::find_compact;
 
 use crate::error::ErrorCompanion;
@@ -193,6 +196,9 @@ impl SpecsKey {
     pub fn as_db_key(&self) -> Vec<u8> {
         self.0.encode()
     }
+    pub fn encryption(&self) -> Encryption {
+        self.0.encryption.to_owned()
+    }
     pub fn hash(&self) -> H256 {
         self.0.genesis_hash.to_owned()
     }
@@ -223,35 +229,6 @@ pub struct SpecsValue {
 impl SpecsValue {
     pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
         Self::decode(&mut &database_value[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsValue)
-    }
-    pub fn read_from_db(
-        db_path: &str,
-        encryption: Encryption,
-        genesis_hash: H256,
-    ) -> Result<Self, ErrorCompanion> {
-        let database = open_db(db_path)?;
-        let specs_tree = open_tree(&database, SPECS)?;
-        let specs_key = SpecsKey::new(encryption, genesis_hash);
-        match specs_tree.get(specs_key.as_db_key()) {
-            Ok(Some(a)) => {
-                let specs_value = Self::from_db_value(&a)?;
-                if specs_value.specs().encryption != encryption {
-                    return Err(ErrorCompanion::DbSpecsEncryptionMismatch {
-                        key: encryption,
-                        value: specs_value.specs().encryption,
-                    });
-                }
-                if specs_value.specs().genesis_hash != genesis_hash {
-                    return Err(ErrorCompanion::DbSpecsHashMismatch {
-                        key: genesis_hash,
-                        value: specs_value.specs().genesis_hash,
-                    });
-                }
-                Ok(specs_value)
-            }
-            Ok(None) => Err(ErrorCompanion::NoSpecs(genesis_hash)),
-            Err(e) => Err(ErrorCompanion::DbInternal(e)),
-        }
     }
     pub fn as_db_value(&self) -> Vec<u8> {
         self.encode()
@@ -332,5 +309,88 @@ impl SpecsValue {
             )
             .map_err(ErrorCompanion::DbInternal)?;
         Ok(())
+    }
+}
+
+pub struct SpecsSelectorElement {
+    element: RwLock<SpecsSelectorElementBody>,
+}
+
+struct SpecsSelectorElementBody {
+    key: SpecsKey,
+    value: SpecsValue,
+    is_selected: bool,
+}
+
+impl SpecsSelectorElement {
+    pub fn from_entry(
+        (specs_key_db, specs_value_db): (IVec, IVec),
+    ) -> Result<Self, ErrorCompanion> {
+        let key = SpecsKey::from_db_key(&specs_key_db)?;
+        let value = SpecsValue::from_db_value(&specs_value_db)?;
+        if value.specs().encryption != key.encryption() {
+            return Err(ErrorCompanion::DbSpecsEncryptionMismatch {
+                key: key.encryption(),
+                value: value.specs().encryption,
+            });
+        }
+        if value.specs().genesis_hash != key.hash() {
+            return Err(ErrorCompanion::DbSpecsHashMismatch {
+                key: key.hash(),
+                value: value.specs().genesis_hash,
+            });
+        }
+        Ok(Self {
+            element: RwLock::new(SpecsSelectorElementBody {
+                key,
+                value,
+                is_selected: false,
+            }),
+        })
+    }
+    pub fn press(self: &Arc<Self>) -> Result<(), ErrorCompanion> {
+        let mut element = self
+            .element
+            .write()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        element.is_selected = !element.is_selected;
+        Ok(())
+    }
+    pub fn title(&self) -> Result<String, ErrorCompanion> {
+        let element = self
+            .element
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(element.value.specs().title)
+    }
+    pub fn is_selected(&self) -> Result<bool, ErrorCompanion> {
+        let element = self
+            .element
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(element.is_selected)
+    }
+    pub fn key(&self) -> Result<String, ErrorCompanion> {
+        let element = self
+            .element
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(hex::encode(element.key.as_db_key()))
+    }
+}
+
+pub struct SpecsSelector {
+    pub selector: Vec<SpecsSelectorElement>,
+}
+
+impl SpecsSelector {
+    pub fn new(db_path: &str) -> Result<Self, ErrorCompanion> {
+        let database = open_db(db_path)?;
+        let specs_tree = open_tree(&database, SPECS)?;
+        let mut selector: Vec<SpecsSelectorElement> = Vec::new();
+        for x in specs_tree.iter().flatten() {
+            selector.push(SpecsSelectorElement::from_entry(x)?)
+        }
+        Ok(Self { selector })
     }
 }

@@ -42,10 +42,32 @@ enum ErrorQr {
 };
 
 interface Action {
-    [Throws=ErrorCompanion]
+    [Name=new_payload, Throws=ErrorCompanion]
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignByCompanion signature_maker);
     
+    [Name=new_derivation, Throws=ErrorCompanion]
+    constructor(sequence<sequence<u8>> chains, string cut_path, boolean has_pwd, SignByCompanion signature_maker);
+    
     sequence<sequence<u8>>? as_transmittable();
+};
+
+interface SpecsSelectorElement {
+    [Throws=ErrorCompanion]
+    void press();
+    
+    [Throws=ErrorCompanion]
+    string title();
+    
+    [Throws=ErrorCompanion]
+    boolean is_selected();
+    
+    [Throws=ErrorCompanion]
+    string key();
+};
+
+interface SpecsSelector {
+    [Throws=ErrorCompanion]
+    constructor([ByRef] string db_path);
 };
 
 [Error]
@@ -61,9 +83,9 @@ enum ErrorCompanion {
     "MetadataQrUnexpectedStructure",
     "NoMetadata",
     "NoMetaPrefixQr",
-    "NoSpecs",
     "NotSubstrate",
     "OnlyV14SupportedQr",
+    "PoisonedLock",
     "SpecsQrDecode",
     "TooLargeInputForNFC",
     "TooShort",
