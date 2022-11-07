@@ -51,23 +51,27 @@ interface Action {
     sequence<sequence<u8>>? as_transmittable();
 };
 
-interface SpecsSelectorElement {
-    [Throws=ErrorCompanion]
-    void press();
-    
-    [Throws=ErrorCompanion]
-    string title();
-    
-    [Throws=ErrorCompanion]
-    boolean is_selected();
-    
-    [Throws=ErrorCompanion]
-    string key();
-};
-
 interface SpecsSelector {
     [Throws=ErrorCompanion]
     constructor([ByRef] string db_path);
+    
+    [Throws=ErrorCompanion]
+    sequence<string> get_all_keys();
+    
+    [Throws=ErrorCompanion]
+    string? title([ByRef] string key);
+    
+    [Throws=ErrorCompanion]
+    boolean? is_selected([ByRef] string key);
+    
+    [Throws=ErrorCompanion]
+    void toggle([ByRef] string key);
+    
+    [Throws=ErrorCompanion]
+    void select_all();
+    
+    [Throws=ErrorCompanion]
+    void deselect_all();
 };
 
 [Error]
