@@ -37,7 +37,6 @@ fun ScreenScaffold(
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
     ) {
         Box(
             Modifier.padding(8.dp)
@@ -47,7 +46,8 @@ fun ScreenScaffold(
                 Mode.Address -> {
                     fi.zymologia.siltti.screens.NewAddress(
                         setAppState,
-                        transmitCallback
+                        transmitCallback,
+                        dbName
                     )
                 }
                 Mode.Scan -> {
