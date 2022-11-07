@@ -172,9 +172,10 @@ impl MetadataStorage {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SpecsKey(SpecsKeyContent);
 
-#[derive(Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode)]
 struct SpecsKeyContent {
     encryption: Encryption,
     genesis_hash: H256,
@@ -219,7 +220,7 @@ pub struct Specs {
     pub unit: String,
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 pub struct SpecsValue {
     specs: Specs,
     specs_signer: MultiSigner,
@@ -312,20 +313,15 @@ impl SpecsValue {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct SpecsSelectorElement {
-    element: RwLock<SpecsSelectorElementBody>,
-}
-
-struct SpecsSelectorElementBody {
     key: SpecsKey,
     value: SpecsValue,
     is_selected: bool,
 }
 
 impl SpecsSelectorElement {
-    pub fn from_entry(
-        (specs_key_db, specs_value_db): (IVec, IVec),
-    ) -> Result<Self, ErrorCompanion> {
+    fn from_entry((specs_key_db, specs_value_db): (IVec, IVec)) -> Result<Self, ErrorCompanion> {
         let key = SpecsKey::from_db_key(&specs_key_db)?;
         let value = SpecsValue::from_db_value(&specs_value_db)?;
         if value.specs().encryption != key.encryption() {
@@ -341,46 +337,34 @@ impl SpecsSelectorElement {
             });
         }
         Ok(Self {
-            element: RwLock::new(SpecsSelectorElementBody {
-                key,
-                value,
-                is_selected: false,
-            }),
+            key,
+            value,
+            is_selected: false,
         })
     }
-    pub fn press(self: &Arc<Self>) -> Result<(), ErrorCompanion> {
-        let mut element = self
-            .element
-            .write()
-            .map_err(|_| ErrorCompanion::PoisonedLock)?;
-        element.is_selected = !element.is_selected;
-        Ok(())
+    fn toggle(&mut self) {
+        self.is_selected = !self.is_selected;
     }
-    pub fn title(&self) -> Result<String, ErrorCompanion> {
-        let element = self
-            .element
-            .read()
-            .map_err(|_| ErrorCompanion::PoisonedLock)?;
-        Ok(element.value.specs().title)
+    fn make_selected(&mut self) {
+        self.is_selected = true;
     }
-    pub fn is_selected(&self) -> Result<bool, ErrorCompanion> {
-        let element = self
-            .element
-            .read()
-            .map_err(|_| ErrorCompanion::PoisonedLock)?;
-        Ok(element.is_selected)
+    fn make_deselected(&mut self) {
+        self.is_selected = false;
     }
-    pub fn key(&self) -> Result<String, ErrorCompanion> {
-        let element = self
-            .element
-            .read()
-            .map_err(|_| ErrorCompanion::PoisonedLock)?;
-        Ok(hex::encode(element.key.as_db_key()))
+    fn title(&self) -> String {
+        self.value.specs().title
+    }
+    fn is_selected(&self) -> bool {
+        self.is_selected
+    }
+    fn key(&self) -> String {
+        hex::encode(self.key.as_db_key())
     }
 }
 
+#[derive(Debug)]
 pub struct SpecsSelector {
-    pub selector: Vec<SpecsSelectorElement>,
+    selector: RwLock<Vec<SpecsSelectorElement>>,
 }
 
 impl SpecsSelector {
@@ -391,6 +375,76 @@ impl SpecsSelector {
         for x in specs_tree.iter().flatten() {
             selector.push(SpecsSelectorElement::from_entry(x)?)
         }
-        Ok(Self { selector })
+        Ok(Self {
+            selector: RwLock::new(selector),
+        })
+    }
+    pub fn get_all_keys(&self) -> Result<Vec<String>, ErrorCompanion> {
+        let selector = self
+            .selector
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(selector.iter().map(|a| a.key()).collect())
+    }
+    pub fn title(&self, key: &str) -> Result<Option<String>, ErrorCompanion> {
+        let selector = self
+            .selector
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        let mut title = None;
+        for element in selector.iter() {
+            if element.key() == key {
+                title = Some(element.title());
+                break;
+            }
+        }
+        Ok(title)
+    }
+    pub fn is_selected(&self, key: &str) -> Result<Option<bool>, ErrorCompanion> {
+        let selector = self
+            .selector
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        let mut title = None;
+        for element in selector.iter() {
+            if element.key() == key {
+                title = Some(element.is_selected());
+                break;
+            }
+        }
+        Ok(title)
+    }
+    pub fn toggle(self: &Arc<Self>, key: &str) -> Result<(), ErrorCompanion> {
+        let mut selector = self
+            .selector
+            .write()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        for element in selector.iter_mut() {
+            if element.key() == key {
+                element.toggle();
+                break;
+            }
+        }
+        Ok(())
+    }
+    pub fn select_all(self: &Arc<Self>) -> Result<(), ErrorCompanion> {
+        let mut selector = self
+            .selector
+            .write()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        for element in selector.iter_mut() {
+            element.make_selected()
+        }
+        Ok(())
+    }
+    pub fn deselect_all(self: &Arc<Self>) -> Result<(), ErrorCompanion> {
+        let mut selector = self
+            .selector
+            .write()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        for element in selector.iter_mut() {
+            element.make_deselected()
+        }
+        Ok(())
     }
 }
