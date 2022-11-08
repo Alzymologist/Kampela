@@ -1,12 +1,8 @@
 package fi.zymologia.siltti.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import fi.zymologia.siltti.Mode
+import fi.zymologia.siltti.components.NetworkCard
 import fi.zymologia.siltti.uniffi.SpecsSelector
 
 @Composable
@@ -47,22 +44,7 @@ fun NewAddress(
                 items = selector.value.getAllKeys(),
                 key = { it }
             ) { key ->
-                Surface(
-                    Modifier
-                        .height(20.dp)
-                        .background(color = if (selector.value.isSelected(key) == true) MaterialTheme.colors.primary else MaterialTheme.colors.secondary)
-                        .clickable {
-                            selector.value.toggle(key)
-                        }
-                ) {
-                    Row {
-                        Text(
-                            selector.value.title(key) ?: "unknown",
-                            color = if (selector.value.isSelected(key) == true) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onSecondary
-                        )
-                        Text(selector.value.isSelected(key).toString())
-                    }
-                }
+                NetworkCard(selector, key)
             }
         }
         Button(
