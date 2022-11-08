@@ -12,12 +12,13 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import fi.zymologia.siltti.uniffi.SpecsKey
 import fi.zymologia.siltti.uniffi.SpecsSelector
 
 @Composable
 fun NetworkCard(
     selector: MutableState<SpecsSelector>,
-    key: String
+    key: SpecsKey
 ) {
     var isSelected by remember { mutableStateOf(selector.value.isSelected(key) == true) }
 

@@ -13,7 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import fi.zymologia.siltti.Mode
+import fi.zymologia.siltti.Signer
 import fi.zymologia.siltti.components.NetworkCard
+import fi.zymologia.siltti.uniffi.Action
 import fi.zymologia.siltti.uniffi.SpecsSelector
 
 @Composable
@@ -23,7 +25,8 @@ fun NewAddress(
     dbName: String
 ) {
     var address by remember { mutableStateOf("") }
-    var selector = remember { mutableStateOf(SpecsSelector(dbName)) }
+    var hasPwd by remember { mutableStateOf(false) }
+    val selector = remember { mutableStateOf(SpecsSelector(dbName)) }
 
     Column(
         Modifier
@@ -42,14 +45,22 @@ fun NewAddress(
         LazyColumn {
             this.items(
                 items = selector.value.getAllKeys(),
-                key = { it }
+                key = { it.toString() }
             ) { key ->
                 NetworkCard(selector, key)
             }
         }
         Button(
             onClick = {
-                transmitCallback(listOf()) // TODO
+                val selected = selector.value.collectSelectedKeys()
+                Action.newDerivation(selected, address, hasPwd, Signer()).asTransmittable()?.let { transmittable ->
+                    transmitCallback(
+                        transmittable.map {
+                            it.toUByteArray().toByteArray()
+                        }
+                    )
+                    setAppState(Mode.TX)
+                }
                 setAppState(Mode.TX)
             }
         ) {
