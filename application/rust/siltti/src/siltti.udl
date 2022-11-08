@@ -46,26 +46,41 @@ interface Action {
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignByCompanion signature_maker);
     
     [Name=new_derivation, Throws=ErrorCompanion]
-    constructor(sequence<sequence<u8>> chains, string cut_path, boolean has_pwd, SignByCompanion signature_maker);
+    constructor(sequence<SpecsKey> specs_key_set, string cut_path, boolean has_pwd, SignByCompanion signature_maker);
+    
+    [Name=new_specs_set, Throws=ErrorCompanion]
+    constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);
     
     sequence<sequence<u8>>? as_transmittable();
 };
+
+interface SpecsKey {
+    string show();
+};
+
+interface SpecsValue {};
 
 interface SpecsSelector {
     [Throws=ErrorCompanion]
     constructor([ByRef] string db_path);
     
     [Throws=ErrorCompanion]
-    sequence<string> get_all_keys();
+    sequence<SpecsKey> get_all_keys();
     
     [Throws=ErrorCompanion]
-    string? title([ByRef] string key);
+    sequence<SpecsKey> collect_selected_keys();
     
     [Throws=ErrorCompanion]
-    boolean? is_selected([ByRef] string key);
+    sequence<SpecsValue> collect_selected_values();
     
     [Throws=ErrorCompanion]
-    void toggle([ByRef] string key);
+    string? title([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    boolean? is_selected([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    void toggle([ByRef] SpecsKey key);
     
     [Throws=ErrorCompanion]
     void select_all();

@@ -4,13 +4,13 @@ use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{ByteArray, H256};
 use sp_runtime::{MultiSignature, MultiSigner};
-use std::convert::TryInto;
+use std::{convert::TryInto, sync::Arc};
 
 use crate::derivation::DerivationInfo;
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
 use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
-use crate::storage::{MetadataStorage, MetadataValue, SpecsValue};
+use crate::storage::{MetadataStorage, MetadataValue, SpecsKey, SpecsValue};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;
 
@@ -161,6 +161,7 @@ pub enum TransmittableContent {
     Derivation(DerivationInfo),
     SignableTransaction(Transaction),
     Specs(SpecsValue),
+    SpecsSet(Vec<Arc<SpecsValue>>),
 }
 
 impl Transmittable {
@@ -226,14 +227,25 @@ impl Action {
     }
 
     pub fn new_derivation(
-        chains: Vec<Vec<u8>>,
+        specs_key_set: Vec<Arc<SpecsKey>>,
         cut_path: String,
         has_pwd: bool,
         signature_maker: Box<dyn SignByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
-        let derivation = DerivationInfo::new(chains, cut_path, has_pwd);
+        let derivation = DerivationInfo::new(specs_key_set, cut_path, has_pwd);
         let transmittable = Transmittable {
             content: TransmittableContent::Derivation(derivation),
+            signature_maker,
+        };
+        Ok(Self::Transmit(transmittable.into_packets()?))
+    }
+
+    pub fn new_specs_set(
+        specs_values_set: Vec<Arc<SpecsValue>>,
+        signature_maker: Box<dyn SignByCompanion>,
+    ) -> Result<Self, ErrorCompanion> {
+        let transmittable = Transmittable {
+            content: TransmittableContent::SpecsSet(specs_values_set),
             signature_maker,
         };
         Ok(Self::Transmit(transmittable.into_packets()?))

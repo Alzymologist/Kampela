@@ -172,10 +172,10 @@ impl MetadataStorage {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SpecsKey(SpecsKeyContent);
 
-#[derive(Clone, Debug, Decode, Encode)]
+#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
 struct SpecsKeyContent {
     encryption: Encryption,
     genesis_hash: H256,
@@ -202,6 +202,9 @@ impl SpecsKey {
     }
     pub fn hash(&self) -> H256 {
         self.0.genesis_hash.to_owned()
+    }
+    pub fn show(&self) -> String {
+        hex::encode(self.as_db_key())
     }
 }
 
@@ -357,8 +360,11 @@ impl SpecsSelectorElement {
     fn is_selected(&self) -> bool {
         self.is_selected
     }
-    fn key(&self) -> String {
-        hex::encode(self.key.as_db_key())
+    fn key(&self) -> SpecsKey {
+        self.key.to_owned()
+    }
+    fn value(&self) -> SpecsValue {
+        self.value.to_owned()
     }
 }
 
@@ -379,48 +385,62 @@ impl SpecsSelector {
             selector: RwLock::new(selector),
         })
     }
-    pub fn get_all_keys(&self) -> Result<Vec<String>, ErrorCompanion> {
+    pub fn get_all_keys(&self) -> Result<Vec<Arc<SpecsKey>>, ErrorCompanion> {
         let selector = self
             .selector
             .read()
             .map_err(|_| ErrorCompanion::PoisonedLock)?;
-        Ok(selector.iter().map(|a| a.key()).collect())
+        Ok(selector.iter().map(|a| Arc::new(a.key())).collect())
     }
-    pub fn title(&self, key: &str) -> Result<Option<String>, ErrorCompanion> {
+    pub fn collect_selected_keys(&self) -> Result<Vec<Arc<SpecsKey>>, ErrorCompanion> {
+        let selector = self
+            .selector
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(selector.iter().filter(|a| a.is_selected()).map(|a| Arc::new(a.key())).collect())
+    }
+    pub fn collect_selected_values(&self) -> Result<Vec<Arc<SpecsValue>>, ErrorCompanion> {
+        let selector = self
+            .selector
+            .read()
+            .map_err(|_| ErrorCompanion::PoisonedLock)?;
+        Ok(selector.iter().filter(|a| a.is_selected()).map(|a| Arc::new(a.value())).collect())
+    }
+    pub fn title(&self, key: &SpecsKey) -> Result<Option<String>, ErrorCompanion> {
         let selector = self
             .selector
             .read()
             .map_err(|_| ErrorCompanion::PoisonedLock)?;
         let mut title = None;
         for element in selector.iter() {
-            if element.key() == key {
+            if &element.key() == key {
                 title = Some(element.title());
                 break;
             }
         }
         Ok(title)
     }
-    pub fn is_selected(&self, key: &str) -> Result<Option<bool>, ErrorCompanion> {
+    pub fn is_selected(&self, key: &SpecsKey) -> Result<Option<bool>, ErrorCompanion> {
         let selector = self
             .selector
             .read()
             .map_err(|_| ErrorCompanion::PoisonedLock)?;
         let mut title = None;
         for element in selector.iter() {
-            if element.key() == key {
+            if &element.key() == key {
                 title = Some(element.is_selected());
                 break;
             }
         }
         Ok(title)
     }
-    pub fn toggle(self: &Arc<Self>, key: &str) -> Result<(), ErrorCompanion> {
+    pub fn toggle(self: &Arc<Self>, key: &SpecsKey) -> Result<(), ErrorCompanion> {
         let mut selector = self
             .selector
             .write()
             .map_err(|_| ErrorCompanion::PoisonedLock)?;
         for element in selector.iter_mut() {
-            if element.key() == key {
+            if &element.key() == key {
                 element.toggle();
                 break;
             }
