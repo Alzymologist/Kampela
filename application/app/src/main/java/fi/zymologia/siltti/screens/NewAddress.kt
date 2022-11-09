@@ -2,13 +2,13 @@ package fi.zymologia.siltti.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -29,19 +29,14 @@ fun NewAddress(
     val selector = remember { mutableStateOf(SpecsSelector(dbName)) }
 
     Column(
-        Modifier
-            .padding(bottom = 24.dp)
-            .border(
-                BorderStroke(1.dp, MaterialTheme.colors.primary),
-                RoundedCornerShape(8.dp)
-            )
-            .clip(RoundedCornerShape(8.dp))
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Type derivation")
         TextField(
             value = address,
             onValueChange = { address = it }
         )
+        Text("Select networks")
         LazyColumn {
             this.items(
                 items = selector.value.getAllKeys(),
@@ -50,21 +45,32 @@ fun NewAddress(
                 NetworkCard(selector, key)
             }
         }
-        Button(
-            onClick = {
-                val selected = selector.value.collectSelectedKeys()
-                Action.newDerivation(selected, address, hasPwd, Signer()).asTransmittable()?.let { transmittable ->
-                    transmitCallback(
-                        transmittable.map {
-                            it.toUByteArray().toByteArray()
-                        }
-                    )
-                    setAppState(Mode.TX)
-                }
-                setAppState(Mode.TX)
-            }
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth(1f)
         ) {
-            Text("Send")
+            Button(
+                onClick = {
+                    val selected = selector.value.collectSelectedKeys()
+                    Action.newDerivation(selected, address, hasPwd, Signer()).asTransmittable()?.let { transmittable ->
+                        transmitCallback(
+                            transmittable.map {
+                                it.toUByteArray().toByteArray()
+                            }
+                        )
+                        setAppState(Mode.TX)
+                    }
+                }
+            ) {
+                Text("Send")
+            }
+            Button(
+                onClick = {
+                    setAppState(Mode.Scan)
+                }
+            ) {
+                Text("Back to scan")
+            }
         }
     }
 }
