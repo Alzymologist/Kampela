@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
 import fi.zymologia.siltti.screens.KeepScreenOn
 import fi.zymologia.siltti.screens.ScanScreen
 import fi.zymologia.siltti.screens.TXScreen
@@ -18,6 +19,7 @@ import fi.zymologia.siltti.uniffi.*
 import fi.zymologia.siltti.uniffi.Collection
 import java.security.KeyPairGenerator
 import java.security.Signature
+import androidx.compose.runtime.livedata.observeAsState
 
 val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 val REQUEST_CODE_PERMISSIONS = 10
@@ -28,6 +30,7 @@ val REQUEST_CODE_PERMISSIONS = 10
 @Composable
 fun ScreenScaffold(
     dbName: String,
+    count: State<Int?>,
     transmitCallback: (List<ByteArray>) -> Unit
 ) {
     var appState by remember { mutableStateOf(Mode.Scan) }
@@ -58,7 +61,7 @@ fun ScreenScaffold(
                     )
                 }
                 Mode.TX -> {
-                    TXScreen(transmitCallback, setAppState)
+                    TXScreen(transmitCallback, setAppState, count)
                 }
             }
         }

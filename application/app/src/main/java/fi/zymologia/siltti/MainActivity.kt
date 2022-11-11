@@ -13,18 +13,24 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import fi.zymologia.siltti.ui.theme.SilttiTheme
 
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private var pendingIntent: PendingIntent? = null
     private var transmitData: List<ByteArray> = emptyList()
+    private val packagesSent by viewModels<PackagesSent>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,13 +57,16 @@ class MainActivity : ComponentActivity() {
         val dbName = this.filesDir.toString()
         setContent {
             SilttiTheme {
+                // TODO: this does not work as TX is in main thread
+                val count = packagesSent.count.observeAsState()
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
                     ScreenScaffold(
-                        dbName
+                        dbName,
+                        count
                     ) { newData: List<ByteArray> ->
                         transmitData = newData
                     }
@@ -92,10 +101,11 @@ class MainActivity : ComponentActivity() {
         nfcAdapter!!.disableForegroundDispatch(this)
     }
 
+    // TODO: move to bg thread
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Log.d("Intent captured", intent.toString())
         if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
+            packagesSent.reset()
             val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             Log.d("NFC tag", tag.toString())
             val tech = IsoDep.get(tag)
@@ -104,13 +114,15 @@ class MainActivity : ComponentActivity() {
             try {
                 while (tech.isConnected) {
                     tech.transceive(transmitData.random())
-                    Log.d("NFC TX", "sending...")
+                    packagesSent.inc()
+                    Log.d("sent: ", packagesSent.count.value.toString())
                 }
             } catch (e: java.lang.Exception) {
                 Log.d("NFC link crashed", e.message ?: "unknown")
             }
             Log.d("NFC TX", "done")
             tech.close()
+            packagesSent.disable()
         }
 
         Log.d("NFC", "intent processed")
@@ -120,7 +132,8 @@ class MainActivity : ComponentActivity() {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
+    val count = PackagesSent().count.observeAsState()
     SilttiTheme {
-        ScreenScaffold("stub", {})
+        ScreenScaffold("stub", count, {})
     }
 }
