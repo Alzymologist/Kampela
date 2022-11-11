@@ -1,4 +1,4 @@
-This is summary of the results of the Kampel survey. 28 users participated in the survey. We divided users into three groups depending on their technical level:  
+This is summary of the results of the Kampela survey. 28 users participated in the survey. We divided users into three groups depending on their technical level:  
 
 ***Cryptocurrency users and enthusiasts***. This group is less technical but contains some active substrate users. This group consists of 13 users who use cryptocurrencies or consider themself blockchain enthusiasts, but do not work in blockchain-related business. Here 9/13 of users have not used substrate coins and 4/13 use them often or occasionally. Among this group, 9/13 of users do not use or do not know what account derivation is, while only 4/13 use multiple derivations or won't tell. Interestingly, the usage of derivations does not correlate significantly with the usage of hardware wallets here. Among 5 users of hardware wallets 1 user does not use derivations, 1 does not know about them, and 1 won't tell.  
 
