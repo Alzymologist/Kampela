@@ -1,6 +1,16 @@
 package fi.zymologia.siltti
 
+import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_MUTABLE
+import android.content.Intent
+import android.content.IntentFilter
+import android.nfc.NfcAdapter
+import android.nfc.NfcAdapter.*
+import android.nfc.Tag
+import android.nfc.tech.*
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,10 +22,31 @@ import androidx.compose.ui.tooling.preview.Preview
 import fi.zymologia.siltti.ui.theme.SilttiTheme
 
 class MainActivity : ComponentActivity() {
+    private var nfcAdapter: NfcAdapter? = null
+    private var pendingIntent: PendingIntent? = null
+    private var transmitData: List<ByteArray> = emptyList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         System.loadLibrary("siltti")
-        val activity = this
+        nfcAdapter = NfcAdapter.getDefaultAdapter(this)
+        if (nfcAdapter == null) {
+            Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        } else {
+            Log.d("NFC support status", nfcAdapter!!.isEnabled.toString())
+        }
+        Log.d("NFC enabled", nfcAdapter?.isEnabled.toString())
+        val intent = Intent(this, javaClass).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            FLAG_MUTABLE
+        )
 
         val dbName = this.filesDir.toString()
         setContent {
@@ -25,10 +56,64 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    ScanScreen(dbName)
+                    ScanScreen(
+                        dbName
+                    ) { newData: List<ByteArray> ->
+                        transmitData = newData
+                    }
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // An Intent to start your current Activity. Flag to singleTop
+        // to imply that it should only be delivered to the current
+        // instance rather than starting a new instance of the Activity.
+        // Define your filters and desired technology types
+        val filters = arrayOf(IntentFilter(ACTION_TAG_DISCOVERED))
+        // val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name))
+
+        // And enable your Activity to receive NFC events. Note that there
+        // is no need to manually disable dispatch in onPause() as the system
+        // very strictly performs this for you. You only need to disable
+        // dispatch if you don't want to receive tags while resumed.
+        nfcAdapter!!.enableForegroundDispatch(
+            this,
+            pendingIntent,
+            filters,
+            null
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        nfcAdapter!!.disableForegroundDispatch(this)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        Log.d("Intent captured", intent.toString())
+        if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
+            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            Log.d("NFC tag", tag.toString())
+            val tech = IsoDep.get(tag)
+            tech.connect()
+            Log.d("max length", tech.maxTransceiveLength.toString())
+            try {
+                while (tech.isConnected) {
+                    tech.transceive(transmitData.random())
+                    Log.d("NFC TX", "sending...")
+                }
+            } catch (e: java.lang.Exception) {
+                Log.d("NFC link crashed", e.message ?: "unknown")
+            }
+            Log.d("NFC TX", "done")
+            tech.close()
+        }
+
+        Log.d("NFC", "intent processed")
     }
 }
 
@@ -36,6 +121,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DefaultPreview() {
     SilttiTheme {
-        ScanScreen("stub")
+        ScanScreen("stub", {})
     }
 }
