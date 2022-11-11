@@ -35,13 +35,14 @@ fun NetworkCard(
             }
     ) {
         Row(
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.padding(10.dp)
         ) {
             Text(
                 selector.value.title(key) ?: "unknown",
                 color = if (isSelected) MaterialTheme.colors.onPrimary else MaterialTheme.colors.onSecondary
             )
+            Text("Version: " + (selector.value.version(key) ?: "unknown"))
             if (isSelected) Icon(Icons.Default.CheckCircle, "selected") else Icon(Icons.Default.AddCircle, "not selected")
         }
     }
