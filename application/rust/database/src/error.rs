@@ -1,5 +1,6 @@
 //! Errors occuring in companion.
 use sp_core::H256;
+use substrate_parser::error::MetaVersionError;
 
 use crate::process_input::Encryption;
 
@@ -31,6 +32,9 @@ pub enum ErrorCompanion {
 
     #[error("Received metadata QR payload has unexpected structure. Can not find compact to cut payload into parts.")]
     MetadataQrUnexpectedStructure,
+
+    #[error("Error determining metadata version. {0}")]
+    MetadataVersion(MetaVersionError),
 
     #[error("No metadata entries for genesis hash {} in the database.", hex::encode(.0))]
     NoMetadata(H256),
