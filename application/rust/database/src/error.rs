@@ -1,5 +1,6 @@
 //! Errors occuring in companion.
 use sp_core::H256;
+use substrate_parser::error::MetaVersionError;
 
 use crate::process_input::Encryption;
 
@@ -32,20 +33,23 @@ pub enum ErrorCompanion {
     #[error("Received metadata QR payload has unexpected structure. Can not find compact to cut payload into parts.")]
     MetadataQrUnexpectedStructure,
 
+    #[error("Error determining metadata version. {0}")]
+    MetadataVersion(MetaVersionError),
+
     #[error("No metadata entries for genesis hash {} in the database.", hex::encode(.0))]
     NoMetadata(H256),
 
     #[error("Metadata from scanned QR does not start with expected b`meta` prefix.")]
     NoMetaPrefixQr,
 
-    #[error("No specs entries in the database.")]
-    NoSpecs(H256),
-
     #[error("Received QR payload is not a Substrate one.")]
     NotSubstrate,
 
     #[error("Metadata in received QR payload is not V14 and is not supported.")]
     OnlyV14SupportedQr,
+
+    #[error("Poisoned lock on uniffi interface.")]
+    PoisonedLock,
 
     #[error("Specs from scanned QR could not be decoded.")]
     SpecsQrDecode,
@@ -56,9 +60,9 @@ pub enum ErrorCompanion {
     #[error("Received QR payload is too short.")]
     TooShort,
 
-    #[error("Unexpected payload type, 0x{}", hex::encode(&[0]))]
+    #[error("Unexpected payload type, 0x{}", hex::encode([*.0]))]
     UnknownPayloadType(u8),
 
-    #[error("Unexpected signing algorithm, 0x{}", hex::encode(&[0]))]
+    #[error("Unexpected signing algorithm, 0x{}", hex::encode([*.0]))]
     UnknownSigningAlgorithm(u8),
 }

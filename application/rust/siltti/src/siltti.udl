@@ -42,10 +42,54 @@ enum ErrorQr {
 };
 
 interface Action {
-    [Throws=ErrorCompanion]
+    [Name=new_payload, Throws=ErrorCompanion]
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignByCompanion signature_maker);
     
+    [Name=new_derivation, Throws=ErrorCompanion]
+    constructor(sequence<SpecsKey> specs_key_set, string cut_path, boolean has_pwd, SignByCompanion signature_maker);
+    
+    [Name=new_specs_set, Throws=ErrorCompanion]
+    constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);
+    
     sequence<sequence<u8>>? as_transmittable();
+};
+
+interface SpecsKey {
+    string show();
+};
+
+interface SpecsValue {};
+
+interface SpecsSelector {
+    [Throws=ErrorCompanion]
+    constructor([ByRef] string db_path);
+    
+    [Throws=ErrorCompanion]
+    sequence<SpecsKey> get_all_keys();
+    
+    [Throws=ErrorCompanion]
+    sequence<SpecsKey> collect_selected_keys();
+    
+    [Throws=ErrorCompanion]
+    sequence<SpecsValue> collect_selected_values();
+    
+    [Throws=ErrorCompanion]
+    string? title([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    string? version([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    boolean? is_selected([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    void toggle([ByRef] SpecsKey key);
+    
+    [Throws=ErrorCompanion]
+    void select_all();
+    
+    [Throws=ErrorCompanion]
+    void deselect_all();
 };
 
 [Error]
@@ -59,11 +103,12 @@ enum ErrorCompanion {
     "DecodeDbSpecsValue",
     "MetadataQrDecode",
     "MetadataQrUnexpectedStructure",
+    "MetadataVersion",
     "NoMetadata",
     "NoMetaPrefixQr",
-    "NoSpecs",
     "NotSubstrate",
     "OnlyV14SupportedQr",
+    "PoisonedLock",
     "SpecsQrDecode",
     "TooLargeInputForNFC",
     "TooShort",
