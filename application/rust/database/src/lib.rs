@@ -7,3 +7,6 @@ pub mod nfc_fountain;
 pub mod process_input;
 pub mod sign_with_companion;
 pub mod storage;
+
+#[cfg(test)]
+mod tests;
