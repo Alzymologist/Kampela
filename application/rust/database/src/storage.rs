@@ -119,7 +119,7 @@ impl MetadataStorage {
         let length_info = find_compact::<u32>(payload, position)
             .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let meta_length = length_info.compact as usize;
-        position += length_info.start_next_unit;
+        position = length_info.start_next_unit;
         match payload.get(position..position + meta_length) {
             Some(meta_slice) => {
                 if !meta_slice.starts_with(&[109, 101, 116, 97]) {
@@ -275,7 +275,7 @@ impl SpecsValue {
         let length_info = find_compact::<u32>(payload, position)
             .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
-        position += length_info.start_next_unit;
+        position = length_info.start_next_unit;
         match payload.get(position..position + encoded_specs_length) {
             Some(encoded_specs_slice) => {
                 let specs = Specs::decode(&mut &encoded_specs_slice[..])
