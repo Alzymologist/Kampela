@@ -1,0 +1,21 @@
+[package]
+authors = ["Vera Abramova <abramova.vera@gmail.com>"]
+edition = "2021"
+name = "app"
+version = "0.1.0"
+
+[dependencies]
+cortex-m = { version = "0.7.6", features = ["critical-section-single-core"]}
+cortex-m-rt = "0.7.2"
+cortex-m-semihosting = "0.3.3"
+efm32pg23_fix = {path = "../efm32pg23_fix", features = ["critical-section", "rt"]}
+embedded-alloc = "0.5.0" # embedded-alloc required nightly!
+panic-halt = "0.2.0"
+patches = {path = "../patches"}
+rand_core = {version = "0.6.4", default-features = false}
+schnorrkel = {version = "0.10.2", default-features = false, features = ["u64_backend"]}
+sp-core = {version = "12.0.0", default-features = false, features = ["full_crypto"]}
+
+[profile.release]
+codegen-units = 1
+lto = true
