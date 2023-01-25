@@ -4,11 +4,17 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_MUTABLE
 import android.content.Intent
 import android.content.IntentFilter
+import android.nfc.NdefMessage
+import android.nfc.NdefRecord
+import android.nfc.NdefRecord.TNF_UNKNOWN
 import android.nfc.NfcAdapter
 import android.nfc.NfcAdapter.*
 import android.nfc.Tag
 import android.nfc.tech.*
+import android.os.Build
 import android.os.Bundle
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -25,6 +31,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import fi.zymologia.siltti.ui.theme.SilttiTheme
+import fi.zymologia.siltti.uniffi.SignByCompanion
+import java.security.KeyPairGenerator
+import java.security.Signature
 
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
@@ -35,7 +44,37 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         System.loadLibrary("siltti")
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this)
+
+        /* thing to view signature
+        // START
+        val data = listOf<UByte>(1u, 2u, 3u, 4u)
+
+                val kpg = KeyPairGenerator.getInstance(
+                    KeyProperties.KEY_ALGORITHM_EC,
+                    "AndroidKeyStore"
+                )
+                val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
+                    "AndroidKeyStore",
+                    KeyProperties.PURPOSE_SIGN
+                ).run {
+                    setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+                    build()
+                }
+
+                kpg.initialize(parameterSpec)
+
+                val kp = kpg.generateKeyPair()
+                val s = Signature.getInstance("SHA256withECDSA").apply {
+                    initSign(kp.private)
+                    update(data.toUByteArray().toByteArray())
+                }
+                val signature: ByteArray = s.sign()
+                Log.d("testsign", (signature.toUByteArray().toList() + kp.public.encoded.toUByteArray() ).toString())
+
+        // END
+        */
+
+        nfcAdapter = getDefaultAdapter(this)
         if (nfcAdapter == null) {
             Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
             finish()
@@ -106,22 +145,38 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
             packagesSent.reset()
-            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
-            Log.d("NFC tag", tag.toString())
-            val tech = IsoDep.get(tag)
-            tech.connect()
-            Log.d("max length", tech.maxTransceiveLength.toString())
-            try {
-                while (tech.isConnected) {
-                    tech.transceive(transmitData.random())
-                    packagesSent.inc()
-                    Log.d("sent: ", packagesSent.count.value.toString())
-                }
-            } catch (e: java.lang.Exception) {
-                Log.d("NFC link crashed", e.message ?: "unknown")
+            val tag = if (Build.VERSION.SDK_INT >= 33) {
+                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            } else {
+                intent.getParcelableExtra(EXTRA_TAG)
             }
-            Log.d("NFC TX", "done")
-            tech.close()
+            Log.d("NFC tag", tag.toString())
+            Ndef.get(tag)?.let { ndef ->
+                ndef.connect()
+                Log.d("max length", ndef.maxSize.toString())
+                try {
+                    while (ndef.isConnected) {
+                        Log.d("connected", "1")
+                        val ndefRecord = NdefRecord(
+                            TNF_UNKNOWN,
+                            byteArrayOf(),
+                            byteArrayOf(),
+                            transmitData.random()
+                        )
+                        Log.d("Record formed", "1")
+                        val ndefMessage = NdefMessage(ndefRecord)
+                        Log.d("Message formed", "1")
+                        ndef.writeNdefMessage(ndefMessage)
+                        Log.d("Message sent", "1")
+                        packagesSent.inc()
+                        Log.d("sent: ", packagesSent.count.value.toString())
+                    }
+                } catch (e: java.lang.Exception) {
+                    Log.d("NFC link crashed", e.message ?: "unknown")
+                }
+                Log.d("NFC TX", "done")
+                ndef.close()
+            }
             packagesSent.disable()
         }
 

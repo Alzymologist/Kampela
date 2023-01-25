@@ -10,7 +10,7 @@ use crate::error::ErrorCompanion;
 
 /// NFC payload size, in bytes. Must be transferrable in single `transceive`
 /// operation.
-pub const NFC_PACKET_SIZE: u16 = 256;
+pub const NFC_PACKET_SIZE: u16 = 128;
 
 /// Form a set of `Vec<u8>` limited length NFC payloads from `&[u8]` input
 pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
