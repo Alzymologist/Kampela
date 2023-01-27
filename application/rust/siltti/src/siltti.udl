@@ -118,6 +118,7 @@ enum ErrorCompanion {
 
 callback interface SignByCompanion {
     sequence<u8> make_signature([ByRef] sequence<u8> data);
+    sequence<u8> export_public_key();
 };
 
 interface SignatureMaker {
