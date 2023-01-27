@@ -88,4 +88,18 @@ class Signer : SignByCompanion {
         val signature: ByteArray = s.sign()
         return signature.toUByteArray().toList()
     }
+
+    override fun exportPublicKey(): List<UByte> {
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
+        }
+
+        val ke = ks.getEntry("AndroidKeyStore", null)
+
+        if (ke !is KeyStore.PrivateKeyEntry) {
+            Log.w("", "Not an instance of a PrivateKeyEntry")
+            return emptyList()
+        }
+        return ke.certificate.publicKey.encoded.toUByteArray().toList()
+    }
 }
