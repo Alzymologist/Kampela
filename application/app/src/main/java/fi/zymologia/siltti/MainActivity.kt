@@ -24,16 +24,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import fi.zymologia.siltti.ui.theme.SilttiTheme
-import fi.zymologia.siltti.uniffi.SignByCompanion
 import java.security.KeyPairGenerator
-import java.security.Signature
+import java.security.KeyStore
 
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
@@ -45,31 +41,66 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         System.loadLibrary("siltti")
 
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
+        }
+
+        if (!ks.aliases().toList().contains("AndroidKeyStore")) {
+            val kpg = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                "AndroidKeyStore"
+            )
+            val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
+                "AndroidKeyStore",
+                KeyProperties.PURPOSE_SIGN
+            ).run {
+                setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+                build()
+            }
+            kpg.initialize(parameterSpec)
+            kpg.generateKeyPair()
+        }
+
         /* thing to view signature
         // START
         val data = listOf<UByte>(1u, 2u, 3u, 4u)
 
-                val kpg = KeyPairGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_EC,
-                    "AndroidKeyStore"
-                )
-                val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
-                    "AndroidKeyStore",
-                    KeyProperties.PURPOSE_SIGN
-                ).run {
-                    setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-                    build()
-                }
+        val s = if (ks.aliases().toList().contains("AndroidKeyStore")) {
+            val ke = ks.getEntry("AndroidKeyStore", null)
 
-                kpg.initialize(parameterSpec)
+            if (ke !is KeyStore.PrivateKeyEntry) {
+                Log.w("", "Not an instance of a PrivateKeyEntry")
+                return
+            }
+            Log.d("test", ke.certificate.publicKey.encoded.toUByteArray().toList().toString())
+            Signature.getInstance("SHA256withECDSA").apply {
+                initSign(ke.privateKey)
+                update(data.toUByteArray().toByteArray())
+            }
+        } else {
+            val kpg = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                "AndroidKeyStore"
+            )
+            val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
+                "AndroidKeyStore",
+                KeyProperties.PURPOSE_SIGN
+            ).run {
+                setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+                build()
+            }
 
-                val kp = kpg.generateKeyPair()
-                val s = Signature.getInstance("SHA256withECDSA").apply {
-                    initSign(kp.private)
-                    update(data.toUByteArray().toByteArray())
-                }
-                val signature: ByteArray = s.sign()
-                Log.d("testsign", (signature.toUByteArray().toList() + kp.public.encoded.toUByteArray() ).toString())
+            kpg.initialize(parameterSpec)
+
+            val kp = kpg.generateKeyPair()
+            Log.d("test", kp.public.encoded.toUByteArray().toList().toString())
+            Signature.getInstance("SHA256withECDSA").apply {
+                initSign(kp.private)
+                update(data.toUByteArray().toByteArray())
+            }
+        }
+        val signature: ByteArray = s.sign()
+        Log.d("testsign", signature.toUByteArray().toList().toString())
 
         // END
         */
@@ -151,6 +182,7 @@ class MainActivity : ComponentActivity() {
                 intent.getParcelableExtra(EXTRA_TAG)
             }
             Log.d("NFC tag", tag.toString())
+
             Ndef.get(tag)?.let { ndef ->
                 ndef.connect()
                 Log.d("max length", ndef.maxSize.toString())
