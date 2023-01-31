@@ -1,5 +1,5 @@
 [package]
-name = "database"
+name = "kampela-common"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,16 +7,14 @@ edition = "2021"
 
 [dependencies]
 frame-metadata = {git = "https://github.com/paritytech/frame-metadata", rev = "1ea329920838b3f4170f421cde53ce7e6a15ccee", default-features = false, features = ["v14", "decode"]}
-hex = "0.4.3"
-parity-scale-codec = "3.1.5"
-raptorq = "1.7.0"
-sled = "0.34.7"
+parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive"]}
 sp-core = {version = "7.0.0", default-features = false, features = ["full_crypto"]}
-substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", rev = "9f6e9ad9229cb6a0138ac37e7ecc6b00e743762e"}
-thiserror = "1.0.35"
-
-kampela-common = {path = "../../../common"}
 
 [lib]
-name = "database"
+name = "kampela_common"
 crate-type = ["lib"]
+
+[features]
+default = ["std"]
+
+std = []

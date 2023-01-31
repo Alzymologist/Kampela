@@ -1,17 +1,18 @@
 //! Keys and corresponding values in companion database.
-use frame_metadata::{RuntimeMetadata, RuntimeMetadataV14};
+use frame_metadata::{v14::RuntimeMetadataV14, RuntimeMetadata};
 use parity_scale_codec::{Decode, Encode};
 use sled::{open, Db, IVec, Tree};
 use sp_core::H256;
-use sp_runtime::{MultiSignature, MultiSigner};
 use std::{
     convert::TryInto,
     sync::{Arc, RwLock},
 };
 use substrate_parser::{compacts::find_compact, CheckedMetadata};
 
+use kampela_common::{Encryption, MultiSignature, MultiSigner, Specs, SpecsKey, SpecsValue};
+
 use crate::error::ErrorCompanion;
-use crate::process_input::Encryption;
+use crate::traits::{DbKey, DbStorage, FromQr};
 
 fn open_db(db_path: &str) -> Result<Db, ErrorCompanion> {
     open(db_path).map_err(ErrorCompanion::DbInternal)
@@ -29,51 +30,38 @@ pub const METADATA: &[u8] = b"metadata";
 /// Tree name for specs storage
 pub const SPECS: &[u8] = b"specs";
 
-pub struct MetadataKey(MetadataKeyContent);
-
 #[derive(Decode, Encode)]
-struct MetadataKeyContent {
-    genesis_hash: H256,
+pub struct MetadataKey {
+    pub genesis_hash: H256,
 }
 
-impl MetadataKey {
-    pub fn new(genesis_hash: H256) -> Self {
-        Self(MetadataKeyContent { genesis_hash })
+impl DbKey for MetadataKey {
+    fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
+        Self::decode(&mut &database_key[..]).map_err(|_| ErrorCompanion::DecodeDbMetadataKey)
     }
-    pub fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
-        Ok(Self(
-            MetadataKeyContent::decode(&mut &database_key[..])
-                .map_err(|_| ErrorCompanion::DecodeDbMetadataKey)?,
-        ))
+    fn as_db_key(&self) -> Vec<u8> {
+        self.encode()
     }
-    pub fn as_db_key(&self) -> Vec<u8> {
-        self.0.encode()
-    }
-    pub fn hash(&self) -> H256 {
-        self.0.genesis_hash.to_owned()
+    fn show(&self) -> String {
+        hex::encode(self.genesis_hash)
     }
 }
 
-pub struct MetadataValue(MetadataValueContent);
-
 #[derive(Decode, Encode)]
-struct MetadataValueContent {
-    metadata: RuntimeMetadataV14,
-    signature: MultiSignature,
+pub struct MetadataValue {
+    pub metadata: RuntimeMetadataV14,
+    pub signature: MultiSignature,
 }
 
 impl MetadataValue {
     pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
-        Ok(Self(
-            MetadataValueContent::decode(&mut &database_value[..])
-                .map_err(|_| ErrorCompanion::DecodeDbMetadataValue)?,
-        ))
+        Self::decode(&mut &database_value[..]).map_err(|_| ErrorCompanion::DecodeDbMetadataValue)
     }
     pub fn try_read_from_tree(
         metadata_tree: &Tree,
         genesis_hash: H256,
     ) -> Result<Option<Self>, ErrorCompanion> {
-        let metadata_key = MetadataKey::new(genesis_hash);
+        let metadata_key = MetadataKey { genesis_hash };
         match metadata_tree.get(metadata_key.as_db_key()) {
             Ok(Some(a)) => Self::from_db_value(&a).map(Some),
             Ok(None) => Ok(None),
@@ -95,13 +83,7 @@ impl MetadataValue {
         Self::read_from_tree(&metadata_tree, genesis_hash)
     }
     pub fn as_db_value(&self) -> Vec<u8> {
-        self.0.encode()
-    }
-    pub fn metadata(&self) -> RuntimeMetadataV14 {
-        self.0.metadata.to_owned()
-    }
-    pub fn signature(&self) -> MultiSignature {
-        self.0.signature.to_owned()
+        self.encode()
     }
 }
 
@@ -110,8 +92,32 @@ pub struct MetadataStorage {
     pub value: MetadataValue,
 }
 
-impl MetadataStorage {
-    pub fn from_payload_prelude_cut(
+impl DbStorage for MetadataStorage {
+    fn from_db_entry(
+        (database_key, database_value): &(IVec, IVec),
+    ) -> Result<Self, ErrorCompanion> {
+        let key = MetadataKey::from_db_key(database_key)?;
+        let value = MetadataValue::from_db_value(database_value)?;
+        Ok(Self { key, value })
+    }
+    fn db_key(&self) -> Vec<u8> {
+        self.key.as_db_key()
+    }
+    fn db_value(&self) -> Vec<u8> {
+        self.value.as_db_value()
+    }
+    fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
+        let database = open_db(db_path)?;
+        let metadata_tree = open_tree(&database, METADATA)?;
+        metadata_tree
+            .insert(self.key.as_db_key(), self.value.as_db_value())
+            .map_err(ErrorCompanion::DbInternal)?;
+        Ok(())
+    }
+}
+
+impl FromQr for MetadataStorage {
+    fn from_payload_prelude_cut(
         payload: &[u8],
         encryption: &Encryption,
     ) -> Result<Self, ErrorCompanion> {
@@ -134,7 +140,8 @@ impl MetadataStorage {
                 position += meta_length;
                 match payload.get(position..position + H256::len_bytes()) {
                     Some(hash_slice) => {
-                        let hash = H256(hash_slice.try_into().expect("stable known length"));
+                        let genesis_hash =
+                            H256(hash_slice.try_into().expect("stable known length"));
                         position += H256::len_bytes();
                         match payload.get(position..position + encryption.signature_length()) {
                             Some(signature_slice) => {
@@ -150,11 +157,11 @@ impl MetadataStorage {
                                     ),
                                 };
                                 Ok(Self {
-                                    key: MetadataKey::new(hash),
-                                    value: MetadataValue(MetadataValueContent {
+                                    key: MetadataKey { genesis_hash },
+                                    value: MetadataValue {
                                         metadata,
                                         signature,
-                                    }),
+                                    },
                                 })
                             }
                             None => Err(ErrorCompanion::TooShort),
@@ -166,91 +173,63 @@ impl MetadataStorage {
             None => Err(ErrorCompanion::TooShort),
         }
     }
-    pub fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
+}
+
+impl DbKey for SpecsKey {
+    fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
+        Self::decode(&mut &database_key[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsKey)
+    }
+    fn as_db_key(&self) -> Vec<u8> {
+        self.encode()
+    }
+    fn show(&self) -> String {
+        hex::encode(self.as_db_key())
+    }
+}
+
+impl DbStorage for SpecsValue {
+    fn from_db_entry(
+        (database_key, database_value): &(IVec, IVec),
+    ) -> Result<Self, ErrorCompanion> {
+        let key = SpecsKey::from_db_key(database_key)?;
+        let value = Self::decode(&mut &database_value[..])
+            .map_err(|_| ErrorCompanion::DecodeDbSpecsValue)?;
+        if value.specs.encryption != key.encryption {
+            return Err(ErrorCompanion::DbSpecsEncryptionMismatch {
+                key: key.encryption,
+                value: value.specs.encryption,
+            });
+        }
+        if value.specs.genesis_hash != key.genesis_hash {
+            return Err(ErrorCompanion::DbSpecsHashMismatch {
+                key: key.genesis_hash,
+                value: value.specs.genesis_hash,
+            });
+        }
+        Ok(value)
+    }
+    fn db_key(&self) -> Vec<u8> {
+        SpecsKey {
+            encryption: self.specs.encryption,
+            genesis_hash: self.specs.genesis_hash,
+        }
+        .as_db_key()
+    }
+    fn db_value(&self) -> Vec<u8> {
+        self.encode()
+    }
+    fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
         let database = open_db(db_path)?;
-        let metadata_tree = open_tree(&database, METADATA)?;
-        metadata_tree
-            .insert(self.key.as_db_key(), self.value.as_db_value())
+        let specs_tree = open_tree(&database, SPECS)?;
+        specs_tree
+            .insert(self.db_key(), self.db_value())
             .map_err(ErrorCompanion::DbInternal)?;
         Ok(())
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SpecsKey(SpecsKeyContent);
-
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-struct SpecsKeyContent {
-    encryption: Encryption,
-    genesis_hash: H256,
-}
-
-impl SpecsKey {
-    pub fn new(encryption: Encryption, genesis_hash: H256) -> Self {
-        Self(SpecsKeyContent {
-            encryption,
-            genesis_hash,
-        })
-    }
-    pub fn from_db_key(database_key: &IVec) -> Result<Self, ErrorCompanion> {
-        Ok(Self(
-            SpecsKeyContent::decode(&mut &database_key[..])
-                .map_err(|_| ErrorCompanion::DecodeDbSpecsKey)?,
-        ))
-    }
-    pub fn as_db_key(&self) -> Vec<u8> {
-        self.0.encode()
-    }
-    pub fn encryption(&self) -> Encryption {
-        self.0.encryption.to_owned()
-    }
-    pub fn hash(&self) -> H256 {
-        self.0.genesis_hash.to_owned()
-    }
-    pub fn show(&self) -> String {
-        hex::encode(self.as_db_key())
-    }
-}
-
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct Specs {
-    pub base58prefix: u16,
-    pub color: String,
-    pub decimals: u8,
-    pub encryption: Encryption,
-    pub genesis_hash: H256,
-    pub logo: String,
-    pub name: String,
-    pub path_id: String,
-    pub secondary_color: String,
-    pub title: String,
-    pub unit: String,
-}
-
-#[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
-pub struct SpecsValue {
-    specs: Specs,
-    specs_signer: MultiSigner,
-    specs_signature: MultiSignature,
-}
-
-impl SpecsValue {
-    pub fn from_db_value(database_value: &IVec) -> Result<Self, ErrorCompanion> {
-        Self::decode(&mut &database_value[..]).map_err(|_| ErrorCompanion::DecodeDbSpecsValue)
-    }
-    pub fn as_db_value(&self) -> Vec<u8> {
-        self.encode()
-    }
-    pub fn specs(&self) -> Specs {
-        self.specs.to_owned()
-    }
-    pub fn signature(&self) -> MultiSignature {
-        self.specs_signature.to_owned()
-    }
-    pub fn signer(&self) -> MultiSigner {
-        self.specs_signer.to_owned()
-    }
-    pub fn from_payload_prelude_cut(
+impl FromQr for SpecsValue {
+    fn from_payload_prelude_cut(
         payload: &[u8],
         encryption: &Encryption,
     ) -> Result<Self, ErrorCompanion> {
@@ -273,7 +252,7 @@ impl SpecsValue {
             None => return Err(ErrorCompanion::TooShort),
         };
         let length_info = find_compact::<u32>(payload, position)
-            .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
+            .map_err(|_| ErrorCompanion::SpecsQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
         position = length_info.start_next_unit;
         match payload.get(position..position + encoded_specs_length) {
@@ -306,17 +285,6 @@ impl SpecsValue {
             None => Err(ErrorCompanion::TooShort),
         }
     }
-    pub fn write_in_db(&self, db_path: &str) -> Result<(), ErrorCompanion> {
-        let database = open_db(db_path)?;
-        let specs_tree = open_tree(&database, SPECS)?;
-        specs_tree
-            .insert(
-                SpecsKey::new(self.specs().encryption, self.specs().genesis_hash).as_db_key(),
-                self.as_db_value(),
-            )
-            .map_err(ErrorCompanion::DbInternal)?;
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -329,31 +297,23 @@ pub struct SpecsSelectorElement {
 
 impl SpecsSelectorElement {
     fn from_entry(
-        (specs_key_db, specs_value_db): (IVec, IVec),
+        database_entry: (IVec, IVec),
         metadata_tree: &Tree,
     ) -> Result<Self, ErrorCompanion> {
-        let key = SpecsKey::from_db_key(&specs_key_db)?;
-        let value = SpecsValue::from_db_value(&specs_value_db)?;
-        if value.specs().encryption != key.encryption() {
-            return Err(ErrorCompanion::DbSpecsEncryptionMismatch {
-                key: key.encryption(),
-                value: value.specs().encryption,
-            });
-        }
-        if value.specs().genesis_hash != key.hash() {
-            return Err(ErrorCompanion::DbSpecsHashMismatch {
-                key: key.hash(),
-                value: value.specs().genesis_hash,
-            });
-        }
-        let metadata_version = match MetadataValue::try_read_from_tree(metadata_tree, key.hash())? {
-            Some(metadata_value) => {
-                let checked_metadata = CheckedMetadata::new(metadata_value.metadata())
-                    .map_err(ErrorCompanion::MetadataVersion)?;
-                Some(checked_metadata.version)
-            }
-            None => None,
+        let value = SpecsValue::from_db_entry(&database_entry)?;
+        let key = SpecsKey {
+            encryption: value.specs.encryption,
+            genesis_hash: value.specs.genesis_hash,
         };
+        let metadata_version =
+            match MetadataValue::try_read_from_tree(metadata_tree, key.genesis_hash)? {
+                Some(metadata_value) => {
+                    let checked_metadata = CheckedMetadata::new(metadata_value.metadata)
+                        .map_err(ErrorCompanion::MetadataVersion)?;
+                    Some(checked_metadata.version)
+                }
+                None => None,
+            };
         Ok(Self {
             key,
             value,
@@ -371,7 +331,7 @@ impl SpecsSelectorElement {
         self.is_selected = false;
     }
     fn title(&self) -> String {
-        self.value.specs().title
+        self.value.specs.title.to_owned()
     }
     fn version(&self) -> Option<String> {
         self.metadata_version.to_owned()

@@ -6,11 +6,9 @@
 
 use std::convert::TryFrom;
 
-use crate::error::ErrorCompanion;
+use kampela_common::NFC_PACKET_SIZE;
 
-/// NFC payload size, in bytes. Must be transferrable in single `transceive`
-/// operation.
-pub const NFC_PACKET_SIZE: u16 = 128;
+use crate::error::ErrorCompanion;
 
 /// Form a set of `Vec<u8>` limited length NFC payloads from `&[u8]` input
 pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {

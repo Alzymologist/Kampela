@@ -1,5 +1,6 @@
-use crate::process_input::Encryption;
-use crate::storage::{MetadataStorage, SpecsValue};
+use kampela_common::Encryption;
+
+use crate::{storage::MetadataStorage, traits::FromQr, SpecsValue};
 
 #[test]
 fn good_specs_processing_1() {
