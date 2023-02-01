@@ -9,8 +9,11 @@ edition = "2021"
 
 bitvec = {version = "1.0.1", default-features = false, features = ["alloc"]}
 hmac = "0.12.1"
+kampela-common = {path = "../../../../common", default-features = false}
+p256 = {version = "0.12.0", default-features = false, features = ["ecdsa", "pkcs8"]}
 pbkdf2 = {version = "0.11.0", default-features = false}
 sha2 = {version = "0.10.6", default-features = false}
+spki = {version = "0.6.0", features = ["alloc"]}
 sp-core = {version = "12.0.0", default-features = false, features = ["full_crypto"]}
 zeroize = "1.5.7"
 
