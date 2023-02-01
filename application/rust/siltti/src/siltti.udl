@@ -110,6 +110,7 @@ enum ErrorCompanion {
     "OnlyV14SupportedQr",
     "PoisonedLock",
     "SpecsQrDecode",
+    "SpecsQrUnexpectedStructure",
     "TooLargeInputForNFC",
     "TooShort",
     "UnknownPayloadType",

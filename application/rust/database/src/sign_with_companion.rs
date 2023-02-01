@@ -1,4 +1,6 @@
-use parity_scale_codec::{Decode, Encode};
+use parity_scale_codec::Encode;
+
+use kampela_common::TransferData;
 
 pub trait SignByCompanion: Send + Sync + std::fmt::Debug {
     fn make_signature(&self, data: Vec<u8>) -> Vec<u8>;
@@ -7,13 +9,6 @@ pub trait SignByCompanion: Send + Sync + std::fmt::Debug {
 
 pub struct SignatureMaker {
     pub signature_maker: Box<dyn SignByCompanion>,
-}
-
-#[derive(Debug, Decode, Encode)]
-pub struct TransferData {
-    encoded_data: Vec<u8>,
-    companion_signature: Vec<u8>,
-    companion_public_key: Vec<u8>,
 }
 
 impl SignatureMaker {
