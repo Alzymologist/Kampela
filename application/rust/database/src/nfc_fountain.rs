@@ -6,7 +6,7 @@
 
 use std::convert::TryFrom;
 
-use kampela_common::NFC_PACKET_SIZE;
+use kampela_common::{NfcPacket, NFC_PACKET_SIZE};
 
 use crate::error::ErrorCompanion;
 
@@ -35,6 +35,12 @@ pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
     Ok(raptor_encoder
         .get_encoded_packets(repair_packets_per_block)
         .iter()
-        .map(|x| x.serialize())
+        .map(|x| {
+            NfcPacket {
+                length: input_length,
+                data: x.serialize(),
+            }
+            .as_raw_packet()
+        })
         .collect::<Vec<Vec<u8>>>())
 }
