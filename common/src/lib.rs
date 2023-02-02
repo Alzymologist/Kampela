@@ -133,7 +133,7 @@ pub struct DerivationInfo {
 #[derive(Debug, Decode, Encode)]
 pub struct NfcPacket {
     #[codec(compact)]
-    pub length: u32,
+    pub payload_length: u32,
     pub data: Vec<u8>,
 }
 

@@ -13,7 +13,7 @@ use crate::error::ErrorCompanion;
 /// Form a set of `Vec<u8>` limited length NFC payloads from `&[u8]` input
 pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
     // Input length. Reasonable input data is expected to fit in `u32`.
-    let input_length = match u32::try_from(input.len()) {
+    let payload_length = match u32::try_from(input.len()) {
         Ok(a) => a,
         Err(_) => return Err(ErrorCompanion::TooLargeInputForNFC),
     };
@@ -21,10 +21,10 @@ pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
     // Number of repair packets.
     // Currently roughly equal to number of core packets.
     let repair_packets_per_block: u32 = {
-        if input_length <= NFC_PACKET_SIZE as u32 {
+        if payload_length <= NFC_PACKET_SIZE as u32 {
             0
         } else {
-            input_length / NFC_PACKET_SIZE as u32
+            payload_length / NFC_PACKET_SIZE as u32
         }
     };
 
@@ -37,7 +37,7 @@ pub fn pack_nfc(input: &[u8]) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
         .iter()
         .map(|x| {
             NfcPacket {
-                length: input_length,
+                payload_length,
                 data: x.serialize(),
             }
             .as_raw_packet()
