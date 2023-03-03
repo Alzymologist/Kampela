@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         // instance rather than starting a new instance of the Activity.
         // Define your filters and desired technology types
         val filters = arrayOf(IntentFilter(ACTION_TAG_DISCOVERED))
-        val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name))
+        val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
 
         // And enable your Activity to receive NFC events. Note that there
         // is no need to manually disable dispatch in onPause() as the system
