@@ -1,33 +1,39 @@
 //! UI state unit; almost all inerfacing should be done through this "object"
 
+use core::ops::Add;
+use embedded_graphics::{
+    geometry::AnchorPoint,
+    mono_font::{
+        ascii::{FONT_10X20, FONT_6X10},
+        MonoTextStyle,
+    },
+    prelude::Primitive,
+    primitives::{
+        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+    },
+    Drawable,
+};
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{Dimensions, Point, Size},
     pixelcolor::BinaryColor,
     Pixel,
 };
-use embedded_graphics::{
-    Drawable,
-    geometry::AnchorPoint,
-    mono_font::{ascii::{FONT_6X10, FONT_10X20}, MonoTextStyle},
-    prelude::Primitive,
-    primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+use embedded_graphics_simulator::{
+    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
     style::{HeightMode, TextBoxStyleBuilder},
     TextBox,
 };
-use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
-use ux::u4;
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use core::ops::Add;
-use std::{time::{Duration, Instant}, thread::sleep};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
+use ux::u4;
 
 use crate::display_def::*;
 
@@ -51,8 +57,14 @@ impl UIState {
     }
 
     /// Read user touch event
-    pub fn handle_event<D>(&mut self, point: Point, rng: &mut ThreadRng, fast_display: &mut D) -> Result<bool, D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    pub fn handle_event<D>(
+        &mut self,
+        point: Point,
+        rng: &mut ThreadRng,
+        fast_display: &mut D,
+    ) -> Result<bool, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         let mut responsive = true;
         match self {
@@ -62,28 +74,26 @@ impl UIState {
                     Some(true) => {
                         println!("You win");
                         *self = UIState::OnboardingRestoreOrGenerate;
-                    },
+                    }
                     Some(false) => {
                         println!("kaput");
                         *self = UIState::Locked;
-                    },
-                    None => {},
+                    }
+                    None => {}
                 }
-            },
-            UIState::OnboardingRestoreOrGenerate => {
-                match point.x {
-                    0..=100 => {
-                        *self = UIState::OnboardingRestore(SeedEntryState::new());
-                        responsive = false;
-                    },
-                    150..=300 => {
-                        *self = UIState::OnboardingBackup("".to_owned());
-                        responsive = false;
-                    },
-                    _ => responsive = true,
+            }
+            UIState::OnboardingRestoreOrGenerate => match point.x {
+                0..=100 => {
+                    *self = UIState::OnboardingRestore(SeedEntryState::new());
+                    responsive = false;
                 }
+                150..=300 => {
+                    *self = UIState::OnboardingBackup("".to_owned());
+                    responsive = false;
+                }
+                _ => responsive = true,
             },
-            _=> (),
+            _ => (),
             UIState::Locked => (),
             UIState::End => (),
         }
@@ -92,23 +102,32 @@ impl UIState {
 
     /// Display new screen state; should be called only when needed, is slow
     pub fn render<D>(&mut self, display: &mut D) -> Result<(), D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         display.bounding_box().into_styled(clear).draw(display);
         match self {
             UIState::PinEntry(ref pin) => {
                 pin.draw(display)?;
-            },
+            }
             UIState::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
-                Line::new(Point::new(0, 0), Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(display)?;
-                Line::new(Point::new(SCREEN_SIZE_X as i32, 0), Point::new(0, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(display)?;
-            },
-            _ => {},
+                Line::new(
+                    Point::new(0, 0),
+                    Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32),
+                )
+                .into_styled(linestyle)
+                .draw(display)?;
+                Line::new(
+                    Point::new(SCREEN_SIZE_X as i32, 0),
+                    Point::new(0, SCREEN_SIZE_Y as i32),
+                )
+                .into_styled(linestyle)
+                .draw(display)?;
+            }
+            _ => {}
         }
         Ok(())
     }
 }
-
-

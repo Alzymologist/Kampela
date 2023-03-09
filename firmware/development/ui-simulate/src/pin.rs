@@ -1,35 +1,37 @@
 //! Pin code entry screen
 
-use bitvec::prelude::{BitArr, Msb0, bitarr};
+use bitvec::prelude::{bitarr, BitArr, Msb0};
+use embedded_graphics::{
+    geometry::AnchorPoint,
+    mono_font::{
+        ascii::{FONT_10X20, FONT_6X10},
+        MonoTextStyle,
+    },
+    prelude::*,
+    primitives::{
+        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+    },
+    Drawable,
+};
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{Dimensions, Point, Size},
     pixelcolor::BinaryColor,
     Pixel,
 };
-use embedded_graphics::{
-    Drawable,
-    geometry::AnchorPoint,
-    mono_font::{ascii::{FONT_6X10, FONT_10X20}, MonoTextStyle},
-    prelude::*,
-    primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+use embedded_graphics_simulator::{
+    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
     style::{HeightMode, TextBoxStyleBuilder},
     TextBox,
 };
-use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
-use ux::u4;
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
+use ux::u4;
 
 use crate::display_def::*;
-
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -53,8 +55,11 @@ const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
 
     let mut x = 0;
     let mut y = 0;
-    while x<4 && y<4 {
-        positions[x+y*4] = Point::new(((x as u32)*x_spacing + x_offset) as i32, ((y as u32)*y_spacing + y_offset) as i32);//offset.add(Size::new(x, y).component_mul(gap.saturating_add(PIN_BUTTON_SIZE)));
+    while x < 4 && y < 4 {
+        positions[x + y * 4] = Point::new(
+            ((x as u32) * x_spacing + x_offset) as i32,
+            ((y as u32) * y_spacing + y_offset) as i32,
+        ); //offset.add(Size::new(x, y).component_mul(gap.saturating_add(PIN_BUTTON_SIZE)));
         if x == 3 {
             x = 0;
             y += 1;
@@ -78,10 +83,10 @@ const PIN_COUNT_POSITIONS: [Point; PIN_LEN] = {
     let x_spacing = 0;
     let y_spacing = GAP + PIN_COUNTER_DIAMETER;
     let mut i = 0;
-    while i<PIN_LEN {
-        out[i] = Point::new(x_offset, ((i as u32)*y_spacing + y_offset) as i32);
+    while i < PIN_LEN {
+        out[i] = Point::new(x_offset, ((i as u32) * y_spacing + y_offset) as i32);
         i += 1;
-    };
+    }
     out
 };
 
@@ -117,60 +122,78 @@ lazy_static! {
 
 /// Draw a pin code button
 fn pin_button<D>(number: &u4, bounds: &Rectangle, display: &mut D) -> Result<(), D::Error>
-    where D: DrawTarget<Color = BinaryColor> 
+where
+    D: DrawTarget<Color = BinaryColor>,
 {
     let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
     let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
-    bounds.clone()
-        .into_styled(thin_stroke)
-        .draw(display)?;
+    bounds.clone().into_styled(thin_stroke).draw(display)?;
 
     let textbox_style = TextBoxStyleBuilder::new()
-            .alignment(HorizontalAlignment::Center)
-            .vertical_alignment(VerticalAlignment::Middle)
-            .build();
+        .alignment(HorizontalAlignment::Center)
+        .vertical_alignment(VerticalAlignment::Middle)
+        .build();
 
-    TextBox::with_textbox_style(&format!("{:x}", number), bounds.to_owned(), character_style, textbox_style).draw(display)?;
+    TextBox::with_textbox_style(
+        &format!("{:x}", number),
+        bounds.to_owned(),
+        character_style,
+        textbox_style,
+    )
+    .draw(display)?;
     Ok(())
 }
 
 /// Draw a pushed pin code button
 fn pin_button_pushed<D>(number: &u4, bounds: &Rectangle, display: &mut D) -> Result<(), D::Error>
-    where D: DrawTarget<Color = BinaryColor> 
+where
+    D: DrawTarget<Color = BinaryColor>,
 {
     let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::Off);
     let filled = PrimitiveStyle::with_fill(BinaryColor::On);
 
-    bounds.clone()
-        .into_styled(filled)
-        .draw(display)?;
+    bounds.clone().into_styled(filled).draw(display)?;
 
     let textbox_style = TextBoxStyleBuilder::new()
-            .alignment(HorizontalAlignment::Center)
-            .vertical_alignment(VerticalAlignment::Middle)
-            .build();
+        .alignment(HorizontalAlignment::Center)
+        .vertical_alignment(VerticalAlignment::Middle)
+        .build();
 
-    TextBox::with_textbox_style(&format!("{:x}", number), bounds.to_owned(), character_style, textbox_style).draw(display)?;
+    TextBox::with_textbox_style(
+        &format!("{:x}", number),
+        bounds.to_owned(),
+        character_style,
+        textbox_style,
+    )
+    .draw(display)?;
     Ok(())
 }
 
 /// Shuffle keys
 fn get_pinkeys(rng: &mut ThreadRng) -> [u4; 16] {
-    let mut pinset: [u4; 16] = core::array::from_fn(|i| (i).try_into().expect("static initialization of numbers 0..15"));
+    let mut pinset: [u4; 16] = core::array::from_fn(|i| {
+        (i).try_into()
+            .expect("static initialization of numbers 0..15")
+    });
     pinset.shuffle(rng);
     pinset
 }
 
 fn pin_counter<D>(on: bool, bounds: &Circle, display: &mut D) -> Result<(), D::Error>
-    where D: DrawTarget<Color = BinaryColor> 
+where
+    D: DrawTarget<Color = BinaryColor>,
 {
     let medium_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
-    if on { 
+    if on {
         let filled = PrimitiveStyle::with_fill(BinaryColor::On);
-        bounds.clone().offset(-3).into_styled(filled).draw(display)?;
+        bounds
+            .clone()
+            .offset(-3)
+            .into_styled(filled)
+            .draw(display)?;
         bounds.clone().into_styled(medium_stroke).draw(display)?;
-    } else { 
+    } else {
         bounds.clone().into_styled(medium_stroke).draw(display)?;
     };
     Ok(())
@@ -205,10 +228,16 @@ impl Pincode {
         self.position += 1;
         self.shuffle(rng);
     }
-    
+
     /// Input event (user touched screen in pin entry mode)
-    pub fn handle_event<D>(&mut self, point: Point, rng: &mut ThreadRng, fast_display: &mut D) -> Result<bool, D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    pub fn handle_event<D>(
+        &mut self,
+        point: Point,
+        rng: &mut ThreadRng,
+        fast_display: &mut D,
+    ) -> Result<bool, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         let mut responsive = true;
         for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
@@ -238,7 +267,8 @@ impl Pincode {
     }
 
     pub fn draw_counter<D>(&self, display: &mut D) -> Result<(), D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
         let textbox_style = TextBoxStyleBuilder::new()
@@ -247,16 +277,18 @@ impl Pincode {
             .build();
         let bounds = Rectangle::new(Point::new(4, 4), Size::new(90, 50));
 
-        TextBox::with_textbox_style("Enter pin", bounds, character_style, textbox_style).draw(display)?;
+        TextBox::with_textbox_style("Enter pin", bounds, character_style, textbox_style)
+            .draw(display)?;
 
         for i in 0..PIN_LEN {
-            pin_counter(i<self.position, &PIN_COUNTER_AREA[i], display)?;
+            pin_counter(i < self.position, &PIN_COUNTER_AREA[i], display)?;
         }
         Ok(())
     }
 
     pub fn draw_pinpad<D>(&self, display: &mut D) -> Result<(), D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         for i in 0..PIN_BUTTON_COUNT {
             pin_button(&self.permutation[i], &PIN_BUTTON_AREA[i], display)?;
@@ -266,12 +298,11 @@ impl Pincode {
 
     /// Draw whole pin code pad
     pub fn draw<D>(&self, display: &mut D) -> Result<(), D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
+    where
+        D: DrawTarget<Color = BinaryColor>,
     {
         self.draw_pinpad(display)?;
         self.draw_counter(display)?;
         Ok(())
     }
-
 }
-

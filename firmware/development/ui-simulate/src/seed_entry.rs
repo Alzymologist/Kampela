@@ -4,8 +4,6 @@ pub struct SeedEntryState {
 
 impl SeedEntryState {
     pub fn new() -> Self {
-        SeedEntryState{
-            a: 0,
-        }
+        SeedEntryState { a: 0 }
     }
 }

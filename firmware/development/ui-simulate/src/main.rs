@@ -1,34 +1,40 @@
 //! This is simulator to develop Kampela UI mocks
 
-use bitvec::prelude::{BitArr, Msb0, bitarr};
+use bitvec::prelude::{bitarr, BitArr, Msb0};
+use core::ops::Add;
+use embedded_graphics::{
+    geometry::AnchorPoint,
+    mono_font::{
+        ascii::{FONT_10X20, FONT_6X10},
+        MonoTextStyle,
+    },
+    prelude::Primitive,
+    primitives::{
+        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+    },
+    Drawable,
+};
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{Dimensions, Point, Size},
     pixelcolor::BinaryColor,
     Pixel,
 };
-use embedded_graphics::{
-    Drawable,
-    geometry::AnchorPoint,
-    mono_font::{ascii::{FONT_6X10, FONT_10X20}, MonoTextStyle},
-    prelude::Primitive,
-    primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+use embedded_graphics_simulator::{
+    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
     style::{HeightMode, TextBoxStyleBuilder},
     TextBox,
 };
-use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
-use ux::u4;
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use core::ops::Add;
-use std::{time::{Duration, Instant}, thread::sleep};
+use std::{
+    thread::sleep,
+    time::{Duration, Instant},
+};
+use ux::u4;
 
 #[macro_use]
 extern crate lazy_static;
@@ -48,9 +54,9 @@ mod uistate;
 use uistate::UIState;
 
 fn main() {
-    
     // Prepare
-    let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
+    let mut display: SimulatorDisplay<BinaryColor> =
+        SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
 
     // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
     let mut rng = thread_rng();
@@ -63,9 +69,9 @@ fn main() {
     let output_settings = OutputSettingsBuilder::new()
         .theme(BinaryColorTheme::Inverted)
         .build();
-    let mut window = Window::new("Hello world", &output_settings);//.show_static(&display);
-    // this variable protects the event handler from touches while screen is not yet updated;
-    // debouncer with screen refresh time as debounce time
+    let mut window = Window::new("Hello world", &output_settings); //.show_static(&display);
+                                                                   // this variable protects the event handler from touches while screen is not yet updated;
+                                                                   // debouncer with screen refresh time as debounce time
     let mut responsive = false;
     let mut update_started = Instant::now();
 
@@ -76,7 +82,6 @@ fn main() {
     // 3. handle input
     // 4. do internal things
     loop {
-
         // display event; it would be delayed
         if !responsive {
             if update_started.elapsed().cmp(&SLOW_UPDATE_TIME).is_gt() {
@@ -95,7 +100,10 @@ fn main() {
         // handle input (only pushes are valid in Kampela)
         for event in window.events() {
             match event {
-                SimulatorEvent::MouseButtonDown{mouse_btn: _, point: point} => {
+                SimulatorEvent::MouseButtonDown {
+                    mouse_btn: _,
+                    point: point,
+                } => {
                     if responsive {
                         println!("{}", point);
                         match state.handle_event(point, &mut rng, &mut display) {
@@ -106,13 +114,12 @@ fn main() {
                             update_started = Instant::now();
                         }
                     }
-                },
+                }
                 SimulatorEvent::Quit => return,
                 _ => (),
             }
-        };
+        }
 
         //and here is some loop time for other things
     }
 }
-
