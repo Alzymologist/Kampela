@@ -11,7 +11,7 @@ use embedded_graphics::{
     mono_font::{ascii::{FONT_6X10, FONT_10X20}, MonoTextStyle},
     prelude::Primitive,
     primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
     },
 };
 use embedded_text::{
@@ -125,6 +125,11 @@ fn main() {
                             Err(e) => println!("{e}"),
                         };
                     },
+                    UIState::Locked => {
+                        let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
+                        Line::new(Point::new(0, 0), Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(&mut display);
+                        Line::new(Point::new(SCREEN_SIZE_X as i32, 0), Point::new(0, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(&mut display);
+                    }
                     _ => {},
                 }
                 responsive = true;
