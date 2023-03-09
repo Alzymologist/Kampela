@@ -43,15 +43,12 @@ const PIN_BUTTON_COUNT: usize = 16;
 /// Positions of button centers on screen
 const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
     let mut positions: [Point; PIN_BUTTON_COUNT] = [Point::new(0, 0); PIN_BUTTON_COUNT];
-    let mut counter = 0;
     let x_offset = 110;
     let y_offset = 22;
     let x_gap = GAP;
     let y_gap = GAP;
     let x_spacing = x_gap + PIN_BUTTON_SIZE.width;
     let y_spacing = y_gap + PIN_BUTTON_SIZE.height;
-    let offset = Point::new(90, 2);
-    let gap = Size::new(4, 4);
 
     let mut x = 0;
     let mut y = 0;
@@ -80,7 +77,6 @@ const PIN_COUNT_POSITIONS: [Point; PIN_LEN] = {
     let mut out = [Point::new(0, 0); PIN_LEN];
     let x_offset = 45;
     let y_offset = 50;
-    let x_spacing = 0;
     let y_spacing = GAP + PIN_COUNTER_DIAMETER;
     let mut i = 0;
     while i < PIN_LEN {
@@ -244,7 +240,7 @@ impl Pincode {
             if area.contains(point) {
                 let key = self.permutation[index];
                 println!("User pressed button {}", key);
-                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display);
+                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
                 self.input(rng, key);
                 responsive = false;
                 break;

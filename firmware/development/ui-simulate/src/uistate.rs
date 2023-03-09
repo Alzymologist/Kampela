@@ -29,10 +29,6 @@ use embedded_text::{
 };
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use std::{
-    thread::sleep,
-    time::{Duration, Instant},
-};
 use ux::u4;
 
 use crate::display_def::*;
@@ -93,7 +89,8 @@ impl UIState {
                 }
                 _ => responsive = true,
             },
-            _ => (),
+            UIState::OnboardingRestore(_) => (),
+            UIState::OnboardingBackup(_) => (),
             UIState::Locked => (),
             UIState::End => (),
         }
@@ -106,7 +103,7 @@ impl UIState {
         D: DrawTarget<Color = BinaryColor>,
     {
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
-        display.bounding_box().into_styled(clear).draw(display);
+        display.bounding_box().into_styled(clear).draw(display)?;
         match self {
             UIState::PinEntry(ref pin) => {
                 pin.draw(display)?;

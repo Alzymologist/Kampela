@@ -30,10 +30,7 @@ use embedded_text::{
 };
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use std::{
-    thread::sleep,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 use ux::u4;
 
 #[macro_use]
@@ -60,8 +57,6 @@ fn main() {
 
     // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
     let mut rng = thread_rng();
-
-    let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
 
     let mut state = UIState::new(&mut rng);
 
@@ -102,7 +97,7 @@ fn main() {
             match event {
                 SimulatorEvent::MouseButtonDown {
                     mouse_btn: _,
-                    point: point,
+                    point,
                 } => {
                     if responsive {
                         println!("{}", point);
