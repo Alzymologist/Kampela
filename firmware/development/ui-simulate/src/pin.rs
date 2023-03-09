@@ -9,7 +9,7 @@ use embedded_graphics::{
     Drawable,
     geometry::AnchorPoint,
     mono_font::{ascii::{FONT_6X10, FONT_10X20}, MonoTextStyle},
-    prelude::Primitive,
+    prelude::*,
     primitives::{
         Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
     },
@@ -26,6 +26,8 @@ use ux::u4;
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
 
+use crate::display_def::*;
+
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -40,8 +42,8 @@ const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
     let mut counter = 0;
     let x_offset = 110;
     let y_offset = 22;
-    let x_gap = 4;
-    let y_gap = 4;
+    let x_gap = GAP;
+    let y_gap = GAP;
     let x_spacing = x_gap + PIN_BUTTON_SIZE.width;
     let y_spacing = y_gap + PIN_BUTTON_SIZE.height;
     let offset = Point::new(90, 2);
@@ -61,8 +63,28 @@ const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
     positions
 };
 
-/// Visible areas of buttons
+/// Number of pin digits
+const PIN_LEN: usize = 6;
+
+const PIN_COUNTER_DIAMETER: u32 = 16;
+
+/// Positions of pin code counter dots
+const PIN_COUNT_POSITIONS: [Point; PIN_LEN] = {
+    let mut out = [Point::new(0, 0); PIN_LEN];
+    let x_offset = 45;
+    let y_offset = 50;
+    let x_spacing = 0;
+    let y_spacing = GAP + PIN_COUNTER_DIAMETER;
+    let mut i = 0;
+    while i<PIN_LEN {
+        out[i] = Point::new(x_offset, ((i as u32)*y_spacing + y_offset) as i32);
+        i += 1;
+    };
+    out
+};
+
 lazy_static! {
+    /// Visible areas of buttons
     static ref PIN_BUTTON_AREA: [Rectangle; PIN_BUTTON_COUNT] = {
         let mut output: [Rectangle; PIN_BUTTON_COUNT] = [Rectangle::zero(); PIN_BUTTON_COUNT];
         for i in 0..PIN_BUTTON_COUNT {
@@ -71,6 +93,7 @@ lazy_static! {
         output
     };
 
+    /// Touchable areas of buttons
     static ref PIN_BUTTON_AREA_ACTIVE: [Rectangle; PIN_BUTTON_COUNT] = {
         let mut output: [Rectangle; PIN_BUTTON_COUNT] = [Rectangle::zero(); PIN_BUTTON_COUNT];
 
@@ -78,6 +101,15 @@ lazy_static! {
             output[i] = PIN_BUTTON_AREA[i].resized(PIN_BUTTON_ACTIVE_SIZE, AnchorPoint::Center);
         };
         output
+    };
+
+    /// Pin counter circles
+    static ref PIN_COUNTER_AREA: [Circle; PIN_LEN] = {
+        let mut out = [Circle::new(Point::zero(), 0); PIN_LEN];
+        for i in 0..PIN_LEN {
+            out[i] = Circle::with_center(PIN_COUNT_POSITIONS[i], PIN_COUNTER_DIAMETER);
+        };
+        out
     };
 }
 
@@ -128,8 +160,19 @@ fn get_pinkeys(rng: &mut ThreadRng) -> [u4; 16] {
     pinset
 }
 
-
-const PIN_LEN: usize = 4;
+fn pin_counter<D>(on: bool, bounds: &Circle, display: &mut D) -> Result<(), D::Error>
+    where D: DrawTarget<Color = BinaryColor> 
+{
+    let medium_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 2);
+    if on { 
+        let filled = PrimitiveStyle::with_fill(BinaryColor::On);
+        bounds.clone().offset(-3).into_styled(filled).draw(display)?;
+        bounds.clone().into_styled(medium_stroke).draw(display)?;
+    } else { 
+        bounds.clone().into_styled(medium_stroke).draw(display)?;
+    };
+    Ok(())
+}
 
 const PIN_CODE_MOCK: [u4; PIN_LEN] = [u4::new(0); PIN_LEN];
 
@@ -181,7 +224,7 @@ impl Pincode {
 
     /// Check pin code; decision making for whether to leave this screen and how
     pub fn check_pin(&self) -> Option<bool> {
-        if self.position == 4 {
+        if self.position == PIN_LEN {
             if self.code == PIN_CODE_MOCK {
                 Some(true)
             } else {
@@ -192,15 +235,41 @@ impl Pincode {
         }
     }
 
+    pub fn draw_counter<D>(&self, display: &mut D) -> Result<(), D::Error>
+        where D: DrawTarget<Color = BinaryColor> 
+    {
+        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        let textbox_style = TextBoxStyleBuilder::new()
+            .alignment(HorizontalAlignment::Center)
+            .vertical_alignment(VerticalAlignment::Middle)
+            .build();
+        let bounds = Rectangle::new(Point::new(4, 4), Size::new(90, 50));
+
+        TextBox::with_textbox_style("Enter pin", bounds, character_style, textbox_style).draw(display)?;
+
+        for i in 0..PIN_LEN {
+            pin_counter(i<self.position, &PIN_COUNTER_AREA[i], display)?;
+        }
+        Ok(())
+    }
+
+    pub fn draw_pinpad<D>(&self, display: &mut D) -> Result<(), D::Error>
+        where D: DrawTarget<Color = BinaryColor> 
+    {
+        for i in 0..PIN_BUTTON_COUNT {
+            pin_button(&self.permutation[i], &PIN_BUTTON_AREA[i], display)?;
+        }
+        Ok(())
+    }
+
     /// Draw whole pin code pad
     pub fn draw<D>(&self, display: &mut D) -> Result<(), D::Error>
         where D: DrawTarget<Color = BinaryColor> 
     {
-        for i in 0..PIN_BUTTON_COUNT {
-        pin_button(&self.permutation[i], &PIN_BUTTON_AREA[i], display)?;
+        self.draw_pinpad(display)?;
+        self.draw_counter(display)?;
+        Ok(())
     }
-    Ok(())
-}
 
 }
 

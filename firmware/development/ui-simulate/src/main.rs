@@ -39,6 +39,9 @@ mod pin;
 
 use pin::Pincode;
 
+mod display_def;
+use display_def::*;
+
 // TODO: extract to separate module 
 /// State of UI
 enum UIState {
@@ -83,7 +86,7 @@ impl UIState {
 fn main() {
     
     // Prepare
-    let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(264, 176));
+    let mut display: SimulatorDisplay<BinaryColor> = SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
 
     // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
     let mut rng = thread_rng();
