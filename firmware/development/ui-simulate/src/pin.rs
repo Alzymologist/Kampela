@@ -1,3 +1,5 @@
+//! Pin code entry screen
+
 use bitvec::prelude::{BitArr, Msb0, bitarr};
 use embedded_graphics_core::{
     draw_target::DrawTarget,

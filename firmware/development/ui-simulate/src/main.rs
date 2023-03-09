@@ -1,3 +1,5 @@
+//! This is simulator to develop Kampela UI mocks
+
 use bitvec::prelude::{BitArr, Msb0, bitarr};
 use embedded_graphics_core::{
     draw_target::DrawTarget,
@@ -35,53 +37,15 @@ extern crate lazy_static;
 ///  should be quite large as screen takes this much to clean
 const SLOW_UPDATE_TIME: Duration = Duration::new(1, 0);
 
-mod pin;
-
-use pin::Pincode;
-
 mod display_def;
 use display_def::*;
 
-// TODO: extract to separate module 
-/// State of UI
-enum UIState {
-    PinEntry(Pincode),
-    Locked,
-    End,
-}
+mod pin;
 
-impl UIState {
-    pub fn new(rng: &mut ThreadRng) -> Self {
-        UIState::PinEntry(Pincode::new(rng))
-    }
+mod seed_entry;
 
-    pub fn handle_event<D>(&mut self, point: Point, rng: &mut ThreadRng, fast_display: &mut D) -> Result<bool, D::Error>
-        where D: DrawTarget<Color = BinaryColor> 
-    {
-        let mut responsive = true;
-        match self {
-            UIState::PinEntry(ref mut pincode) => {
-                responsive = pincode.handle_event(point, rng, fast_display)?;
-                match pincode.check_pin() {
-                    Some(true) => {
-                        println!("You win");
-                        *self = UIState::End;
-                    },
-                    Some(false) => {
-                        println!("kaput");
-                        *self = UIState::Locked;
-                    },
-                    None => {},
-                }
-            },
-            UIState::Locked => (),
-            UIState::End => (),
-        }
-        Ok(responsive)
-    } 
-}
-
-
+mod uistate;
+use uistate::UIState;
 
 fn main() {
     
@@ -117,21 +81,10 @@ fn main() {
         if !responsive {
             if update_started.elapsed().cmp(&SLOW_UPDATE_TIME).is_gt() {
                 // this unavoidable command actually takes time in real hardware
-                display.bounding_box().into_styled(clear).draw(&mut display);
-                match state {
-                    UIState::PinEntry(ref pin) => {
-                        match pin.draw(&mut display) {
-                            Ok(()) => (),
-                            Err(e) => println!("{e}"),
-                        };
-                    },
-                    UIState::Locked => {
-                        let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
-                        Line::new(Point::new(0, 0), Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(&mut display);
-                        Line::new(Point::new(SCREEN_SIZE_X as i32, 0), Point::new(0, SCREEN_SIZE_Y as i32)).into_styled(linestyle).draw(&mut display);
-                    }
-                    _ => {},
-                }
+                match state.render(&mut display) {
+                    Ok(()) => (),
+                    Err(e) => println!("{:?}", e),
+                };
                 responsive = true;
             }
         }
