@@ -24,29 +24,37 @@ use embedded_text::{
 
 use crate::display_def::*;
 
+/// Draw seed recovery screen
+pub fn draw<D>(display: &mut D) -> Result<(), D::Error>
+where
+    D: DrawTarget<Color = BinaryColor>,
+{
+    let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
+    let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+    let textbox_style = TextBoxStyleBuilder::new()
+        .alignment(HorizontalAlignment::Center)
+        .vertical_alignment(VerticalAlignment::Middle)
+        .build();
 
-
-    /// Draw seed recovery screen
-    pub fn draw<D>(display: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
-    {
-        let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-        let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
-        let textbox_style = TextBoxStyleBuilder::new()
-            .alignment(HorizontalAlignment::Center)
-            .vertical_alignment(VerticalAlignment::Middle)
-            .build();
-
-        let restore = Rectangle::new(Point::new(0, 50), Size::new(SCREEN_SIZE_X/2, SCREEN_SIZE_Y-50));
-        let generate = Rectangle::new(Point::new(SCREEN_SIZE_X as i32/2, 50), Size::new(SCREEN_SIZE_X/2, SCREEN_SIZE_Y-50));
-        let header = Rectangle::new(Point::new(0, 0), Size::new(SCREEN_SIZE_X, 50));
-        TextBox::with_textbox_style("restore", restore, character_style, textbox_style)
-            .draw(display)?;
-        TextBox::with_textbox_style("generate", generate, character_style, textbox_style)
-            .draw(display)?;
-        TextBox::with_textbox_style("restore or generate?", header, character_style, textbox_style)
-            .draw(display)?;
-        Ok(())
-    }
-
+    let restore = Rectangle::new(
+        Point::new(0, 50),
+        Size::new(SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 50),
+    );
+    let generate = Rectangle::new(
+        Point::new(SCREEN_SIZE_X as i32 / 2, 50),
+        Size::new(SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 50),
+    );
+    let header = Rectangle::new(Point::new(0, 0), Size::new(SCREEN_SIZE_X, 50));
+    TextBox::with_textbox_style("restore", restore, character_style, textbox_style)
+        .draw(display)?;
+    TextBox::with_textbox_style("generate", generate, character_style, textbox_style)
+        .draw(display)?;
+    TextBox::with_textbox_style(
+        "restore or generate?",
+        header,
+        character_style,
+        textbox_style,
+    )
+    .draw(display)?;
+    Ok(())
+}

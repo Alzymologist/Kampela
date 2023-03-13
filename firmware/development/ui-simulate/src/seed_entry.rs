@@ -24,8 +24,7 @@ use embedded_text::{
     TextBox,
 };
 
-
-use patches::phrase::{Bits11, phrase_to_entropy, WordList, wordlist_english, WordListElement};
+use patches::phrase::{phrase_to_entropy, wordlist_english, Bits11, WordList, WordListElement};
 
 use crate::display_def::*;
 
@@ -36,13 +35,51 @@ const SHORT_SEED: usize = 12;
 const BUTTON_TOP: i32 = 30;
 const CONTROL_BUTTON_WIDTH: u32 = 40;
 
-const BACK_BUTTON_AREA: Rectangle = Rectangle::new(Point::new(GAP as i32, BUTTON_TOP), Size::new(CONTROL_BUTTON_WIDTH, SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP));
-const FORWARD_BUTTON_AREA: Rectangle = Rectangle::new(Point::new(SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32 - GAP as i32, BUTTON_TOP), Size::new(CONTROL_BUTTON_WIDTH, SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP));
+const BACK_BUTTON_AREA: Rectangle = Rectangle::new(
+    Point::new(GAP as i32, BUTTON_TOP),
+    Size::new(
+        CONTROL_BUTTON_WIDTH,
+        SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP,
+    ),
+);
+const FORWARD_BUTTON_AREA: Rectangle = Rectangle::new(
+    Point::new(
+        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32 - GAP as i32,
+        BUTTON_TOP,
+    ),
+    Size::new(
+        CONTROL_BUTTON_WIDTH,
+        SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP,
+    ),
+);
 
-const BACK_BUTTON_TRIANGLE: Triangle = Triangle::new(Point::new(CONTROL_BUTTON_WIDTH as i32, BUTTON_TOP + GAP as i32), Point::new(CONTROL_BUTTON_WIDTH as i32, SCREEN_SIZE_Y as i32 - GAP as i32 * 2), Point::new(GAP as i32 * 2, BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2));
-const FORWARD_BUTTON_TRIANGLE: Triangle = Triangle::new(Point::new(SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32, BUTTON_TOP + GAP as i32), Point::new(SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32, SCREEN_SIZE_Y as i32 - GAP as i32 * 2), Point::new(SCREEN_SIZE_X as i32 - GAP as i32 * 2, BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2));
+const BACK_BUTTON_TRIANGLE: Triangle = Triangle::new(
+    Point::new(CONTROL_BUTTON_WIDTH as i32, BUTTON_TOP + GAP as i32),
+    Point::new(
+        CONTROL_BUTTON_WIDTH as i32,
+        SCREEN_SIZE_Y as i32 - GAP as i32 * 2,
+    ),
+    Point::new(GAP as i32 * 2, BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2),
+);
+const FORWARD_BUTTON_TRIANGLE: Triangle = Triangle::new(
+    Point::new(
+        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32,
+        BUTTON_TOP + GAP as i32,
+    ),
+    Point::new(
+        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32,
+        SCREEN_SIZE_Y as i32 - GAP as i32 * 2,
+    ),
+    Point::new(
+        SCREEN_SIZE_X as i32 - GAP as i32 * 2,
+        BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2,
+    ),
+);
 
-const PHRASE_AREA: Rectangle = Rectangle::new(Point::new(GAP as i32, GAP as i32), Size::new(SCREEN_SIZE_X - 2*GAP, BUTTON_TOP as u32 - GAP));
+const PHRASE_AREA: Rectangle = Rectangle::new(
+    Point::new(GAP as i32, GAP as i32),
+    Size::new(SCREEN_SIZE_X - 2 * GAP, BUTTON_TOP as u32 - GAP),
+);
 const WORD_AREA: Rectangle = Rectangle::new(Point::new(103, BUTTON_TOP), Size::new(50, 14));
 
 const KEY_COUNT: usize = 26;
@@ -120,12 +157,17 @@ impl KeyButton {
 
     fn handle(&self, point: Point) -> Option<char> {
         if self.area.offset(-5).contains(point) {
-            Some(self.label.to_lowercase().next().expect("button should contain at least 1 letter"))
+            Some(
+                self.label
+                    .to_lowercase()
+                    .next()
+                    .expect("button should contain at least 1 letter"),
+            )
         } else {
             None
         }
     }
-    
+
     fn draw<D>(&self, display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
@@ -149,7 +191,6 @@ impl KeyButton {
         .draw(display)?;
         Ok(())
     }
-    
 }
 
 struct SeedBuffer {
@@ -181,7 +222,11 @@ impl SeedBuffer {
     }
 
     pub fn proposed_phrase(&self) -> String {
-        self.seed_phrase.iter().map(|a| a.word().to_string()).collect::<Vec<String>>().join(" ")
+        self.seed_phrase
+            .iter()
+            .map(|a| a.word().to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
     }
 
     pub fn remove_last(&mut self) -> bool {
@@ -193,11 +238,18 @@ impl SeedBuffer {
     }
 
     pub fn validate(&mut self) -> bool {
-        match phrase_to_entropy(&self.seed_phrase.iter().map(|a| a.word().to_string()).collect::<Vec<String>>().join(" ")) {
+        match phrase_to_entropy(
+            &self
+                .seed_phrase
+                .iter()
+                .map(|a| a.word().to_string())
+                .collect::<Vec<String>>()
+                .join(" "),
+        ) {
             Ok(a) => {
                 self.ready = Some(a);
                 true
-            },
+            }
             Err(_) => false,
         }
     }
@@ -240,14 +292,17 @@ impl Proposal {
 
     pub fn remove_letter(&mut self) -> bool {
         self.entry.pop();
-        self.guess = if self.proposed_len() == 0 { Vec::new() } else { wordlist_english().get_words_by_prefix(&self.entry) };
+        self.guess = if self.proposed_len() == 0 {
+            Vec::new()
+        } else {
+            wordlist_english().get_words_by_prefix(&self.entry)
+        };
         true
     }
 
     pub fn proposed_len(&self) -> usize {
         self.guess.len()
     }
-
 
     pub fn forward_button_action(&mut self) -> Option<WordListElement> {
         if self.guess.len() == 1 {
@@ -270,7 +325,11 @@ impl Proposal {
     }
 
     pub fn get_only_word(&mut self) -> WordListElement {
-        if let Some(a) = self.guess.pop() { a } else { panic!() }
+        if let Some(a) = self.guess.pop() {
+            a
+        } else {
+            panic!()
+        }
     }
 }
 
@@ -282,7 +341,7 @@ pub struct SeedEntryState {
 
 impl SeedEntryState {
     pub fn new() -> Self {
-        SeedEntryState { 
+        SeedEntryState {
             seed_phrase: SeedBuffer::new(),
             proposal: Proposal::new(),
         }
@@ -291,11 +350,8 @@ impl SeedEntryState {
     pub fn resolve(&self) -> Option<Vec<u8>> {
         self.seed_phrase.ready.clone()
     }
-    
-    fn update_entry<D>(
-        &self,
-        fast_display: &mut D,
-    ) -> Result<(), D::Error>
+
+    fn update_entry<D>(&self, fast_display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -306,16 +362,18 @@ impl SeedEntryState {
             .build();
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         WORD_AREA.into_styled(clear).draw(fast_display)?;
-        TextBox::with_textbox_style(&format!("{}", self.proposal.word()), WORD_AREA, character_style, textbox_style)
-            .draw(fast_display)?;
+        TextBox::with_textbox_style(
+            &format!("{}", self.proposal.word()),
+            WORD_AREA,
+            character_style,
+            textbox_style,
+        )
+        .draw(fast_display)?;
 
         Ok(())
     }
 
-    fn update_proposal<D>(
-        &self,
-        fast_display: &mut D,
-    ) -> Result<(), D::Error>
+    fn update_proposal<D>(&self, fast_display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -328,17 +386,16 @@ impl SeedEntryState {
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         PHRASE_AREA.into_styled(clear).draw(fast_display)?;
         let mut proposal = self.seed_phrase.proposed_phrase();
-        if proposal == "" { proposal = String::from("please enter seed phrase") };
+        if proposal == "" {
+            proposal = String::from("please enter seed phrase")
+        };
         TextBox::with_textbox_style(&proposal, PHRASE_AREA, character_style, textbox_style)
             .draw(fast_display)?;
 
         Ok(())
     }
 
-    fn back_button_event<D>(
-        &mut self,
-        fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    fn back_button_event<D>(&mut self, fast_display: &mut D) -> Result<bool, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -353,10 +410,7 @@ impl SeedEntryState {
         Ok(true)
     }
 
-    fn forward_button_event<D>(
-        &mut self,
-        fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    fn forward_button_event<D>(&mut self, fast_display: &mut D) -> Result<bool, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -375,11 +429,7 @@ impl SeedEntryState {
         Ok(true)
     }
 
-    fn key_button_event<D>(
-        &mut self,
-        key: char,
-        fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    fn key_button_event<D>(&mut self, key: char, fast_display: &mut D) -> Result<bool, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -390,13 +440,8 @@ impl SeedEntryState {
         Ok(true)
     }
 
-
     /// Input event (user touched screen in pin entry mode)
-    pub fn handle_event<D>(
-        &mut self,
-        point: Point,
-        fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    pub fn handle_event<D>(&mut self, point: Point, fast_display: &mut D) -> Result<bool, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -425,10 +470,18 @@ impl SeedEntryState {
             .alignment(HorizontalAlignment::Center)
             .vertical_alignment(VerticalAlignment::Middle)
             .build();
-        let bounds = Rectangle::new(Point::new(0, 0), Size::new(SCREEN_SIZE_X, BUTTON_TOP as u32));
+        let bounds = Rectangle::new(
+            Point::new(0, 0),
+            Size::new(SCREEN_SIZE_X, BUTTON_TOP as u32),
+        );
 
-        TextBox::with_textbox_style(&format!("Words entered: {}", self.seed_phrase.proposed_phrase()), PHRASE_AREA, character_style, textbox_style)
-            .draw(display)?;
+        TextBox::with_textbox_style(
+            &format!("Words entered: {}", self.seed_phrase.proposed_phrase()),
+            PHRASE_AREA,
+            character_style,
+            textbox_style,
+        )
+        .draw(display)?;
         //TextBox::with_textbox_style(&format!("Words entered: {}, last word: {}", self.seed_phrase.words_entered(), self.seed_phrase.last_word()), WORD_AREA, character_style, textbox_style)
 
         Ok(())
@@ -445,19 +498,29 @@ impl SeedEntryState {
             .vertical_alignment(VerticalAlignment::Middle)
             .build();
 
-        BACK_BUTTON_AREA.clone().into_styled(thin_stroke).draw(display)?;
-        BACK_BUTTON_TRIANGLE.into_styled(thin_stroke).draw(display)?;
+        BACK_BUTTON_AREA
+            .clone()
+            .into_styled(thin_stroke)
+            .draw(display)?;
+        BACK_BUTTON_TRIANGLE
+            .into_styled(thin_stroke)
+            .draw(display)?;
 
         Ok(())
     }
-    
+
     fn draw_forward_button<D>(&self, display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
         let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-        FORWARD_BUTTON_AREA.clone().into_styled(thin_stroke).draw(display)?;
-        FORWARD_BUTTON_TRIANGLE.into_styled(thin_stroke).draw(display)?;
+        FORWARD_BUTTON_AREA
+            .clone()
+            .into_styled(thin_stroke)
+            .draw(display)?;
+        FORWARD_BUTTON_TRIANGLE
+            .into_styled(thin_stroke)
+            .draw(display)?;
         Ok(())
     }
 
@@ -469,7 +532,7 @@ impl SeedEntryState {
         self.draw_forward_button(display)?;
         Ok(())
     }
-    
+
     fn draw_key_buttons<D>(&self, display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
@@ -479,7 +542,7 @@ impl SeedEntryState {
         }
         Ok(())
     }
-    
+
     fn draw_buttons<D>(&self, display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
@@ -488,7 +551,6 @@ impl SeedEntryState {
         self.draw_key_buttons(display)?;
         Ok(())
     }
-
 
     /// Draw seed recovery screen
     pub fn draw<D>(&self, display: &mut D) -> Result<(), D::Error>
@@ -500,5 +562,4 @@ impl SeedEntryState {
         self.draw_buttons(display)?;
         Ok(())
     }
-
 }

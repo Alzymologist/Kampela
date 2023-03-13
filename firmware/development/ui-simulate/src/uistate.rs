@@ -54,7 +54,7 @@ pub enum UIState {
 impl UIState {
     pub fn new(rng: &mut ThreadRng) -> Self {
         UIState::PinEntry(Pincode::new(rng))
-//        UIState::OnboardingRestore(SeedEntryState::new())
+        //        UIState::OnboardingRestore(SeedEntryState::new())
     }
 
     /// Read user touch event
@@ -99,11 +99,11 @@ impl UIState {
                 if let Some(b) = a.resolve() {
                     *self = UIState::OnboardingBackup(entropy_to_phrase(&b).unwrap())
                 }
-            },
+            }
             UIState::OnboardingBackup(_) => {
                 *self = UIState::End;
                 responsive = false;
-            },
+            }
             UIState::Locked => (),
             UIState::End => (),
         }
@@ -120,13 +120,13 @@ impl UIState {
         match self {
             UIState::PinEntry(ref pin) => {
                 pin.draw(display)?;
-            },
+            }
             UIState::OnboardingRestoreOrGenerate => {
                 restore_or_generate::draw(display)?;
-            },
+            }
             UIState::OnboardingRestore(ref entry) => {
                 entry.draw(display)?;
-            },
+            }
             UIState::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
                 Line::new(
@@ -141,7 +141,7 @@ impl UIState {
                 )
                 .into_styled(linestyle)
                 .draw(display)?;
-            },
+            }
             _ => {}
         }
         Ok(())
