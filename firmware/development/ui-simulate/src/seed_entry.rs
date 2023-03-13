@@ -447,15 +447,6 @@ impl SeedEntryState {
 
         BACK_BUTTON_AREA.clone().into_styled(thin_stroke).draw(display)?;
         BACK_BUTTON_TRIANGLE.into_styled(thin_stroke).draw(display)?;
-        let text = if self.proposal.entry.len() > 0 {
-            "backspace"
-        } else if self.seed_phrase.len() > 0 {
-            "remove word"
-        } else {
-            ""
-        };
-        TextBox::with_textbox_style(text, BACK_BUTTON_AREA, character_style, textbox_style)
-            .draw(display)?;
 
         Ok(())
     }

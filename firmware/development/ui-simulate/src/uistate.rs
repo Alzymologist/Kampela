@@ -39,6 +39,8 @@ use crate::pin::Pincode;
 
 use crate::seed_entry::SeedEntryState;
 
+use crate::restore_or_generate;
+
 /// State of UI
 pub enum UIState {
     PinEntry(Pincode),
@@ -51,8 +53,8 @@ pub enum UIState {
 
 impl UIState {
     pub fn new(rng: &mut ThreadRng) -> Self {
-//        UIState::PinEntry(Pincode::new(rng))
-        UIState::OnboardingRestore(SeedEntryState::new())
+        UIState::PinEntry(Pincode::new(rng))
+//        UIState::OnboardingRestore(SeedEntryState::new())
     }
 
     /// Read user touch event
@@ -119,9 +121,12 @@ impl UIState {
             UIState::PinEntry(ref pin) => {
                 pin.draw(display)?;
             },
+            UIState::OnboardingRestoreOrGenerate => {
+                restore_or_generate::draw(display)?;
+            },
             UIState::OnboardingRestore(ref entry) => {
                 entry.draw(display)?;
-            }
+            },
             UIState::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
                 Line::new(

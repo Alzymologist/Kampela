@@ -44,7 +44,7 @@ mod display_def;
 use display_def::*;
 
 mod pin;
-
+mod restore_or_generate;
 mod seed_entry;
 
 mod uistate;
