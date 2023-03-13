@@ -31,6 +31,8 @@ use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
 use ux::u4;
 
+use patches::phrase::entropy_to_phrase;
+
 use crate::display_def::*;
 
 use crate::pin::Pincode;
@@ -49,7 +51,8 @@ pub enum UIState {
 
 impl UIState {
     pub fn new(rng: &mut ThreadRng) -> Self {
-        UIState::PinEntry(Pincode::new(rng))
+//        UIState::PinEntry(Pincode::new(rng))
+        UIState::OnboardingRestore(SeedEntryState::new())
     }
 
     /// Read user touch event
@@ -89,8 +92,16 @@ impl UIState {
                 }
                 _ => responsive = true,
             },
-            UIState::OnboardingRestore(_) => (),
-            UIState::OnboardingBackup(_) => (),
+            UIState::OnboardingRestore(ref mut a) => {
+                responsive = a.handle_event(point, fast_display)?;
+                if let Some(b) = a.resolve() {
+                    *self = UIState::OnboardingBackup(entropy_to_phrase(&b).unwrap())
+                }
+            },
+            UIState::OnboardingBackup(_) => {
+                *self = UIState::End;
+                responsive = false;
+            },
             UIState::Locked => (),
             UIState::End => (),
         }
@@ -107,6 +118,9 @@ impl UIState {
         match self {
             UIState::PinEntry(ref pin) => {
                 pin.draw(display)?;
+            },
+            UIState::OnboardingRestore(ref entry) => {
+                entry.draw(display)?;
             }
             UIState::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
@@ -122,7 +136,7 @@ impl UIState {
                 )
                 .into_styled(linestyle)
                 .draw(display)?;
-            }
+            },
             _ => {}
         }
         Ok(())

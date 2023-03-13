@@ -14,3 +14,4 @@ embedded-graphics-simulator = "0.3.0"
 ux = "0.1.5"
 rand = "0.8.5"
 lazy_static = "1.4.0"
+patches = { path = "../kampela_experiments_efm32pg23/patches" }
