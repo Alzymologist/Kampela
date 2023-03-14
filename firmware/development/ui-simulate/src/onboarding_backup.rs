@@ -1,6 +1,6 @@
 use embedded_graphics::{
     geometry::AnchorPoint,
-    mono_font::{
+mono_font::{
         ascii::{FONT_10X20, FONT_4X6, FONT_6X10},
         MonoTextStyle,
     },
@@ -22,10 +22,12 @@ use embedded_text::{
     TextBox,
 };
 
+use patches::phrase::{phrase_to_entropy, wordlist_english, Bits11, WordList, WordListElement};
+
 use crate::display_def::*;
 
-/// Draw the screen asking the user wherther to restore seed or generate random one
-pub fn draw<D>(display: &mut D) -> Result<(), D::Error>
+/// Show seed to user
+pub fn draw<D>(seed: &str, display: &mut D) -> Result<(), D::Error>
 where
     D: DrawTarget<Color = BinaryColor>,
 {
@@ -50,7 +52,7 @@ where
     TextBox::with_textbox_style("generate", generate, character_style, textbox_style)
         .draw(display)?;
     TextBox::with_textbox_style(
-        "restore or generate?",
+        "Your seed is:",
         header,
         character_style,
         textbox_style,

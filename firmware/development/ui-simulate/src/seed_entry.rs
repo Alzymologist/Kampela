@@ -32,49 +32,6 @@ const WORD_LENGTH: usize = 8;
 const MAX_SEED: usize = 24;
 const SHORT_SEED: usize = 12;
 
-const BUTTON_TOP: i32 = 30;
-const CONTROL_BUTTON_WIDTH: u32 = 40;
-
-const BACK_BUTTON_AREA: Rectangle = Rectangle::new(
-    Point::new(GAP as i32, BUTTON_TOP),
-    Size::new(
-        CONTROL_BUTTON_WIDTH,
-        SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP,
-    ),
-);
-const FORWARD_BUTTON_AREA: Rectangle = Rectangle::new(
-    Point::new(
-        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32 - GAP as i32,
-        BUTTON_TOP,
-    ),
-    Size::new(
-        CONTROL_BUTTON_WIDTH,
-        SCREEN_SIZE_Y - BUTTON_TOP as u32 - GAP,
-    ),
-);
-
-const BACK_BUTTON_TRIANGLE: Triangle = Triangle::new(
-    Point::new(CONTROL_BUTTON_WIDTH as i32, BUTTON_TOP + GAP as i32),
-    Point::new(
-        CONTROL_BUTTON_WIDTH as i32,
-        SCREEN_SIZE_Y as i32 - GAP as i32 * 2,
-    ),
-    Point::new(GAP as i32 * 2, BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2),
-);
-const FORWARD_BUTTON_TRIANGLE: Triangle = Triangle::new(
-    Point::new(
-        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32,
-        BUTTON_TOP + GAP as i32,
-    ),
-    Point::new(
-        SCREEN_SIZE_X as i32 - CONTROL_BUTTON_WIDTH as i32,
-        SCREEN_SIZE_Y as i32 - GAP as i32 * 2,
-    ),
-    Point::new(
-        SCREEN_SIZE_X as i32 - GAP as i32 * 2,
-        BUTTON_TOP / 2 + SCREEN_SIZE_Y as i32 / 2,
-    ),
-);
 
 const PHRASE_AREA: Rectangle = Rectangle::new(
     Point::new(GAP as i32, GAP as i32),
