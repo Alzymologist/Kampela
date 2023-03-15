@@ -936,7 +936,7 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
         .en
         .write(|w_reg| w_reg.en().enable());
 
-/*
+    /*
     epaper_hw_init(peripherals);
     make_text(peripherals, LOREM_IPSUM);
     visible_delay(1000);
@@ -967,7 +967,7 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
     visible_delay(1000);
     epaper_deep_sleep(peripherals);
 */
-/*
+    /*
     let mut hasher2 = Blake2b::new(32);
     for _i in 0..100000 {
         hasher2.update(&[0]);
@@ -998,7 +998,8 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
     make_text(peripherals, &text);
     visible_delay(1000);
     epaper_deep_sleep(peripherals);
-
+    */
+/*
     loop {
         if peripherals.GPIO_S.if_.read().extif0().bit_is_set() {
 

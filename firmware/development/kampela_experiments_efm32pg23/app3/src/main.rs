@@ -5,6 +5,7 @@
 extern crate alloc;
 extern crate core;
 
+use alloc::format;
 use core::{alloc::Layout, panic::PanicInfo};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m_rt::{entry, exception};
@@ -17,7 +18,7 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use app::{draw::FrameBuffer, screen::{epaper_hw_init, epaper_deep_sleep, ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, ui::uistate};
+use app::{draw::{FrameBuffer, make_text, highlight_point}, screen::{epaper_hw_init, epaper_deep_sleep, ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, ui::{display_def::*, uistate}, visible_delay};
 
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
@@ -25,7 +26,12 @@ fn oom(_: Layout) -> ! {
 }
 
 #[panic_handler]
-fn panic(_panic: &PanicInfo<'_>) -> ! {
+fn panic(panic: &PanicInfo<'_>) -> ! {
+    let mut peripherals = unsafe{Peripherals::steal()};
+    epaper_hw_init(&mut peripherals);
+    make_text(&mut peripherals, &format!("{:?}", panic));
+    visible_delay(1000);
+    epaper_deep_sleep(&mut peripherals);
     loop {}
 }
 
@@ -98,6 +104,8 @@ fn main() -> ! {
     // display abstraction
     let mut slow_screen = FrameBuffer::new_white();
 
+    let mut fast_screen = FrameBuffer::new_white();
+
     let mut input = None;
 
     loop {
@@ -106,14 +114,15 @@ fn main() -> ! {
             state.render(&mut slow_screen);
             epaper_hw_init(&mut peripherals);
             slow_screen.apply(&mut peripherals);
+            visible_delay(1000);
             should_refresh = false;
+            responsive = true;
             epaper_deep_sleep(&mut peripherals);
         }
 
         // 2. read input if possible
         if responsive {
             if peripherals.GPIO_S.if_.read().extif0().bit_is_set() {
-                responsive = false;
                 let touch_data = ft6336_read_at::<LEN_NUM_TOUCHES>(&mut peripherals, FT6X36_REG_NUM_TOUCHES).unwrap();
                 //let text = format!("got touch_data {:?}", touch_data);
                 //epaper_hw_init(peripherals);
@@ -121,14 +130,15 @@ fn main() -> ! {
                 //visible_delay(1000);
                 //epaper_deep_sleep(peripherals);
             
-                let detected_y = ((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16;
-                let detected_x = ((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16;
-                //epaper_hw_init(peripherals);
-                //highlight_point(peripherals, detected_x, detected_y);
-                //visible_delay(1000);
-                //epaper_deep_sleep(peripherals);
-          
-                input = Some(Point::new(detected_x.into(), detected_y.into()));
+                let detected_y = (((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16) as i32;
+                let detected_x = (((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16) as i32;
+                /*
+                epaper_hw_init(&mut peripherals);
+                highlight_point(&mut peripherals, detected_x, detected_y);
+                visible_delay(1000);
+                epaper_deep_sleep(&mut peripherals);
+*/
+                input = Some(Point::new(SCREEN_SIZE_X as i32 - detected_x, /*SCREEN_SIZE_Y as i32 - */detected_y));
 
                 peripherals
                     .GPIO_S
@@ -136,9 +146,16 @@ fn main() -> ! {
                     .write(|w_reg| w_reg.extif0().clear_bit())
             }
 
+        // 3. handle input
+            if let Some(point) = input {
+                match state.handle_event(point, &mut se_rng::SeRng{peripherals: &mut peripherals}, &mut slow_screen) {
+                    Ok(a) => responsive = a,
+                    Err(e) => (),
+                };
+                should_refresh = !responsive;
+            }
         }
 
-        // 3. handle input
 
         // 4. non-UI loop time
 
