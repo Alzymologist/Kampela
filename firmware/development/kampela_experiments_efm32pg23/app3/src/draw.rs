@@ -20,6 +20,7 @@ use embedded_text::{
 };
 
 use crate::screen::epaper_draw_stuff_differently;
+use crate::ui::display_def::*;
 
 #[derive(Debug)]
 pub enum DisplayError {
@@ -57,7 +58,7 @@ impl<'a> Drawable for TextToPrint<'a> {
             .alignment(HorizontalAlignment::Justified)
             .paragraph_spacing(5)
             .build();
-        let bounds = Rectangle::new(Point::zero(), Size::new(176, 0));
+        let bounds = Rectangle::new(Point::zero(), Size::new(SCREEN_SIZE_X, 0));
         TextBox::with_textbox_style(self.line, bounds, character_style, textbox_style).draw(target)?;
         Ok(())
     }
@@ -70,7 +71,7 @@ pub struct FrameBuffer(PixelData);
 
 impl FrameBuffer {
     pub fn new_white() -> Self {
-        Self(bitarr!(u8, Msb0; 1; 176*264))
+        Self(bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize))
     }
     pub fn apply(&self, peripherals: &mut Peripherals) {
         epaper_draw_stuff_differently(peripherals, self.0.into_inner());
@@ -80,14 +81,15 @@ impl FrameBuffer {
 impl Dimensions for FrameBuffer {
     fn bounding_box(&self) -> Rectangle {
         Rectangle {
-            top_left: Point { x: 0, y: 0 },
-            size: Size {
-                width: 176,
-                height: 264,
-            },
+            top_left: SCREEN_ZERO,
+            size: SCREEN_SIZE,
         }
     }
 }
+
+// this was an experiment to find Y offset value in memory
+//const SHIFT_COEFFICIENT: usize = (SCREEN_SIZE_Y * 7) as usize;
+const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
 
 impl DrawTarget for FrameBuffer {
     type Color = BinaryColor;
@@ -97,9 +99,11 @@ impl DrawTarget for FrameBuffer {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for pixel in pixels {
-            if (pixel.0.x<0)|(pixel.0.x>=176) {return Err(DisplayError::XBounds)}
-            if (pixel.0.y<0)|(pixel.0.y>=264) {return Err(DisplayError::YBounds)}
-            let n = (pixel.0.y*176 + (175 - pixel.0.x)) as usize;
+            if (pixel.0.x<0)|(pixel.0.x>=SCREEN_SIZE_X as i32) {return Err(DisplayError::XBounds)}
+            if (pixel.0.y<0)|(pixel.0.y>=SCREEN_SIZE_Y as i32) {return Err(DisplayError::YBounds)}
+            //transposing pizels correctly here
+            let n = (pixel.0.y + pixel.0.x*SCREEN_SIZE_Y as i32) /*(pixel.0.y*176 + (175 - pixel.0.x))*/ as usize;
+            //let n = if n<SHIFT_COEFFICIENT { n + SCREEN_SIZE_VALUE - SHIFT_COEFFICIENT } else { n - SHIFT_COEFFICIENT };
             let mut pixel_update = self.0.get_mut(n).expect("checked the bounds");
             match pixel.1 {
                 BinaryColor::Off => {

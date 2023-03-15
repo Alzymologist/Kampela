@@ -297,7 +297,7 @@ pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; 
     epaper_write_command(peripherals, &[0x4E]);
     epaper_write_data(peripherals, &[0x00]);
     epaper_write_command(peripherals, &[0x4F]);
-    epaper_write_data(peripherals, &[0x00]);
+    epaper_write_data(peripherals, &[0x07]);
     epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
     epaper_write_data(peripherals, &stuff);
     epaper_write_command(peripherals, &[0x26]);
@@ -348,7 +348,7 @@ pub const LOGO: &[u8] = &[
 pub const BAUDRATE_USART: u32 = 10_000_000;
 pub const BAUDRATE_EUSART: u32 = 10_000_000;
 
-pub fn try_this_test(peripherals: &mut Peripherals) {
+pub fn init_peripherals(peripherals: &mut Peripherals) {
     peripherals
         .CMU_S
         .clken0
@@ -936,6 +936,7 @@ pub fn try_this_test(peripherals: &mut Peripherals) {
         .en
         .write(|w_reg| w_reg.en().enable());
 
+/*
     epaper_hw_init(peripherals);
     make_text(peripherals, LOREM_IPSUM);
     visible_delay(1000);
@@ -965,7 +966,7 @@ pub fn try_this_test(peripherals: &mut Peripherals) {
     make_text(peripherals, &text);
     visible_delay(1000);
     epaper_deep_sleep(peripherals);
-
+*/
 /*
     let mut hasher2 = Blake2b::new(32);
     for _i in 0..100000 {

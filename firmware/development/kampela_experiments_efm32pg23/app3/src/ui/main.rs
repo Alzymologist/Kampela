@@ -40,8 +40,8 @@ extern crate lazy_static;
 ///  should be quite large as screen takes this much to clean
 const SLOW_UPDATE_TIME: Duration = Duration::new(1, 0);
 
-mod display_def;
-use display_def::*;
+pub mod display_def;
+pub use display_def::*;
 
 mod pin;
 mod restore_or_generate;
