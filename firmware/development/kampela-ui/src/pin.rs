@@ -1,5 +1,11 @@
 //! Pin code entry screen
 
+#[cfg(not(feature="std"))]
+use alloc::format;
+
+#[cfg(feature="std")]
+use std::format;
+
 use bitvec::prelude::{bitarr, BitArr, Msb0};
 use embedded_graphics::{
     geometry::AnchorPoint,
@@ -19,19 +25,16 @@ use embedded_graphics_core::{
     pixelcolor::BinaryColor,
     Pixel,
 };
-use embedded_graphics_simulator::{
-    BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
     style::{HeightMode, TextBoxStyleBuilder},
     TextBox,
 };
-use rand::seq::SliceRandom;
-use rand::{rngs::ThreadRng, thread_rng};
+use rand::{Rng, seq::SliceRandom};
 use ux::u4;
 
 use crate::display_def::*;
+use crate::uistate::{EventResult, UIState, UpdateRequest};
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -133,7 +136,7 @@ where
 
     TextBox::with_textbox_style(
         &format!("{:x}", number),
-        bounds.to_owned(),
+        *bounds,
         character_style,
         textbox_style,
     )
@@ -158,7 +161,7 @@ where
 
     TextBox::with_textbox_style(
         &format!("{:x}", number),
-        bounds.to_owned(),
+        *bounds,
         character_style,
         textbox_style,
     )
@@ -167,7 +170,7 @@ where
 }
 
 /// Shuffle keys
-fn get_pinkeys(rng: &mut ThreadRng) -> [u4; 16] {
+fn get_pinkeys<R: Rng + ?Sized>(rng: &mut R) -> [u4; 16] {
     let mut pinset: [u4; 16] = core::array::from_fn(|i| {
         (i).try_into()
             .expect("static initialization of numbers 0..15")
@@ -205,7 +208,7 @@ pub struct Pincode {
 }
 
 impl Pincode {
-    pub fn new(rng: &mut ThreadRng) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Pincode {
             code: [u4::new(0); PIN_LEN],
             position: 0,
@@ -214,48 +217,62 @@ impl Pincode {
     }
 
     /// Change pin keys positions; remember to run before new key press
-    fn shuffle(&mut self, rng: &mut ThreadRng) {
+    fn shuffle<R: Rng + ?Sized>(&mut self, rng: &mut R) {
         self.permutation = get_pinkeys(rng);
     }
 
     /// User pushed a button
-    pub fn input(&mut self, rng: &mut ThreadRng, key: u4) {
+    pub fn input<R: Rng + ?Sized>(&mut self, rng: &mut R, key: u4) {
         self.code[self.position] = key;
         self.position += 1;
         self.shuffle(rng);
     }
 
-    /// Input event (user touched screen in pin entry mode)
-    pub fn handle_event<D>(
+    fn handle_button<D, R: Rng + ?Sized>(
         &mut self,
         point: Point,
-        rng: &mut ThreadRng,
+        rng: &mut R,
         fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    ) -> Result<UpdateRequest, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
-        let mut responsive = true;
+        let mut out = UpdateRequest::new();
         for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
             if area.contains(point) {
-                let key = self.permutation[index];
-                println!("User pressed button {}", key);
+                let key = self.permutation[index].clone();
                 pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
                 self.input(rng, key);
-                responsive = false;
+                out.set_both();
                 break;
             }
         }
-        Ok(responsive)
+        Ok(out)
+    }
+
+
+    /// Input event (user touched screen in pin entry mode)
+    pub fn handle_event<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<EventResult, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let request = self.handle_button(point, rng, fast_display)?;
+        let state = self.check_pin();
+        Ok(EventResult {request, state})
     }
 
     /// Check pin code; decision making for whether to leave this screen and how
-    pub fn check_pin(&self) -> Option<bool> {
+    fn check_pin(&self) -> Option<UIState> {
         if self.position == PIN_LEN {
             if self.code == PIN_CODE_MOCK {
-                Some(true)
+                Some(UIState::OnboardingRestoreOrGenerate)
             } else {
-                Some(false)
+                Some(UIState::Locked)
             }
         } else {
             None

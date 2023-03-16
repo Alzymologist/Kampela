@@ -14,10 +14,7 @@ extern crate alloc;
 pub mod draw;
 pub mod se;
 pub mod screen;
-pub mod ui;
-
-#[macro_use]
-extern crate lazy_static;
+use kampela_ui as ui;
 
 /// Ticks counter.
 pub static mut COUNT: u32 = 0;

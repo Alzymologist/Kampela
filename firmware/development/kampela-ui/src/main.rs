@@ -1,5 +1,5 @@
 //! This is simulator to develop Kampela UI mocks
-
+#![cfg(feature="std")]
 use bitvec::prelude::{bitarr, BitArr, Msb0};
 use core::ops::Add;
 use embedded_graphics::{
@@ -30,7 +30,7 @@ use embedded_text::{
 };
 use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use std::time::{Duration, Instant};
+use std::{thread::sleep, time::{Duration, Instant}};
 use ux::u4;
 
 #[macro_use]
@@ -40,15 +40,15 @@ extern crate lazy_static;
 ///  should be quite large as screen takes this much to clean
 const SLOW_UPDATE_TIME: Duration = Duration::new(1, 0);
 
-mod display_def;
-use display_def::*;
+pub mod display_def;
+pub use display_def::*;
 
 mod pin;
 mod restore_or_generate;
 mod seed_entry;
 
 mod uistate;
-use uistate::UIState;
+use uistate::{UIState, UpdateRequest};
 
 fn main() {
     // Prepare
@@ -67,9 +67,12 @@ fn main() {
     let mut window = Window::new("Hello world", &output_settings); //.show_static(&display);
                                                                    // this variable protects the event handler from touches while screen is not yet updated;
                                                                    // debouncer with screen refresh time as debounce time
-    let mut responsive = false;
     let mut update_started = Instant::now();
 
+    let mut update = uistate::UpdateRequest::new();
+    update.set_slow();
+
+    
     // event loop:
     //
     // 1. draw
@@ -78,15 +81,15 @@ fn main() {
     // 4. do internal things
     loop {
         // display event; it would be delayed
-        if !responsive {
-            if update_started.elapsed().cmp(&SLOW_UPDATE_TIME).is_gt() {
-                // this unavoidable command actually takes time in real hardware
-                match state.render(&mut display) {
+        if update.read_fast() {
+            //no-op for non-EPD
+        }
+        if update.read_slow() {
+            sleep(SLOW_UPDATE_TIME);
+            match state.render(&mut display) {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
-                responsive = true;
-            }
         }
 
         // this collects ui events, do not remove or simulator will crash
@@ -99,16 +102,11 @@ fn main() {
                     mouse_btn: _,
                     point,
                 } => {
-                    if responsive {
-                        println!("{}", point);
+                    println!("{}", point);
                         match state.handle_event(point, &mut rng, &mut display) {
-                            Ok(a) => responsive = a,
+                            Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };
-                        if !responsive {
-                            update_started = Instant::now();
-                        }
-                    }
                 }
                 SimulatorEvent::Quit => return,
                 _ => (),

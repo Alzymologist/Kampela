@@ -48,6 +48,7 @@ dependencies = [
  "embedded-text",
  "frame-metadata",
  "hex",
+ "kampela-ui",
  "lazy_static",
  "panic-halt",
  "parity-scale-codec",
@@ -725,6 +726,21 @@ dependencies = [
  "frame-metadata",
  "parity-scale-codec",
  "sp-core 7.0.0",
+]
+
+[[package]]
+name = "kampela-ui"
+version = "0.1.0"
+dependencies = [
+ "bitvec",
+ "embedded-graphics",
+ "embedded-graphics-core",
+ "embedded-text",
+ "lazy_static",
+ "patches",
+ "rand",
+ "rand_core 0.6.4",
+ "ux",
 ]
 
 [[package]]
