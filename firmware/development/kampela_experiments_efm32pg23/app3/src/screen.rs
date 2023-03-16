@@ -260,13 +260,17 @@ pub fn epaper_deep_sleep(peripherals: &mut Peripherals) {
 pub fn epaper_update(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x12]);
     visible_delay(100);
+    while display_is_busy(peripherals) {}
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xF7]); // ?
     epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
     while display_is_busy(peripherals) {}
 }
-/*
+
 pub fn epaper_update_fast(peripherals: &mut Peripherals) {
+    epaper_write_command(peripherals, &[0x12]);
+    visible_delay(100);
+    while display_is_busy(peripherals) {}
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xC7]); // ?
     epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
@@ -284,7 +288,7 @@ pub fn epaper_update_part(peripherals: &mut Peripherals) {
 
 pub const X_SIZE: usize = 176;
 pub const Y_SIZE: usize = 264;
-*/
+
 pub const BUFSIZE: usize = 5808;
 
 pub fn epaper_draw_stuff(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
@@ -294,6 +298,7 @@ pub fn epaper_draw_stuff(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
 }
 
 pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
+    epaper_reset(peripherals);
     epaper_write_command(peripherals, &[0x4E]);
     epaper_write_data(peripherals, &[0x00]);
     epaper_write_command(peripherals, &[0x4F]);
@@ -304,6 +309,22 @@ pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; 
     epaper_write_data(peripherals, &stuff);
     epaper_update(peripherals);
 }
+
+pub fn epaper_draw_stuff_quickly(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
+    epaper_reset(peripherals);
+    epaper_write_command(peripherals, &[0x4E]);
+    epaper_write_data(peripherals, &[0x00]);
+    epaper_write_command(peripherals, &[0x4F]);
+    epaper_write_data(peripherals, &[0x07]);
+    epaper_write_command(peripherals, &[0x3C]);
+    epaper_write_data(peripherals, &[0x80]);
+    epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
+    epaper_write_data(peripherals, &stuff);
+    //epaper_write_command(peripherals, &[0x26]);
+    //epaper_write_data(peripherals, &stuff);
+    epaper_update_part(peripherals);
+}
+
 
 pub const LOGO: &[u8] = &[
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,

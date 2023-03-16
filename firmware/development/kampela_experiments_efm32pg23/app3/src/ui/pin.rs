@@ -29,6 +29,7 @@ use rand::{Rng, seq::SliceRandom};
 use ux::u4;
 
 use crate::ui::display_def::*;
+use crate::ui::uistate::{EventResult, UIState, UpdateRequest};
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -222,36 +223,51 @@ impl Pincode {
         self.shuffle(rng);
     }
 
+    fn handle_button<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<UpdateRequest, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let mut out = UpdateRequest::new();
+        for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
+            if area.contains(point) {
+                let key = self.permutation[index].clone();
+                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
+                self.input(rng, key);
+                out.set_both();
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+
     /// Input event (user touched screen in pin entry mode)
     pub fn handle_event<D, R: Rng + ?Sized>(
         &mut self,
         point: Point,
         rng: &mut R,
         fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    ) -> Result<EventResult, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
-        let mut responsive = true;
-        for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
-            if area.contains(point) {
-                let key = self.permutation[index];
-                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
-                self.input(rng, key);
-                responsive = false;
-                break;
-            }
-        }
-        Ok(responsive)
+        let request = self.handle_button(point, rng, fast_display)?;
+        let state = self.check_pin();
+        Ok(EventResult {request, state})
     }
 
     /// Check pin code; decision making for whether to leave this screen and how
-    pub fn check_pin(&self) -> Option<bool> {
+    fn check_pin(&self) -> Option<UIState> {
         if self.position == PIN_LEN {
             if self.code == PIN_CODE_MOCK {
-                Some(true)
+                Some(UIState::OnboardingRestoreOrGenerate)
             } else {
-                Some(false)
+                Some(UIState::Locked)
             }
         } else {
             None

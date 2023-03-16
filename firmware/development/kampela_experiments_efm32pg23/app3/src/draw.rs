@@ -19,8 +19,9 @@ use embedded_text::{
     TextBox,
 };
 
-use crate::screen::epaper_draw_stuff_differently;
+use crate::screen::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
 use crate::ui::display_def::*;
+use crate::visible_delay;
 
 #[derive(Debug)]
 pub enum DisplayError {
@@ -74,7 +75,24 @@ impl FrameBuffer {
         Self(bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize))
     }
     pub fn apply(&self, peripherals: &mut Peripherals) {
+        epaper_hw_init(peripherals);
         epaper_draw_stuff_differently(peripherals, self.0.into_inner());
+        visible_delay(10);
+        epaper_deep_sleep(peripherals);
+        peripherals
+                    .GPIO_S
+                    .if_
+                    .write(|w_reg| w_reg.extif0().clear_bit());
+    }
+    pub fn apply_fast(&self, peripherals: &mut Peripherals) {
+        epaper_hw_init(peripherals);
+        epaper_draw_stuff_quickly(peripherals, self.0.into_inner());
+        visible_delay(10);
+        epaper_deep_sleep(peripherals);
+        peripherals
+                    .GPIO_S
+                    .if_
+                    .write(|w_reg| w_reg.extif0().clear_bit());
     }
 }
 

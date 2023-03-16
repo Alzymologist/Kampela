@@ -25,7 +25,7 @@ pub const SCREEN_ZERO: Point = Point{x: 0, y: 0};
 pub const GAP: u32 = 4;
 
 pub const BUTTON_TOP: i32 = 30;
-pub const CONTROL_BUTTON_WIDTH: u32 = 40;
+pub const CONTROL_BUTTON_WIDTH: u32 = 20;
 
 pub const BACK_BUTTON_AREA: Rectangle = Rectangle::new(
     Point::new(GAP as i32, BUTTON_TOP),

@@ -37,6 +37,72 @@ use crate::ui::seed_entry::SeedEntryState;
 
 use crate::ui::restore_or_generate;
 
+pub struct EventResult {
+    pub request: UpdateRequest,
+    pub state: Option<UIState>,
+}
+
+impl EventResult {
+    pub fn new() -> Self {
+        EventResult {
+            request: UpdateRequest::new(),
+            state: None,
+        }
+    }
+}
+
+pub struct UpdateRequest {
+    fast: bool,
+    slow: bool,
+}
+
+impl UpdateRequest {
+    pub fn new() -> Self {
+        UpdateRequest {
+            fast: false,
+            slow: false,
+        }
+    }
+
+    pub fn set_slow(&mut self) {
+        self.slow = true;
+    }
+
+    pub fn set_fast(&mut self) {
+        self.fast = true;
+    }
+
+    pub fn set_both(&mut self) {
+        self.set_slow();
+        self.set_fast();
+    }
+
+    pub fn propagate(&mut self, mut new: UpdateRequest) {
+        if new.read_fast() { self.set_fast() };
+        if new.read_slow() { self.set_slow() };
+    }
+
+    pub fn read_slow(&mut self) -> bool {
+        if self.slow {
+            self.slow = false;
+            true
+        } else { false }
+    }
+
+    pub fn read_fast(&mut self) -> bool {
+        if self.fast {
+            self.fast = false;
+            true
+        } else { false }
+    }
+}
+
+impl Default for UpdateRequest {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// State of UI
 pub enum UIState {
     PinEntry(Pincode),
@@ -59,49 +125,45 @@ impl UIState {
         point: Point,
         rng: &mut R,
         fast_display: &mut D,
-    ) -> Result<bool, D::Error>
+    ) -> Result<UpdateRequest, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
-        let mut responsive = true;
+        let mut out = UpdateRequest::new();
         match self {
             UIState::PinEntry(ref mut pincode) => {
-                responsive = pincode.handle_event(point, rng, fast_display)?;
-                match pincode.check_pin() {
-                    Some(true) => {
-                        *self = UIState::OnboardingRestoreOrGenerate;
-                    }
-                    Some(false) => {
-                        *self = UIState::Locked;
-                    }
-                    None => {}
+                let res = pincode.handle_event(point, rng, fast_display)?;
+                out = res.request;
+                if let Some(a) = res.state {
+                    *self = a;
                 }
             }
             UIState::OnboardingRestoreOrGenerate => match point.x {
                 0..=100 => {
                     *self = UIState::OnboardingRestore(SeedEntryState::new());
-                    responsive = false;
+                    out.set_slow();
                 }
                 150..=300 => {
                     *self = UIState::OnboardingBackup(String::new());
-                    responsive = false;
+                    out.set_slow();
                 }
-                _ => responsive = true,
+                _ => {},
             },
             UIState::OnboardingRestore(ref mut a) => {
-                responsive = a.handle_event(point, fast_display)?;
-                if let Some(b) = a.resolve() {
-                    *self = UIState::OnboardingBackup(entropy_to_phrase(&b).unwrap())
+                let res = a.handle_event(point, fast_display)?;
+                out = res.request;
+                if let Some(b) = res.state {
+                    *self = b;
                 }
             }
             UIState::OnboardingBackup(_) => {
                 *self = UIState::End;
-                responsive = false;
+                out.set_slow();
             }
             UIState::Locked => (),
             UIState::End => (),
         }
-        Ok(responsive)
+        Ok(out)
     }
 
     /// Display new screen state; should be called only when needed, is slow
@@ -141,3 +203,4 @@ impl UIState {
         Ok(())
     }
 }
+
