@@ -65,14 +65,10 @@ fn main() {
         .theme(BinaryColorTheme::Inverted)
         .build();
     let mut window = Window::new("Hello world", &output_settings); //.show_static(&display);
-                                                                   // this variable protects the event handler from touches while screen is not yet updated;
-                                                                   // debouncer with screen refresh time as debounce time
-    let mut update_started = Instant::now();
-
+    
     let mut update = uistate::UpdateRequest::new();
     update.set_slow();
 
-    
     // event loop:
     //
     // 1. draw
@@ -82,14 +78,18 @@ fn main() {
     loop {
         // display event; it would be delayed
         if update.read_fast() {
+            window.update(&display);
+            println!("skip {} events in fast update", window.events().count());
             //no-op for non-EPD
         }
         if update.read_slow() {
-            sleep(SLOW_UPDATE_TIME);
             match state.render(&mut display) {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
+            sleep(SLOW_UPDATE_TIME);
+            window.update(&display);
+            println!("skip {} events in slow update", window.events().count());
         }
 
         // this collects ui events, do not remove or simulator will crash
