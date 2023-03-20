@@ -23,6 +23,7 @@ use kampela_ui::{display_def::*, uistate};
 
 static mut PUSHED: bool = false;
 static mut TOUCH_UNDEBOUNCE: bool = true;
+static mut VOLTAGE: u32 = 0;
 
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
@@ -68,6 +69,14 @@ fn I2C0() {
 fn GPIO_ODD() {
     unsafe{
         PUSHED = true;
+    }
+}
+
+#[interrupt]
+fn IADC() {
+    let measure = 0;
+    unsafe{
+        VOLTAGE = measure;
     }
 }
 
