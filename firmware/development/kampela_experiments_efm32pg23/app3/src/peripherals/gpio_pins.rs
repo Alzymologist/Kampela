@@ -51,6 +51,8 @@ macro_rules! gpio_pin {
     }
 }
 
+// Prepare GPIO pins
+
 gpio_pin!(
     /// Set flash chip select:
     /// Clear flash chip select:

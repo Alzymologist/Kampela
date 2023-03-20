@@ -18,7 +18,7 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use app::{draw::{FrameBuffer, make_text, highlight_point}, init::{epaper_hw_init, epaper_deep_sleep, ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
+use app::{draw::{FrameBuffer, make_text, highlight_point, burning_tank}, init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
 use kampela_ui::{display_def::*, uistate};
 
 static mut PUSHED: bool = false;
@@ -33,10 +33,7 @@ fn oom(_: Layout) -> ! {
 #[panic_handler]
 fn panic(panic: &PanicInfo<'_>) -> ! {
     let mut peripherals = unsafe{Peripherals::steal()};
-    epaper_hw_init(&mut peripherals);
-    make_text(&mut peripherals, &format!("{:?}", panic));
-    visible_delay(1000);
-    epaper_deep_sleep(&mut peripherals);
+    burning_tank(&mut peripherals, format!("{:?}", panic));
     loop {}
 }
 

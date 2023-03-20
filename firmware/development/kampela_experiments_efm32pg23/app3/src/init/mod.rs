@@ -4,200 +4,18 @@ use blake2_rfc::blake2b::Blake2b;
 
 use efm32pg23_fix::Peripherals;
 
-mod adc;
-
 use crate::visible_delay;
 use crate::draw::{make_text, highlight_point};
-use adc::init_adc;
-use crate::gpio_pins::*;
-
-pub fn usart_on(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken0
-        .write(|w_reg| w_reg.usart0().set_bit())
-}
-
-pub fn usart_off(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken0
-        .write(|w_reg| w_reg.usart0().clear_bit())
-}
-
-pub fn epaper_write_command(peripherals: &mut Peripherals, command_set: &[u8]) {
-    // CS clear corresponds to selected chip, see epaper docs
-    display_chip_select_set(peripherals);
-    display_chip_select_clear(peripherals); // not necessary if state is known and default at start
-
-    display_data_command_clear(peripherals);
-    for command in command_set.iter() {
-        write_to_usart(peripherals, *command);
-    }
-    display_chip_select_set(peripherals);
-}
-
-pub fn epaper_write_data(peripherals: &mut Peripherals, data_set: &[u8]) {
-    display_chip_select_set(peripherals);
-    display_chip_select_clear(peripherals); // not necessary if state is known and default at start
-
-    display_data_command_set(peripherals);
-    for data in data_set.iter() {
-        write_to_usart(peripherals, *data);
-    }
-    display_chip_select_set(peripherals);
-    //    display_data_command_clear(peripherals);
-}
-
-
-/// BUSY is on port B, pin [`SPI_BUSY_PIN`].
-pub fn display_is_busy(peripherals: &mut Peripherals) -> bool {
-    let portb_din_bits = peripherals.GPIO_S.portb_din.read().din().bits();
-    portb_din_bits & (1 << SPI_BUSY_PIN) == (1 << SPI_BUSY_PIN)
-}
-
-/// Why these specific numbers for delays?
-pub fn epaper_reset(peripherals: &mut Peripherals) {
-    visible_delay(1);
-    display_res_clear(peripherals);
-    visible_delay(5);
-    display_res_set(peripherals);
-    visible_delay(10);
-    display_res_clear(peripherals);
-    visible_delay(5);
-    display_chip_select_set(peripherals); // this is not the default state, should not be here
-    visible_delay(5);
-}
-
-pub fn epaper_hw_init(peripherals: &mut Peripherals) {
-    epaper_reset(peripherals);
-    while display_is_busy(peripherals) {}
-    epaper_write_command(peripherals, &[0x12]);
-    visible_delay(10);
-    while display_is_busy(peripherals) {}
-}
-/*
-pub fn epaper_hw_init_fast(peripherals: &mut Peripherals) {
-    epaper_hw_init(peripherals);
-
-    epaper_write_command(peripherals, &[0x18]); // from manual, temperature sensor read
-    epaper_write_data(peripherals, &[0x80]); // ?
-
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "load temperature value"
-    epaper_write_data(peripherals, &[0xB1]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual
-    while display_is_busy(peripherals) {}
-
-    epaper_write_command(peripherals, &[0x1A]); // Y: "Write to temperature register"?
-    epaper_write_data(peripherals, &[0x64, 0x00]); // ?
-
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "load temperature value" - again?
-    epaper_write_data(peripherals, &[0x91]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual - again?
-    while display_is_busy(peripherals) {}
-}
-*/
-pub fn epaper_deep_sleep(peripherals: &mut Peripherals) {
-    epaper_write_command(peripherals, &[0x10]); // from manual, enter deep sleep
-    epaper_write_data(peripherals, &[0x01]); // ?
-    visible_delay(100); // why delay, from where the number?
-}
-
-pub fn epaper_update(peripherals: &mut Peripherals) {
-    epaper_write_command(peripherals, &[0x12]);
-    visible_delay(100);
-    while display_is_busy(peripherals) {}
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
-    epaper_write_data(peripherals, &[0xF7]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    while display_is_busy(peripherals) {}
-}
-
-pub fn epaper_update_fast(peripherals: &mut Peripherals) {
-    epaper_write_command(peripherals, &[0x12]);
-    visible_delay(100);
-    while display_is_busy(peripherals) {}
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
-    epaper_write_data(peripherals, &[0xC7]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    visible_delay(1); // why delay, from where the number?
-    while display_is_busy(peripherals) {}
-}
-
-pub fn epaper_update_part(peripherals: &mut Peripherals) {
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
-    epaper_write_data(peripherals, &[0xFF]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    visible_delay(1); // why delay, from where the number?
-    while display_is_busy(peripherals) {}
-}
-
-pub const X_SIZE: usize = 176;
-pub const Y_SIZE: usize = 264;
-
-pub const BUFSIZE: usize = 5808;
-
-pub fn epaper_draw_stuff(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
-    epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
-    epaper_write_data(peripherals, &stuff);
-    epaper_update(peripherals);
-}
-
-pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
-    epaper_reset(peripherals);
-    epaper_write_command(peripherals, &[0x4E]);
-    epaper_write_data(peripherals, &[0x00]);
-    epaper_write_command(peripherals, &[0x4F]);
-    epaper_write_data(peripherals, &[0x07]);
-    epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
-    epaper_write_data(peripherals, &stuff);
-    epaper_write_command(peripherals, &[0x26]);
-    epaper_write_data(peripherals, &stuff);
-    epaper_update(peripherals);
-}
-
-pub fn epaper_draw_stuff_quickly(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
-    epaper_reset(peripherals);
-    epaper_write_command(peripherals, &[0x4E]);
-    epaper_write_data(peripherals, &[0x00]);
-    epaper_write_command(peripherals, &[0x4F]);
-    epaper_write_data(peripherals, &[0x07]);
-    epaper_write_command(peripherals, &[0x3C]);
-    epaper_write_data(peripherals, &[0x80]);
-    epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
-    epaper_write_data(peripherals, &stuff);
-    //epaper_write_command(peripherals, &[0x26]);
-    //epaper_write_data(peripherals, &stuff);
-    epaper_update_part(peripherals);
-}
+use crate::peripherals::{adc::init_adc, cmu::init_cmu};
+use crate::peripherals::gpio_pins::*;
+use crate::peripherals::usart::*;
 
 pub const BAUDRATE_USART: u32 = 10_000_000;
 pub const BAUDRATE_EUSART: u32 = 10_000_000;
 
 /// All peripheral initializations
 pub fn init_peripherals(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken0
-        .write(|w_reg| {
-            w_reg
-                .gpio().set_bit()
-                .hfrco0().set_bit()
-                .i2c0().set_bit()
-                .iadc0().set_bit()
-                .ldma().set_bit()
-                .ldmaxbar().set_bit()
-                .timer0().set_bit()
-                .timer1().set_bit()
-                .usart0().set_bit()
-    });
-    peripherals
-        .CMU_S
-        .clken1
-        .write(|w_reg| {
-            w_reg
-                .eusart2().set_bit()
-    });
+    init_cmu(peripherals);
 
     peripherals
         .GPIO_S
@@ -863,21 +681,6 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
 */
 }
 
-/// Write `u8` data to usart.
-///
-/// At this point USART must be already clocked from elsewhere.
-pub fn write_to_usart(peripherals: &mut Peripherals, data: u8) -> u8 {
-    while peripherals.USART0_S.status.read().txbl().bit_is_clear() {}
-
-    peripherals
-        .USART0_S
-        .txdata
-        .write(|w_reg| w_reg.txdata().variant(data));
-
-    while peripherals.USART0_S.status.read().txc().bit_is_clear() {}
-
-    peripherals.USART0_S.rxdata.read().rxdata().bits()
-}
 
 pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) -> Result<(), I2CError> {
     // abort unexpected processes

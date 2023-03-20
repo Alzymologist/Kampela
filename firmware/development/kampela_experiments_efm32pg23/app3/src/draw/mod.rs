@@ -1,3 +1,7 @@
+use alloc::format;
+use core::{alloc::Layout, panic::PanicInfo};
+use alloc::string::String;
+
 use bitvec::prelude::{BitArr, Msb0, bitarr};
 use efm32pg23_fix::Peripherals;
 use embedded_graphics_core::{
@@ -19,9 +23,11 @@ use embedded_text::{
     TextBox,
 };
 
-use crate::init::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
+pub mod display;
+use display::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
 use crate::ui::display_def::*;
 use crate::visible_delay;
+
 
 #[derive(Debug)]
 pub enum DisplayError {
@@ -65,30 +71,38 @@ impl<'a> Drawable for TextToPrint<'a> {
     }
 }
 
-
+/// Virtual display data storage
 type PixelData = BitArr!(for 176*264, in u8, Msb0);
 
+/// A virtual display that could be written to EPD simultaneously
 pub struct FrameBuffer(PixelData);
 
 impl FrameBuffer {
+    /// Create new virtual display and fill it with ON pixels
     pub fn new_white() -> Self {
         Self(bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize))
     }
+
+    /// Send display data to real EPD; invokes full screen refresh
     pub fn apply(&self, peripherals: &mut Peripherals) {
         epaper_hw_init(peripherals);
         epaper_draw_stuff_differently(peripherals, self.0.into_inner());
         visible_delay(10);
         epaper_deep_sleep(peripherals);
+        // Hack to prevent touch trigger on power surge
         peripherals
                     .GPIO_S
                     .if_
                     .write(|w_reg| w_reg.extif0().clear_bit());
     }
+
+    /// Send display data to real EPD in a fast partial way
     pub fn apply_fast(&self, peripherals: &mut Peripherals) {
         epaper_hw_init(peripherals);
         epaper_draw_stuff_quickly(peripherals, self.0.into_inner());
         visible_delay(10);
         epaper_deep_sleep(peripherals);
+        // Hack to prevent touch trigger on power surge
         peripherals
                     .GPIO_S
                     .if_
@@ -136,10 +150,20 @@ impl DrawTarget for FrameBuffer {
     }
 }
 
+/// Accessibility tool: highlight a spot with size similar to typical touch area
 pub fn highlight_point(peripherals: &mut Peripherals, detected_x: u16, detected_y: u16) {
     let mut buffer = FrameBuffer::new_white();
     Circle::with_center(Point{x: 176 - detected_x as i32, y: 264 - detected_y as i32}, 20)
         .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
         .draw(&mut buffer).unwrap();
     buffer.apply(peripherals);
+}
+
+/// Emergency debug function that spits out errors
+/// TODO: replace by power drain in production!
+pub fn burning_tank(peripherals: &mut Peripherals, text: String) {
+    epaper_hw_init(peripherals);
+    make_text(peripherals, &text);
+    visible_delay(1000);
+    epaper_deep_sleep(peripherals);
 }

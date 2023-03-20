@@ -12,8 +12,8 @@
 extern crate alloc;
 
 pub mod init;
-pub mod gpio_pins;
-
+mod peripherals;
+mod devices;
 pub mod draw;
 pub mod se;
 use kampela_ui as ui;
