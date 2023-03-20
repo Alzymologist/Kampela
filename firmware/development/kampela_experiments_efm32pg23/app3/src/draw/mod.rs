@@ -19,7 +19,7 @@ use embedded_text::{
     TextBox,
 };
 
-use crate::screen::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
+use crate::init::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
 use crate::ui::display_def::*;
 use crate::visible_delay;
 

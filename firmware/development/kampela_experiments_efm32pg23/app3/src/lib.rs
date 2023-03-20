@@ -11,9 +11,11 @@
 
 extern crate alloc;
 
+pub mod init;
+pub mod gpio_pins;
+
 pub mod draw;
 pub mod se;
-pub mod screen;
 use kampela_ui as ui;
 
 /// Ticks counter.

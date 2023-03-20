@@ -18,7 +18,7 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use app::{draw::{FrameBuffer, make_text, highlight_point}, screen::{epaper_hw_init, epaper_deep_sleep, ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
+use app::{draw::{FrameBuffer, make_text, highlight_point}, init::{epaper_hw_init, epaper_deep_sleep, ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
 use kampela_ui::{display_def::*, uistate};
 
 static mut PUSHED: bool = false;
@@ -105,6 +105,8 @@ fn main() -> ! {
     init_peripherals(&mut peripherals);
 
     let mut state = uistate::UIState::new(&mut se_rng::SeRng{peripherals: &mut peripherals}); 
+    // line for debug init messages
+    // panic!(format!("lol: {}", 0));
 
     let mut update = uistate::UpdateRequest::new();
     update.set_slow();
