@@ -27,6 +27,7 @@ pub mod display;
 use display::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
 use crate::ui::display_def::*;
 use crate::visible_delay;
+use crate::devices::power::halt_for_display_power;
 
 
 #[derive(Debug)]
@@ -85,6 +86,7 @@ impl FrameBuffer {
 
     /// Send display data to real EPD; invokes full screen refresh
     pub fn apply(&self, peripherals: &mut Peripherals) {
+        halt_for_display_power(peripherals);
         epaper_hw_init(peripherals);
         epaper_draw_stuff_differently(peripherals, self.0.into_inner());
         visible_delay(10);
@@ -98,6 +100,7 @@ impl FrameBuffer {
 
     /// Send display data to real EPD in a fast partial way
     pub fn apply_fast(&self, peripherals: &mut Peripherals) {
+        halt_for_display_power(peripherals);
         epaper_hw_init(peripherals);
         epaper_draw_stuff_quickly(peripherals, self.0.into_inner());
         visible_delay(10);

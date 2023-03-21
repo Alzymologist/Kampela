@@ -19,6 +19,7 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 static HEAP: Heap = Heap::empty();
 
 use app::{draw::{FrameBuffer, make_text, highlight_point, burning_tank}, init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
+use app::devices::power::measure_voltage;
 use kampela_ui::{display_def::*, uistate};
 
 static mut PUSHED: bool = false;
@@ -101,9 +102,12 @@ fn main() -> ! {
 
     init_peripherals(&mut peripherals);
 
+    //let test_voltage = measure_voltage(&mut peripherals);
+    //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
+
     let mut state = uistate::UIState::new(&mut se_rng::SeRng{peripherals: &mut peripherals}); 
     // line for debug init messages
-    // panic!(format!("lol: {}", 0));
+    //panic!("lol: {}", test_voltage);
 
     let mut update = uistate::UpdateRequest::new();
     update.set_slow();
@@ -116,6 +120,8 @@ fn main() -> ! {
     loop {
         // 1. update ui if needed
         if update.read_fast() {
+            //let test_voltage = measure_voltage(&mut peripherals);
+            //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
             slow_screen.apply_fast(&mut peripherals);
             peripherals
                 .GPIO_S
@@ -123,12 +129,14 @@ fn main() -> ! {
                 .write(|w_reg| w_reg.extif0().clear_bit())
         }
         if update.read_slow() {
+            //let test_voltage = measure_voltage(&mut peripherals);
+            //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
             state.render(&mut slow_screen);
             slow_screen.apply(&mut peripherals);
             peripherals
                 .GPIO_S
                 .if_
-                .write(|w_reg| w_reg.extif0().clear_bit())
+                .write(|w_reg| w_reg.extif0().clear_bit());
 
         }
 
