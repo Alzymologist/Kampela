@@ -848,6 +848,7 @@ dependencies = [
  "kampela-common",
  "p256",
  "pbkdf2",
+ "raptorq",
  "sha2 0.10.6",
  "sp-core 12.0.0",
  "spki",
@@ -955,6 +956,11 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
+
+[[package]]
+name = "raptorq"
+version = "1.7.0"
+source = "git+https://github.com/Alzymologist/raptorq?rev=f3fd22e04aa14e736f470ff9c7086faa2d3edaff#f3fd22e04aa14e736f470ff9c7086faa2d3edaff"
 
 [[package]]
 name = "ref-cast"

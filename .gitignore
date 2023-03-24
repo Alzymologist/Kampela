@@ -33,6 +33,7 @@ fp-info-cache
 # firmware build
 /firmware/development/kampela_experiments_efm32pg23/app/target/
 /firmware/development/kampela_experiments_efm32pg23/app3/target/
+/firmware/development/kampela_experiments_efm32pg23/app2/target/
 /firmware/development/kampela_experiments_efm32pg23/efm32pg23_fix/target/
 /firmware/development/kampela_experiments_efm32pg23/patches/target/
 /firmware/development/kampela-ui/target/
