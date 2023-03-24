@@ -9,6 +9,7 @@ use crate::draw::{make_text, highlight_point};
 use crate::peripherals::{adc::init_adc, cmu::init_cmu};
 use crate::peripherals::gpio_pins::*;
 use crate::peripherals::{eusart::init_eusart, usart::init_usart};
+use crate::devices::psram::psram_reset;
 
 pub const BAUDRATE_USART: u32 = 10_000_000;
 
@@ -25,7 +26,8 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
 
     // Setting up EUSART2 for PSRAM
     init_eusart(peripherals);
-
+    // ...and reset ram immediately
+    psram_reset(peripherals);
 
 
     // set up ldma

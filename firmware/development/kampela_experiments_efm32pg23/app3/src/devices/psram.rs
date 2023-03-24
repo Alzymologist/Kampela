@@ -1,3 +1,31 @@
+//! external RAM
+
+use alloc::{format, vec::Vec};
+use efm32pg23_fix::Peripherals;
+use crate::peripherals::gpio_pins::*;
+
+pub fn psram_reset(peripherals: &mut Peripherals) {
+    psram_chip_select_set(peripherals); // deselect PSRAM
+    psram_chip_select_clear(peripherals); // select PSRAM, explain why
+    psram_write_read_byte(peripherals, PSRAM_RESET_ENABLE);
+    psram_chip_select_set(peripherals); // deselect PSRAM
+    psram_chip_select_clear(peripherals); // select PSRAM
+    psram_write_read_byte(peripherals, PSRAM_RESET);
+    psram_chip_select_set(peripherals); // deselect PSRAM
+}
+
+pub fn psram_write_read_byte(peripherals: &mut Peripherals, byte: u8) -> u8 {
+    while peripherals.EUSART2_S.status.read().txfl().bit_is_clear() {}
+    peripherals.EUSART2_S.txdata.write({|w_reg|
+        w_reg
+            // EUSART tx and rx are u16,
+            // single byte is used here because of the commands,
+            // setting used is `.databits().eight()`
+            .txdata().variant(byte as u16)
+    });
+    while peripherals.EUSART2_S.status.read().rxfl().bit_is_clear() {}
+    peripherals.EUSART2_S.rxdata.read().rxdata().bits().try_into().expect("configured frame for 8 data bits")
+}
 
 /// PSRAM dummy command, to send a new item in rx.
 ///
@@ -24,12 +52,6 @@ pub fn psram_read_vec(peripherals: &mut Peripherals, len: usize) -> Vec<u8> {
     }
     out
 }
-
-
-
-
-
-
 
 /// PSRAM commands from manual
 pub const PSRAM_RESET_ENABLE: u8 = 0x66;
