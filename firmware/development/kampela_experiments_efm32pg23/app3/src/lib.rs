@@ -15,7 +15,6 @@ pub mod init;
 mod peripherals;
 pub mod devices;
 pub mod draw;
-pub mod se;
 use kampela_ui as ui;
 
 /// Ticks counter.

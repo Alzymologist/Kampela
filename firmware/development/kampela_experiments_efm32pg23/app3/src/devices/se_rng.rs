@@ -7,8 +7,8 @@ use rand_core::{CryptoRng, Error, RngCore};
 
 use efm32pg23_fix::Peripherals;
 
-use crate::se::se_command::{
-    se_off, se_on, DataTransfer, RxError, SeCommand, SE_COMMAND_TRNG_GET_RANDOM,
+use crate::peripherals::se_command::{
+    DataTransfer, RxError, SeCommand, SE_COMMAND_TRNG_GET_RANDOM,
     SE_DATATRANSFER_NO_DATA, SE_DATATRANSFER_REALIGN, SE_DATATRANSFER_STOP,
 };
 
@@ -18,25 +18,19 @@ pub struct SeRng<'a> {
 
 impl<'a> RngCore for SeRng<'a> {
     fn next_u32(&mut self) -> u32 {
-        se_on(self.peripherals);
         let bytes = random_with_length(self.peripherals, size_of::<u32>())
             .expect("expected rng normal functioning");
-        se_off(self.peripherals);
         u32::from_be_bytes(bytes.try_into().expect("stable u32 length"))
     }
     fn next_u64(&mut self) -> u64 {
-        se_on(self.peripherals);
         let bytes = random_with_length(self.peripherals, size_of::<u64>())
             .expect("expected rng normal functioning");
-        se_off(self.peripherals);
         u64::from_be_bytes(bytes.try_into().expect("stable u64 length"))
     }
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        se_on(self.peripherals);
         let content = random_with_length(self.peripherals, dest.len())
             .expect("expected rng normal functioning");
         dest.copy_from_slice(&content[..dest.len()]);
-        se_off(self.peripherals);
     }
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
         self.fill_bytes(dest);

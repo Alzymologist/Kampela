@@ -4,22 +4,6 @@ use cortex_m::asm::delay;
 
 use efm32pg23_fix::Peripherals;
 
-/// Enable SE. Must always be applied before any operations with SE begin.
-pub fn se_on(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken1
-        .write(|w_reg| w_reg.semailboxhost().set_bit())
-}
-
-/// Disable SE. Is applied to switch SE off after SE operations are completed.
-pub fn se_off(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken1
-        .write(|w_reg| w_reg.semailboxhost().clear_bit())
-}
-
 /// Value to use in place of a pointer when there is no input or no output to
 /// pass into the command.
 pub const SE_DATATRANSFER_NO_DATA: u32 = 0;

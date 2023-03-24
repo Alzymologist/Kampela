@@ -18,8 +18,8 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use app::{draw::{FrameBuffer, make_text, highlight_point, burning_tank}, init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, se::se_rng, COUNT, visible_delay};
-use app::devices::power::measure_voltage;
+use app::{draw::{FrameBuffer, make_text, highlight_point, burning_tank}, init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, COUNT, visible_delay};
+use app::devices::{power::measure_voltage, se_rng};
 use kampela_ui::{display_def::*, uistate};
 
 static mut PUSHED: bool = false;

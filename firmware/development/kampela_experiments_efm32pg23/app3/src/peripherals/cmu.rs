@@ -2,6 +2,7 @@
 
 use efm32pg23_fix::Peripherals;
 
+/// Initialize all needed clock units
 pub fn init_cmu(peripherals: &mut Peripherals) {
         peripherals
         .CMU_S
@@ -24,6 +25,7 @@ pub fn init_cmu(peripherals: &mut Peripherals) {
         .write(|w_reg| {
             w_reg
                 .eusart2().set_bit()
+                .semailboxhost().set_bit()
     });
 
 }
