@@ -15,159 +15,17 @@ pub const BAUDRATE_EUSART: u32 = 10_000_000;
 
 /// All peripheral initializations
 pub fn init_peripherals(peripherals: &mut Peripherals) {
+    // first, start clocking
     init_cmu(peripherals);
 
-    peripherals
-        .GPIO_S
-        .porta_model
-        .write(|w_reg| {
-            w_reg
-                .mode3().wiredandpullup() // SCL for USART (display)
-                .mode4().pushpull() // I2C power
-                .mode5().wiredandpullup() // SDA for USART (display)
-                .mode6().pushpull() // Display reset
-    });
-    peripherals
-        .GPIO_S
-        .porta_modeh
-        .write(|w_reg| {
-            w_reg
-                .mode0().inputpullfilter() // NFC
-                .mode1().pushpull() // Power 2.8 V
-    });
-    peripherals
-        .GPIO_S
-        .portb_model
-        .write(|w_reg| {
-            w_reg
-                .mode1().input() // interrupts from display sensor
-                .mode4().input() // BUSY spi
-    });
-    peripherals
-        .GPIO_S
-        .portc_model
-        .write(|w_reg| {
-            w_reg
-                .mode0().pushpull() // Flash chip select
-                .mode1().inputpull() // Display MISO
-                .mode2().pushpull() // Display MOSI
-                .mode3().pushpull() //Display SCK
-                .mode4().pushpull() // PSRAM chip select
-                .mode5().inputpull() // PSRAM MISO
-                .mode6().pushpull() // PSRAM MOSI
-                .mode7().pushpull() // PSRAM SCK
-    });
-    peripherals
-        .GPIO_S
-        .portd_model
-        .write(|w_reg| {
-            w_reg
-                .mode2().inputpull() // Display chip select
-                .mode3().pushpull() // Display data/command
-    });
-    pow_set(peripherals);
-    i2c_set(peripherals);
-    visible_delay(10); // wait after power set! (epaper manual for 2.8V setup)
-    display_chip_select_set(peripherals);
-    display_data_command_clear(peripherals);
-    display_res_clear(peripherals);
-    sda_set(peripherals);
-    scl_set(peripherals);
-    flash_chip_select_set(peripherals);
-    miso_set(peripherals);
-    mosi_set(peripherals);
-    sck_clear(peripherals);
-    psram_chip_select_set(peripherals);
-    psram_miso_set(peripherals);
-    psram_mosi_clear(peripherals);
-    psram_sck_clear(peripherals);
-    nfc_pin_clear(peripherals);
+    // map GPIO pins to their functions and set their starting values
+    init_gpio(peripherals);
 
     // Setting up USART0, for epaper display
+    init_usart(peripherals);
 
-    peripherals
-        .USART0_S
-        .en
-        .write(|w_reg| {
-            w_reg
-                .en().set_bit()
-    });
-    peripherals
-        .USART0_S
-        .ctrl
-        .write(|w_reg| {
-            w_reg
-                .sync().enable()
-                .clkpol().idlelow()
-                .msbf().enable()
-                .autotx().clear_bit()
-    });
-    peripherals
-        .USART0_S
-        .frame
-        .write(|w_reg| {
-            w_reg
-                .databits().eight()
-                .stopbits().one()
-                .parity().none()
-    });
 
-    let clkdiv = ((19_000_000 - 1)/(2*BAUDRATE_USART)) << 8;
 
-    peripherals
-        .USART0_S
-        .clkdiv
-        .write(|w_reg| {
-            w_reg
-                .div().variant(clkdiv)
-    });
-    peripherals
-        .USART0_S
-        .cmd
-        .write(|w_reg| {
-            w_reg
-                .masteren().set_bit()
-                .txen().set_bit()
-                .rxen().set_bit()
-    });
-
-    // display MOSI
-    peripherals
-        .GPIO_S
-        .usart0_txroute
-        .write(|w_reg| {
-            w_reg
-                .port().variant(2)
-                .pin().variant(E_MOSI_PIN)
-    });
-    // display MISO
-    peripherals
-        .GPIO_S
-        .usart0_rxroute
-        .write(|w_reg| {
-            w_reg
-                .port().variant(2)
-                .pin().variant(E_MISO_PIN)
-    });
-    // display SCK
-    peripherals
-        .GPIO_S
-        .usart0_clkroute
-        .write(|w_reg| {
-            w_reg
-                .port().variant(2)
-                .pin().variant(E_SCK_PIN)
-    });
-    // route enable
-    peripherals
-        .GPIO_S
-        .usart0_routeen
-        .write(|w_reg| {
-            w_reg
-                .txpen().set_bit()
-                .rxpen().set_bit()
-                .clkpen().set_bit()
-    });
 
     // setting up EUSART2, for PSRAM: why gpio setup is before init? does the order matter at all?
     // PSRAM MOSI

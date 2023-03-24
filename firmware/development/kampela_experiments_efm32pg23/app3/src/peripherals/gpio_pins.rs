@@ -1,6 +1,7 @@
 //! Map GPIO pins
 
 use efm32pg23_fix::Peripherals;
+use crate::visible_delay;
 
 pub const FLASH_CS_PIN: u8 = 0;
 pub const DISP_CS_PIN: u8 = 2;
@@ -213,3 +214,81 @@ gpio_pin!(
     NFC_PIN
 );
 
+/// GPIO initializations
+pub fn init_gpio(peripherals: &mut Peripherals) {
+    map_gpio(peripherals);
+    set_gpio_pins(peripherals);
+}
+
+/// Map GPIO pins to their destinations
+fn map_gpio(peripherals: &mut Peripherals) {
+    peripherals
+        .GPIO_S
+        .porta_model
+        .write(|w_reg| {
+            w_reg
+                .mode3().wiredandpullup() // SCL for USART (display)
+                .mode4().pushpull() // I2C power
+                .mode5().wiredandpullup() // SDA for USART (display)
+                .mode6().pushpull() // Display reset
+    });
+    peripherals
+        .GPIO_S
+        .porta_modeh
+        .write(|w_reg| {
+            w_reg
+                .mode0().inputpullfilter() // NFC
+                .mode1().pushpull() // Power 2.8 V
+    });
+    peripherals
+        .GPIO_S
+        .portb_model
+        .write(|w_reg| {
+            w_reg
+                .mode1().input() // interrupts from display sensor
+                .mode4().input() // BUSY spi
+    });
+    peripherals
+        .GPIO_S
+        .portc_model
+        .write(|w_reg| {
+            w_reg
+                .mode0().pushpull() // Flash chip select
+                .mode1().inputpull() // Display MISO
+                .mode2().pushpull() // Display MOSI
+                .mode3().pushpull() //Display SCK
+                .mode4().pushpull() // PSRAM chip select
+                .mode5().inputpull() // PSRAM MISO
+                .mode6().pushpull() // PSRAM MOSI
+                .mode7().pushpull() // PSRAM SCK
+    });
+    peripherals
+        .GPIO_S
+        .portd_model
+        .write(|w_reg| {
+            w_reg
+                .mode2().inputpull() // Display chip select
+                .mode3().pushpull() // Display data/command
+    });
+}
+
+/// Set GPIO pins to their starting values
+fn set_gpio_pins(peripherals: &mut Peripherals) {
+    pow_set(peripherals);
+    i2c_set(peripherals);
+    visible_delay(10); // wait after power set! (epaper manual for 2.8V setup)
+    display_chip_select_set(peripherals);
+    display_data_command_clear(peripherals);
+    display_res_clear(peripherals);
+    sda_set(peripherals);
+    scl_set(peripherals);
+    flash_chip_select_set(peripherals);
+    miso_set(peripherals);
+    mosi_set(peripherals);
+    sck_clear(peripherals);
+    psram_chip_select_set(peripherals);
+    psram_miso_set(peripherals);
+    psram_mosi_clear(peripherals);
+    psram_sck_clear(peripherals);
+    nfc_pin_clear(peripherals);
+}
