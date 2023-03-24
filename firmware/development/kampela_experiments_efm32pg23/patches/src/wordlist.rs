@@ -1,3 +1,4 @@
+#[rustfmt::skip]
 pub const WORDLIST_ENGLISH: [&str; 2048] = [
     "abandon",
     "ability",
