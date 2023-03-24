@@ -10,6 +10,7 @@ cortex-m-rt = "0.7.2"
 cortex-m-semihosting = "0.3.3"
 efm32pg23_fix = {path = "../efm32pg23_fix", features = ["critical-section", "rt"]}
 embedded-alloc = "0.5.0" # embedded-alloc required nightly!
+k256 = {version = "0.12.0", default-features = false, features = ["ecdsa"]}
 panic-halt = "0.2.0"
 patches = {path = "../patches"}
 rand_core = {version = "0.6.4", default-features = false}

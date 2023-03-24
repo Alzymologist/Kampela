@@ -1,25 +1,17 @@
 package fi.zymologia.siltti
 
 import android.Manifest
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import androidx.camera.lifecycle.ProcessCameraProvider
+import android.util.Log
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
-import fi.zymologia.siltti.screens.KeepScreenOn
 import fi.zymologia.siltti.screens.ScanScreen
 import fi.zymologia.siltti.screens.TXScreen
 import fi.zymologia.siltti.uniffi.*
-import fi.zymologia.siltti.uniffi.Collection
-import java.security.KeyPairGenerator
+import java.security.KeyStore
 import java.security.Signature
-import androidx.compose.runtime.livedata.observeAsState
 
 val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 val REQUEST_CODE_PERMISSIONS = 10
@@ -77,26 +69,37 @@ enum class Mode {
 class Signer : SignByCompanion {
     @OptIn(ExperimentalUnsignedTypes::class)
     override fun makeSignature(data: List<UByte>): List<UByte> {
-        val kpg = KeyPairGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_EC,
-            "AndroidKeyStore"
-        )
-        val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
-            "AndroidKeyStore",
-            KeyProperties.PURPOSE_SIGN
-        ).run {
-            setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-            build()
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
         }
 
-        kpg.initialize(parameterSpec)
+        val ke = ks.getEntry("AndroidKeyStore", null)
 
-        val kp = kpg.generateKeyPair()
+        if (ke !is KeyStore.PrivateKeyEntry) {
+            Log.w("", "Not an instance of a PrivateKeyEntry")
+            return emptyList()
+        }
+
         val s = Signature.getInstance("SHA256withECDSA").apply {
-            initSign(kp.private)
+            initSign(ke.privateKey)
             update(data.toUByteArray().toByteArray())
         }
+
         val signature: ByteArray = s.sign()
-        return signature.toUByteArray().toList() + kp.public.encoded.toUByteArray() // TODO
+        return signature.toUByteArray().toList()
+    }
+
+    override fun exportPublicKey(): List<UByte> {
+        val ks = KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
+        }
+
+        val ke = ks.getEntry("AndroidKeyStore", null)
+
+        if (ke !is KeyStore.PrivateKeyEntry) {
+            Log.w("", "Not an instance of a PrivateKeyEntry")
+            return emptyList()
+        }
+        return ke.certificate.publicKey.encoded.toUByteArray().toList()
     }
 }

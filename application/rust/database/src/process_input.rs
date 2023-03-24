@@ -1,71 +1,29 @@
 //! Basic processing of QR inputs.
 
-use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
-use sp_core::{ByteArray, H256};
-use sp_runtime::{MultiSignature, MultiSigner};
+use sp_core::H256;
 use std::{convert::TryInto, sync::Arc};
 
-use crate::derivation::DerivationInfo;
+use kampela_common::{
+    Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue, Transaction,
+    TransmittableContent,
+};
+
 use crate::error::ErrorCompanion;
 use crate::nfc_fountain::pack_nfc;
 use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
-use crate::storage::{MetadataStorage, MetadataValue, SpecsKey, SpecsValue};
+use crate::storage::{MetadataStorage, MetadataValue};
+use crate::traits::{DbStorage, FromQr, FromQrAndDb};
 
 pub const PREFIX_SUBSTRATE: u8 = 0x53;
-
-pub const ENCRYPTION_ED25519: u8 = 0x00;
-pub const ENCRYPTION_SR25519: u8 = 0x01;
-pub const ENCRYPTION_ECDSA: u8 = 0x02;
 
 pub const ID_SIGNABLE: &[u8] = &[0x00, 0x02];
 pub const ID_BYTES: u8 = 0x03;
 pub const ID_METADATA: u8 = 0x80;
 pub const ID_SPECS: u8 = 0xc1;
 
-#[derive(Clone, Copy, Debug, Decode, Encode, Eq, PartialEq)]
-pub enum Encryption {
-    Ed25519,
-    Sr25519,
-    Ecdsa,
-}
-
-impl Encryption {
-    pub fn from_symbol(symbol: u8) -> Result<Self, ErrorCompanion> {
-        match symbol {
-            ENCRYPTION_ED25519 => Ok(Encryption::Ed25519),
-            ENCRYPTION_SR25519 => Ok(Encryption::Sr25519),
-            ENCRYPTION_ECDSA => Ok(Encryption::Ecdsa),
-            a => Err(ErrorCompanion::UnknownSigningAlgorithm(a)),
-        }
-    }
-    pub fn key_length(&self) -> usize {
-        match &self {
-            Encryption::Ed25519 => sp_core::ed25519::Public::LEN,
-            Encryption::Sr25519 => sp_core::sr25519::Public::LEN,
-            Encryption::Ecdsa => sp_core::ecdsa::Public::LEN,
-        }
-    }
-    pub fn signature_length(&self) -> usize {
-        match &self {
-            Encryption::Ed25519 => 64,
-            Encryption::Sr25519 => 64,
-            Encryption::Ecdsa => 65,
-        }
-    }
-}
-
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub struct Transaction {
-    genesis_hash: H256,
-    meta_v14: RuntimeMetadataV14,
-    meta_signature: MultiSignature,
-    signable_transaction: Vec<u8>,
-    signer: MultiSigner,
-}
-
-impl Transaction {
-    pub fn from_payload_prelude_cut(
+impl FromQrAndDb for Transaction {
+    fn from_payload_prelude_cut(
         mut payload: &[u8],
         encryption: &Encryption,
         db_path: &str,
@@ -97,8 +55,8 @@ impl Transaction {
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
             Ok(Self {
                 genesis_hash,
-                meta_v14: metadata_value.metadata(),
-                meta_signature: metadata_value.signature(),
+                meta_v14: metadata_value.metadata,
+                meta_signature: metadata_value.signature,
                 signable_transaction,
                 signer,
             })
@@ -108,14 +66,8 @@ impl Transaction {
     }
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub struct Bytes {
-    bytes_uncut: Vec<u8>,
-    signer: MultiSigner,
-}
-
-impl Bytes {
-    pub fn from_payload_prelude_cut(
+impl FromQr for Bytes {
+    fn from_payload_prelude_cut(
         payload: &[u8],
         encryption: &Encryption,
     ) -> Result<Self, ErrorCompanion> {
@@ -155,15 +107,6 @@ pub struct Transmittable {
     signature_maker: Box<dyn SignByCompanion>,
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub enum TransmittableContent {
-    Bytes(Bytes),
-    Derivation(DerivationInfo),
-    SignableTransaction(Transaction),
-    Specs(SpecsValue),
-    SpecsSet(Vec<Arc<SpecsValue>>),
-}
-
 impl Transmittable {
     pub fn into_packets(self) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
         let encoded_data = self.content.encode();
@@ -184,7 +127,8 @@ impl Action {
                 if prelude[0] != PREFIX_SUBSTRATE {
                     return Err(ErrorCompanion::NotSubstrate);
                 }
-                let encryption = Encryption::from_symbol(prelude[1])?;
+                let encryption = Encryption::decode(&mut &prelude[1..2])
+                    .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
                 match prelude[2] {
                     a if ID_SIGNABLE.contains(&a) => {
                         let transaction =
@@ -232,7 +176,14 @@ impl Action {
         has_pwd: bool,
         signature_maker: Box<dyn SignByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
-        let derivation = DerivationInfo::new(specs_key_set, cut_path, has_pwd);
+        let derivation = DerivationInfo {
+            chains: specs_key_set
+                .iter()
+                .map(|a| a.as_ref().to_owned())
+                .collect(),
+            cut_path,
+            has_pwd,
+        };
         let transmittable = Transmittable {
             content: TransmittableContent::Derivation(derivation),
             signature_maker,
@@ -244,8 +195,12 @@ impl Action {
         specs_values_set: Vec<Arc<SpecsValue>>,
         signature_maker: Box<dyn SignByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
+        let specs_values = specs_values_set
+            .iter()
+            .map(|a| a.as_ref().to_owned())
+            .collect();
         let transmittable = Transmittable {
-            content: TransmittableContent::SpecsSet(specs_values_set),
+            content: TransmittableContent::SpecsSet(specs_values),
             signature_maker,
         };
         Ok(Self::Transmit(transmittable.into_packets()?))

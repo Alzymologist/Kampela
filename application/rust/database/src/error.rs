@@ -2,7 +2,7 @@
 use sp_core::H256;
 use substrate_parser::error::MetaVersionError;
 
-use crate::process_input::Encryption;
+use kampela_common::Encryption;
 
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ErrorCompanion {
@@ -53,6 +53,9 @@ pub enum ErrorCompanion {
 
     #[error("Specs from scanned QR could not be decoded.")]
     SpecsQrDecode,
+
+    #[error("Received specs QR payload has unexpected structure. Can not find compact to cut payload into parts.")]
+    SpecsQrUnexpectedStructure,
 
     #[error("Input size too large to form NFC. Please file a ticket if you see this.")]
     TooLargeInputForNFC,

@@ -13,13 +13,16 @@ extern crate alloc;
 extern crate core;
 
 use alloc::{vec, vec::Vec};
+use k256::{
+    ecdsa::{SigningKey, signature::hazmat::PrehashVerifier, VerifyingKey},
+};
 use rand_core::RngCore;
 use schnorrkel::{
     context::attach_rng,
     derive::{ChainCode, Derivation},
     signing_context, ExpansionMode, MiniSecretKey,
 };
-use sp_core::{crypto::DeriveJunction, ecdsa, ed25519, Pair};
+use sp_core::{crypto::DeriveJunction, ed25519, Pair, hashing::blake2_256, Encode};
 
 use efm32pg23_fix::Peripherals;
 use patches::{cut_derivations, entropy_to_big_seed, entropy_to_phrase, phrase_to_entropy};
@@ -197,7 +200,7 @@ pub fn test_pairs_derive_sign_verify(peripherals: &mut Peripherals) {
             .derived_key_simple_rng(ChainCode(*junction.inner()), [], SeRng { peripherals })
             .0;
 
-        //hard derivation
+        // hard derivation
         let junction = DeriveJunction::hard("alice");
         let _pair_derived = pair
             .hard_derive_mini_secret_key(Some(ChainCode(*junction.inner())), b"")
@@ -224,14 +227,29 @@ pub fn test_pairs_derive_sign_verify(peripherals: &mut Peripherals) {
         assert!(ed25519::Pair::verify(&signature, msg, &pair.public()));
     }
 
-    // ecdsa
+    // ecdsa, with k256 crate, result fully compatible with sp_core
     {
+        let signing_key = SigningKey::from_bytes(mini_secret_bytes).unwrap();
+        let verifying_key = VerifyingKey::from(&signing_key);
+
+        let message_blake2_hash = blake2_256(&msg);
+        let (signature, recid) = signing_key.sign_prehash_recoverable(&message_blake2_hash).unwrap();
+        let _full_signature: [u8;65] = [signature.to_bytes().as_slice().to_vec(), vec![recid.to_byte()]].concat().try_into().unwrap();
+        assert!(verifying_key.verify_prehash(&message_blake2_hash, &signature).is_ok());
+
+        // hard derivation
+        let junction = DeriveJunction::hard("alice");
+        let _signing_key_derived = SigningKey::from_bytes(&("Secp256k1HDKD", mini_secret_bytes, junction.inner()).using_encoded(sp_core::hashing::blake2_256)).unwrap();
+
+/*
+        // this is direct use of ecdsa from sp_core, it compiles except verification part, that demands too much memory
         let pair = ecdsa::Pair::from_seed_slice(mini_secret_bytes).unwrap();
         assert!(pair
             .derive(cut_derivations("//alice//1").unwrap().into_iter(), None)
             .is_ok());
         let _signature = pair.sign(&msg);
         // assert!(ecdsa::Pair::verify(&signature, &msg, &pair.public())); <-- this does not compile and claims insufficient memory
+*/
     }
 
     se_off(peripherals);
