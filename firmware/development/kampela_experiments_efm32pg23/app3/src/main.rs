@@ -146,12 +146,6 @@ fn main() -> ! {
             
             let detected_y = (((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16) as i32;
             let detected_x = (((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16) as i32;
-                /*
-                epaper_hw_init(&mut peripherals);
-                highlight_point(&mut peripherals, detected_x, detected_y);
-                visible_delay(1000);
-                epaper_deep_sleep(&mut peripherals);
-*/
             input = Some(Point::new(SCREEN_SIZE_X as i32 - detected_x, /*SCREEN_SIZE_Y as i32 - */detected_y));
 
             peripherals
