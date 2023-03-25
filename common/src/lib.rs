@@ -130,15 +130,45 @@ pub struct DerivationInfo {
     pub has_pwd: bool,
 }
 
+#[derive(Debug, Decode, Encode)]
+pub struct NfcPacket {
+    #[codec(compact)]
+    pub payload_length: u32,
+    pub data: Vec<u8>,
+}
+
+impl NfcPacket {
+    pub fn as_raw_packet(&self) -> Vec<u8> {
+        self.encode()
+    }
+    pub fn from_raw_packet(raw: &[u8]) -> Result<Self, ErrorCommon> {
+        Self::decode(&mut &raw[..]).map_err(|_| ErrorCommon::PacketNotDecodable)
+    }
+}
+
+#[derive(Debug)]
+pub enum ErrorCommon {
+    PacketNotDecodable,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn decode_encryption() {
-        assert_eq!(Encryption::decode(&mut [0].as_slice()).unwrap(), Encryption::Ed25519);
-        assert_eq!(Encryption::decode(&mut [1].as_slice()).unwrap(), Encryption::Sr25519);
-        assert_eq!(Encryption::decode(&mut [2].as_slice()).unwrap(), Encryption::Ecdsa);
+        assert_eq!(
+            Encryption::decode(&mut [0].as_slice()).unwrap(),
+            Encryption::Ed25519
+        );
+        assert_eq!(
+            Encryption::decode(&mut [1].as_slice()).unwrap(),
+            Encryption::Sr25519
+        );
+        assert_eq!(
+            Encryption::decode(&mut [2].as_slice()).unwrap(),
+            Encryption::Ecdsa
+        );
         assert!(Encryption::decode(&mut [3].as_slice()).is_err());
     }
 }

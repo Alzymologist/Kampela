@@ -1,18 +1,20 @@
 //! `tiny-bip39` functionality for entropy to seed phrase and seed phrase to
 //! entropy transformations.
 
-use alloc::{vec::Vec, string::String};
+use alloc::{string::String, vec::Vec};
 use bitvec::prelude::{BitSlice, BitVec, Msb0};
 use sha2::{Digest, Sha256};
 
 use crate::{error::Error, wordlist::WORDLIST_ENGLISH};
 
 pub struct WordList {
-    inner: [&'static str; 2048]
+    inner: [&'static str; 2048],
 }
 
 pub const fn wordlist_english() -> WordList {
-    WordList { inner: WORDLIST_ENGLISH }
+    WordList {
+        inner: WORDLIST_ENGLISH,
+    }
 }
 
 pub struct WordListElement {
@@ -35,18 +37,17 @@ impl WordList {
     }
 
     pub fn get_words_by_prefix(&self, prefix: &str) -> Vec<WordListElement> {
-        let start = self.inner
-            .binary_search(&prefix)
-            .unwrap_or_else(|idx| idx);
-        let count = self.inner[start..].iter()
+        let start = self.inner.binary_search(&prefix).unwrap_or_else(|idx| idx);
+        let count = self.inner[start..]
+            .iter()
             .take_while(|word| word.starts_with(prefix))
             .count();
 
         let mut out: Vec<WordListElement> = Vec::with_capacity(count);
         for idx in start..start + count {
-            out.push(WordListElement{
+            out.push(WordListElement {
                 word: self.inner[idx],
-                bits11: Bits11::from(idx as u16)
+                bits11: Bits11::from(idx as u16),
             })
         }
         out
@@ -62,7 +63,7 @@ impl WordList {
         }
         match found {
             Some(idx) => Ok(Bits11::from(idx as u16)),
-            None => Err(Error::NoWord)
+            None => Err(Error::NoWord),
         }
     }
 }
@@ -105,7 +106,7 @@ impl MnemonicType {
             18 => Ok(Self::Words18),
             21 => Ok(Self::Words21),
             24 => Ok(Self::Words24),
-            _ => Err(Error::WordsNumber)
+            _ => Err(Error::WordsNumber),
         }
     }
     fn checksum_bits(&self) -> u8 {
@@ -134,8 +135,9 @@ impl MnemonicType {
 pub fn check_entropy_length(entropy: &[u8]) -> Result<(), Error> {
     if entropy.len() < 16 || entropy.len() > 32 || entropy.len() % 4 != 0 {
         Err(Error::InvalidEntropy)
+    } else {
+        Ok(())
     }
-    else {Ok(())}
 }
 
 fn sha256_first_byte(input: &[u8]) -> u8 {
@@ -146,16 +148,18 @@ pub fn entropy_to_phrase(entropy: &[u8]) -> Result<String, Error> {
     check_entropy_length(entropy)?;
     let wordlist = wordlist_english();
     let checksum_byte = sha256_first_byte(entropy);
-    let mut entropy_bits: BitVec<u8, Msb0> = BitVec::with_capacity((entropy.len()+1)*8);
+    let mut entropy_bits: BitVec<u8, Msb0> = BitVec::with_capacity((entropy.len() + 1) * 8);
     entropy_bits.extend_from_bitslice(&BitVec::<u8, Msb0>::from_slice(entropy));
     entropy_bits.extend_from_bitslice(&BitVec::<u8, Msb0>::from_element(checksum_byte));
-    
+
     let words: Vec<&'static str> = entropy_bits
         .chunks_exact(11usize)
         .map(|chunk| {
             let mut bits11: u16 = 0;
             for (i, bit) in chunk.into_iter().enumerate() {
-                if *bit {bits11 |= 1 << (10-i)}
+                if *bit {
+                    bits11 |= 1 << (10 - i)
+                }
             }
             wordlist.get_word(Bits11(bits11))
         })
@@ -165,30 +169,35 @@ pub fn entropy_to_phrase(entropy: &[u8]) -> Result<String, Error> {
 
 pub fn phrase_to_entropy(phrase: &str) -> Result<Vec<u8>, Error> {
     let wordlist = wordlist_english();
-    
+
     let words: Vec<&str> = phrase.split(' ').collect();
     let mnemonic_type = MnemonicType::from(words.len())?;
-    
+
     let mut entropy_bits: BitVec<u8, Msb0> = BitVec::with_capacity(mnemonic_type.total_bits());
-    
+
     for word in words {
         let bits11 = wordlist.get_bits11(word)?;
-        entropy_bits.extend_from_bitslice(&BitSlice::<u8, Msb0>::from_slice(&(bits11.bits() as u16).to_be_bytes())[5..16])
+        entropy_bits.extend_from_bitslice(
+            &BitSlice::<u8, Msb0>::from_slice(&(bits11.bits() as u16).to_be_bytes())[5..16],
+        )
     }
-    
+
     let mut entropy = entropy_bits.into_vec();
     let entropy_len = mnemonic_type.entropy_bits() / 8;
-    
+
     let actual_checksum = checksum(entropy[entropy_len], mnemonic_type.checksum_bits());
-    
+
     entropy.truncate(entropy_len);
-    
+
     let checksum_byte = sha256_first_byte(&entropy);
-    
+
     let expected_checksum = checksum(checksum_byte, mnemonic_type.checksum_bits());
-    
-    if actual_checksum != expected_checksum {Err(Error::InvalidChecksum)}
-    else {Ok(entropy)}
+
+    if actual_checksum != expected_checksum {
+        Err(Error::InvalidChecksum)
+    } else {
+        Ok(entropy)
+    }
 }
 
 fn checksum(source: u8, bits: u8) -> u8 {
@@ -299,7 +308,7 @@ mod tests {
             "f585c11aec520db57dd353c69554b21a89b20fb0650966fa0a9d6f74fd989d8f",
         ]
     ];
-    
+
     #[test]
     fn test_entropy_to_phrase() {
         for vec in VECTORS {
@@ -307,7 +316,7 @@ mod tests {
             assert_eq!(entropy_to_phrase(&entropy).unwrap(), vec[0]);
         }
     }
-    
+
     #[test]
     fn test_phrase_to_entropy() {
         for vec in VECTORS {
