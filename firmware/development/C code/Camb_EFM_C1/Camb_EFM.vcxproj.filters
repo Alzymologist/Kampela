@@ -1,0 +1,468 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{e883ec6b-60a2-4340-a546-d72a8c25a096}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{6225726c-923e-42d4-a408-5e9a58270d2a}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{96b7c0ff-ba11-4e36-9c83-4abc2a5a01d2}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Source files\Device-specific files">
+      <UniqueIdentifier>{aa9ca533-c663-4c68-9f62-d36a9142eb47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\Device-specific files\Emlib">
+      <UniqueIdentifier>{c84838d8-f852-4663-b75a-1c6e74ba94f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Device-specific files">
+      <UniqueIdentifier>{3931fb7f-6377-4ff2-9f2a-cb6f134e73e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Device-specific files\Emlib">
+      <UniqueIdentifier>{46ee2cdb-ef14-4d0a-876d-a821ab78b25c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Make files">
+      <UniqueIdentifier>{343b642d-8b8e-42dc-a0ea-aa93850590e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VisualGDB settings">
+      <UniqueIdentifier>{0888a2e9-5bb4-4f23-be98-7922260e6c40}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="Silabs\emdrv\dmadrv\src\dmadrv.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="user\epd27.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="user\FT6336.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="utils.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="user\AT25.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="user\psram.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="user\NfcDecoder.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="efm32.mak">
+      <Filter>Source files\Device-specific files</Filter>
+    </None>
+    <ClCompile Include="$(BSP_ROOT)\EFM32PG23\Devices\Source\system_efm32pg23.c">
+      <Filter>Source files\Device-specific files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\EFM32PG23\StartupFiles\startup_efm32pg23.c">
+      <Filter>Source files\Device-specific files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_acmp.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_adc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_aes.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_assert.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_burtc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_can.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_cmu.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_cmu_fpga.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_core.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_cryotimer.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_crypto.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_csen.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_dac.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_dbg.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_dma.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_ebi.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_emu.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_eusart.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_gpcrc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_gpio.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_i2c.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_iadc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_idac.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_lcd.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_ldma.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_lesense.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_letimer.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_leuart.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_msc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_opamp.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_pcnt.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_pdm.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_prs.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_qspi.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_rmu.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_rtc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_rtcc.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_se.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_system.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_timer.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_usart.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_vcmp.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_vdac.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClCompile Include="$(BSP_ROOT)\framework\emlib\src\em_wdog.c">
+      <Filter>Source files\Device-specific files\Emlib</Filter>
+    </ClCompile>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\arm_common_tables.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\arm_const_structs.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\arm_math.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_armcc.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_armclang.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_compiler.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_gcc.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_iccarm.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\cmsis_version.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_armv8mbl.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_armv8mml.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm0.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm0plus.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm23.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm3.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm33.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm4.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_cm7.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_sc000.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\core_sc300.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\mpu_armv7.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\mpu_armv8.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\CMSIS\tz_context.h">
+      <Filter>Header files\Device-specific files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\config\emlib_core_debug_config.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_acmp.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_adc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_aes.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_aes_compat.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_assert.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_burtc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_bus.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_can.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_chip.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_cmu.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_cmu_compat.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_cmu_fpga.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_common.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_core.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_cryotimer.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_crypto.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_crypto_compat.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_csen.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_dac.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_dbg.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_dma.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_ebi.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_emu.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_eusart.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_eusart_compat.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_gpcrc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_gpio.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_i2c.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_iadc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_idac.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_lcd.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_ldma.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_lesense.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_letimer.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_leuart.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_msc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_msc_compat.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_opamp.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_pcnt.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_pdm.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_prs.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_qspi.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_ramfunc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_rmu.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_rtc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_rtcc.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_se.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_smu.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_system.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_timer.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_usart.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_vcmp.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_vdac.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_version.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\inc\em_wdog.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\init\gpio_simple\sl_emlib_gpio_simple_init.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <ClInclude Include="$(BSP_ROOT)\framework\emlib\init\gpio_simple\config\sl_emlib_gpio_init_pin_config.h">
+      <Filter>Header files\Device-specific files\Emlib</Filter>
+    </ClInclude>
+    <None Include="debug.mak">
+      <Filter>Make files</Filter>
+    </None>
+    <None Include="release.mak">
+      <Filter>Make files</Filter>
+    </None>
+    <None Include="Camb_EFM-Debug.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="Camb_EFM-Release.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="efm32.xml">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="EFM32PG23B200F512IM40_flash.lds">
+      <Filter>Source files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
+</Project>
