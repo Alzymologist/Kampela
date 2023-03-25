@@ -184,6 +184,9 @@ class MainActivity : ComponentActivity() {
             Log.d("NFC tag", tag.toString())
 
             Ndef.get(tag)?.let { ndef ->
+                if (transmitData.size < (packagesSent.count.value ?: 0)) {
+                    packagesSent.reset()
+                }
                 ndef.connect()
                 Log.d("max length", ndef.maxSize.toString())
                 try {
@@ -191,9 +194,9 @@ class MainActivity : ComponentActivity() {
                         Log.d("connected", "1")
                         val ndefRecord = NdefRecord(
                             TNF_UNKNOWN,
-                            byteArrayOf(),
-                            byteArrayOf(),
-                            transmitData.random()
+                            null,
+                            null,
+                            transmitData.getOrNull(packagesSent.count.value ?: 0)
                         )
                         Log.d("Record formed", "1")
                         val ndefMessage = NdefMessage(ndefRecord)
