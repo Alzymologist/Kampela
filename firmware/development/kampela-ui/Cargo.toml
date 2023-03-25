@@ -16,6 +16,7 @@ rand_core = { version = "0.6.4", default-features = false }
 rand = { version = "0.8.5", default_features = false }
 lazy_static = { version = "1.4.0", default_features = false }
 patches = { path = "../kampela_experiments_efm32pg23/patches" }
+kampela-display-common = { path = "../kampela-display-common" }
 
 [features]
 default = ["std"]
