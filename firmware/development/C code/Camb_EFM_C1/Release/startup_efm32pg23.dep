@@ -1,3 +1,0 @@
-Release/startup_efm32pg23.o: \
- C:/GDB/EmbeddedBSPs/arm-eabi/com.sysprogs.arm.silabs.efm32/EFM32PG23/StartupFiles/startup_efm32pg23.c \
- c:\sysgcc\arm-eabi\lib\gcc\arm-none-eabi\10.3.1\include\stddef.h

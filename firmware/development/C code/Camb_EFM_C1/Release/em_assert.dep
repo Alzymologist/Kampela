@@ -1,4 +1,0 @@
-Release/em_assert.o: \
- C:/GDB/EmbeddedBSPs/arm-eabi/com.sysprogs.arm.silabs.efm32/framework/emlib/src/em_assert.c \
- C:/GDB/EmbeddedBSPs/arm-eabi/com.sysprogs.arm.silabs.efm32/framework/emlib/inc/em_assert.h \
- c:\sysgcc\arm-eabi\lib\gcc\arm-none-eabi\10.3.1\include\stdbool.h
