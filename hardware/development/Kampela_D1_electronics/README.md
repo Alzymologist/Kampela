@@ -1,4 +1,4 @@
-# Electronics design progress
+# D1 iteration electronics design progress
 
 ## Display and touchscreen
 
