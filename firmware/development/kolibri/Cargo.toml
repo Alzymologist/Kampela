@@ -1,0 +1,15 @@
+[package]
+name = "kolibri"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+embedded-graphics = "0.7.1"
+embedded-graphics-core = "0.3.3"
+embedded-text = {version = "0.5.0", default-features = false}
+embedded-graphics-simulator = { version = "0.3.0", optional = true }
+rand = { version = "0.8.5", default_features = false }
+
+[features]
+default = ["std"]
+std = ["embedded-graphics-simulator", "rand/default"]
