@@ -6,11 +6,8 @@ use embedded_graphics_simulator::{
 };
 use rand::thread_rng;
 
-pub mod display_def;
-pub use display_def::*;
-
-mod uistate;
-use uistate::UIState;
+use kolibri::display_def::*;
+use kolibri::uistate::UIState;
 
 fn main() {
     // Prepare
@@ -20,7 +17,7 @@ fn main() {
     // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
     let mut rng = thread_rng();
 
-    let mut state = UIState::new(&mut rng);
+    let mut state = UIState::init(&mut rng);
 
     // Draw
     let output_settings = OutputSettingsBuilder::new()
@@ -47,7 +44,7 @@ fn main() {
                     point,
                 } => {
                     println!("{point}");
-                    state.process_touch(point, &mut rng);
+                    state.process_touch(point, &mut rng).unwrap();
                     do_update = true;
                 }
                 SimulatorEvent::Quit => return,
