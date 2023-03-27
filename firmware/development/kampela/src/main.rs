@@ -20,9 +20,9 @@ static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     COUNT, 
-    devices::{power::measure_voltage, se_rng},
+    devices::{power::measure_voltage, se_rng, touch::{ft6336_read_at, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, make_text, highlight_point, burning_tank}, 
-    init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, 
+    init::init_peripherals, 
     visible_delay, 
 };
 use kampela_ui::{display_def::*, uistate};

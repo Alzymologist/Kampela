@@ -218,6 +218,7 @@ gpio_pin!(
 pub fn init_gpio(peripherals: &mut Peripherals) {
     map_gpio(peripherals);
     set_gpio_pins(peripherals);
+    set_external_interrupts(peripherals);
 }
 
 /// Map GPIO pins to their destinations
@@ -291,4 +292,28 @@ fn set_gpio_pins(peripherals: &mut Peripherals) {
     psram_mosi_clear(peripherals);
     psram_sck_clear(peripherals);
     nfc_pin_clear(peripherals);
+}
+
+/// Set up external interrupt pins (used to get touch events from touch pad)
+fn set_external_interrupts(peripherals: &mut Peripherals) {
+    peripherals
+        .GPIO_S
+        .extipsell
+        .write(|w_reg| w_reg.extipsel0().portb());
+    peripherals
+        .GPIO_S
+        .extipinsell
+        .write(|w_reg| w_reg.extipinsel0().pin1());
+    peripherals
+        .GPIO_S
+        .extirise
+        .write(|w_reg| w_reg.extirise().variant(0));
+    peripherals
+        .GPIO_S
+        .extifall
+        .write(|w_reg| w_reg.extifall().variant(1 << 0));
+    peripherals
+        .GPIO_S
+        .ien
+        .write(|w_reg| w_reg.extien0().set_bit());
 }
