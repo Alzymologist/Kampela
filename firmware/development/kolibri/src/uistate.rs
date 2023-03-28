@@ -30,6 +30,8 @@ use embedded_text::{
 };
 use rand::{distributions::Uniform, Rng};
 
+use kampela_display_common::display_def::{SCREEN_SIZE_X, SCREEN_SIZE_Y};
+
 use crate::calibration::{MeasuredAffine, SET_LEN};
 use crate::display_def::*;
 

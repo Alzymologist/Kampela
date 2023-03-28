@@ -6,7 +6,8 @@ use embedded_graphics_simulator::{
 };
 use rand::thread_rng;
 
-use kolibri::display_def::*;
+use kampela_display_common::display_def::{SCREEN_SIZE_X, SCREEN_SIZE_Y};
+
 use kolibri::uistate::UIState;
 
 fn main() {
@@ -14,7 +15,6 @@ fn main() {
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
 
-    // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
     let mut rng = thread_rng();
 
     let mut state = UIState::init(&mut rng);

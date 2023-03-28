@@ -1,20 +1,14 @@
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics_core::geometry::{Point, Size};
 
-pub const SCREEN_SIZE_X: u32 = 264;
-pub const SCREEN_SIZE_Y: u32 = 176;
-pub const SCREEN_SIZE: Size = Size {
-    width: SCREEN_SIZE_X,
-    height: SCREEN_SIZE_Y,
-};
-pub const SCREEN_ZERO: Point = Point { x: 0, y: 0 };
+use kampela_display_common::display_def::{SCREEN_SIZE_X, SCREEN_SIZE_Y};
 
 pub const HALF_LEN: i32 = 7;
 pub const LINE_WIDTH: u32 = 3;
 
-pub const GAP: u32 = 12;
-pub const BUTTON_WIDTH: u32 = 72;
-pub const BUTTON_TOP: i32 = 120;
+const GAP: u32 = 12;
+const BUTTON_WIDTH: u32 = 72;
+const BUTTON_TOP: i32 = 120;
 
 pub const RESTART_BUTTON_AREA: Rectangle = Rectangle::new(
     Point::new(GAP as i32, BUTTON_TOP),
