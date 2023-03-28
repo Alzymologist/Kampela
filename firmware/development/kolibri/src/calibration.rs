@@ -12,7 +12,7 @@ use crate::uistate::MeasuredData;
 #[derive(Debug)]
 pub struct MeasuredAffine(Affine2<f32>);
 
-pub const SET_LEN: usize = 10;
+pub const SET_LEN: usize = 30;
 
 impl MeasuredAffine {
     pub fn new() -> Self {

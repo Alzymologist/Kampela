@@ -77,7 +77,11 @@ impl UIState {
     }
 
     /// Read user touch event
-    pub fn process_touch<R: Rng + ?Sized>(&mut self, touch_point: Point, rng: &mut R) -> Result<(), &'static str> {
+    pub fn process_touch<R: Rng + ?Sized>(
+        &mut self,
+        touch_point: Point,
+        rng: &mut R,
+    ) -> Result<bool, &'static str> {
         match self {
             UIState::Crosshair {
                 point,
@@ -87,36 +91,42 @@ impl UIState {
                     display_point: *point,
                     touch_point,
                 };
-                let mut collected_data_updated = collected_data.to_vec();
-                collected_data_updated.push(measured_data.to_owned());
                 *self = UIState::MeasuredData {
                     measured_data,
-                    collected_data: collected_data_updated,
+                    collected_data: collected_data.to_vec(),
                 };
+                Ok(true)
             }
             UIState::MeasuredData {
-                measured_data: _,
+                measured_data,
                 collected_data,
             } => {
                 if APPROVE_BUTTON_AREA.contains(touch_point) {
-                    if collected_data.len() == SET_LEN {
-                        let measured_data_array: [MeasuredData; SET_LEN] = collected_data
-                            .to_vec()
+                    let mut collected_data_updated = collected_data.to_vec();
+                    collected_data_updated.push(measured_data.to_owned());
+
+                    if collected_data_updated.len() == SET_LEN {
+                        let measured_data_array: [MeasuredData; SET_LEN] = collected_data_updated
                             .try_into()
                             .expect("static length, always fit");
                         let measured_affine = MeasuredAffine::from_data(&measured_data_array)?;
                         *self = UIState::Complete(measured_affine);
                     } else {
-                        *self = UIState::next_crosshair(rng, collected_data.to_vec());
+                        *self = UIState::next_crosshair(rng, collected_data_updated);
                     }
-                }
-                if RESTART_BUTTON_AREA.contains(touch_point) {
+                    Ok(true)
+                } else if DECLINE_BUTTON_AREA.contains(touch_point) {
+                    *self = UIState::next_crosshair(rng, collected_data.to_vec());
+                    Ok(true)
+                } else if RESTART_BUTTON_AREA.contains(touch_point) {
                     *self = UIState::init(rng);
+                    Ok(true)
+                } else {
+                    Ok(false)
                 }
             }
-            UIState::Complete(_) => {}
+            UIState::Complete(_) => Ok(false),
         }
-        Ok(())
     }
 
     /// Display new screen state; should be called only when needed, is slow
@@ -199,7 +209,7 @@ impl UIState {
                 TextBox::with_textbox_style(
                     &format!(
                         "point {} of {}\n\ndisplay: ({}, {})\ntouch: ({}, {})",
-                        collected_data.len(),
+                        collected_data.len() + 1,
                         SET_LEN,
                         measured_data.display_point.x,
                         measured_data.display_point.y,
@@ -214,7 +224,9 @@ impl UIState {
 
                 control_button::<D>("restart", &RESTART_BUTTON_AREA, display)?;
 
-                if collected_data.len() == SET_LEN {
+                control_button::<D>("skip", &DECLINE_BUTTON_AREA, display)?;
+
+                if collected_data.len() + 1 == SET_LEN {
                     control_button::<D>("done", &APPROVE_BUTTON_AREA, display)?;
                 } else {
                     control_button::<D>("add", &APPROVE_BUTTON_AREA, display)?;
@@ -245,7 +257,7 @@ fn control_button<D>(text: &str, bounds: &Rectangle, display: &mut D) -> Result<
 where
     D: DrawTarget<Color = BinaryColor>,
 {
-    let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
+    let character_style = MonoTextStyle::new(&FONT_7X13, BinaryColor::On);
     let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
     (*bounds).into_styled(thin_stroke).draw(display)?;

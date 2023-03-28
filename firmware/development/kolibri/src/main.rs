@@ -44,8 +44,7 @@ fn main() {
                     point,
                 } => {
                     println!("{point}");
-                    state.process_touch(point, &mut rng).unwrap();
-                    do_update = true;
+                    do_update = state.process_touch(point, &mut rng).unwrap();
                 }
                 SimulatorEvent::Quit => return,
                 _ => (),
