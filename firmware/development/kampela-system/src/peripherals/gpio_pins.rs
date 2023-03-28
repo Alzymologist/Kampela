@@ -221,7 +221,7 @@ pub fn init_gpio(peripherals: &mut Peripherals) {
     set_external_interrupts(peripherals);
 }
 
-/// Map GPIO pins to their destinations
+/// Set GPIO functions
 fn map_gpio(peripherals: &mut Peripherals) {
     peripherals
         .GPIO_S

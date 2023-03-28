@@ -1,16 +1,12 @@
-use alloc::{format, vec::Vec};
-
-use blake2_rfc::blake2b::Blake2b;
+//! All initializations should be declared here when possible
 
 use efm32pg23_fix::Peripherals;
 
-use crate::visible_delay;
-use crate::draw::{make_text, highlight_point};
-use crate::peripherals::gpio_pins::*;
 use crate::peripherals::{
     adc::init_adc, 
     cmu::init_cmu, 
     eusart::init_eusart, 
+    gpio_pins::init_gpio,
     i2c::init_i2c,
     ldma::init_ldma,
     timers::init_timers,
@@ -18,12 +14,10 @@ use crate::peripherals::{
 };
 use crate::devices::psram::psram_reset;
 
-pub const BAUDRATE_USART: u32 = 10_000_000;
-
 /// All peripheral initializations
 pub fn init_peripherals(peripherals: &mut Peripherals) {
     // first, start clocking
-    init_cmu(peripherals);
+    init_cmu(&mut peripherals.CMU_S);
 
     // map GPIO pins to their functions and set their starting values
     init_gpio(peripherals);
@@ -51,5 +45,7 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
 
     // set up i2c line to communicate with touch pad
     init_i2c(peripherals);
+
+    // TODO: lock GPIO
 }
 

@@ -1,11 +1,10 @@
 //! Clock management unit initializations
 
-use efm32pg23_fix::Peripherals;
+use efm32pg23_fix::CMU_S;
 
 /// Initialize all needed clock units
-pub fn init_cmu(peripherals: &mut Peripherals) {
-        peripherals
-        .CMU_S
+pub fn init_cmu(cmu: &mut CMU_S) {
+    cmu
         .clken0
         .write(|w_reg| {
             w_reg
@@ -19,8 +18,8 @@ pub fn init_cmu(peripherals: &mut Peripherals) {
                 .timer1().set_bit()
                 .usart0().set_bit()
     });
-    peripherals
-        .CMU_S
+
+    cmu
         .clken1
         .write(|w_reg| {
             w_reg
