@@ -20,7 +20,7 @@ pub fn init_peripherals(peripherals: &mut Peripherals) {
     init_cmu(&mut peripherals.CMU_S);
 
     // map GPIO pins to their functions and set their starting values
-    init_gpio(peripherals);
+    init_gpio(&mut peripherals.GPIO_S);
 
     // Setting up USART0, for epaper display and flash memory
     init_usart(peripherals);
