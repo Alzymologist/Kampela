@@ -1,6 +1,6 @@
 //! Map GPIO pins
 
-use efm32pg23_fix::{GPIO_S, Peripherals};
+use efm32pg23_fix::GPIO_S;
 use crate::visible_delay;
 
 pub const FLASH_CS_PIN: u8 = 0;
