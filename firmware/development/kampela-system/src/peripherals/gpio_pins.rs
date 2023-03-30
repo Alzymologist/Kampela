@@ -1,6 +1,6 @@
 //! Map GPIO pins
 
-use efm32pg23_fix::Peripherals;
+use efm32pg23_fix::GPIO_S;
 use crate::visible_delay;
 
 pub const FLASH_CS_PIN: u8 = 0;
@@ -33,18 +33,16 @@ macro_rules! gpio_pin {
         $(
             #[$attr_set]
             #[$attr_common]
-            pub fn $func_set(peripherals: &mut Peripherals) {
-                peripherals
-                    .GPIO_S
+            pub fn $func_set(gpio: &mut GPIO_S) {
+                gpio
                     .$port
                     .modify(|r, w| w.dout().variant(r.dout().bits() | (1 << $pin)));
             }
 
             #[$attr_clear]
             #[$attr_common]
-            pub fn $func_clear(peripherals: &mut Peripherals) {
-                peripherals
-                    .GPIO_S
+            pub fn $func_clear(gpio: &mut GPIO_S) {
+                gpio
                     .$port
                     .modify(|r, w| w.dout().variant(r.dout().bits() ^ (1 << $pin)));
             }
@@ -215,15 +213,15 @@ gpio_pin!(
 );
 
 /// GPIO initializations
-pub fn init_gpio(peripherals: &mut Peripherals) {
-    map_gpio(peripherals);
-    set_gpio_pins(peripherals);
+pub fn init_gpio(gpio: &mut GPIO_S) {
+    map_gpio(gpio);
+    set_gpio_pins(gpio);
+    set_external_interrupts(gpio);
 }
 
-/// Map GPIO pins to their destinations
-fn map_gpio(peripherals: &mut Peripherals) {
-    peripherals
-        .GPIO_S
+/// Set GPIO functions
+fn map_gpio(gpio: &mut GPIO_S) {
+    gpio
         .porta_model
         .write(|w_reg| {
             w_reg
@@ -232,24 +230,21 @@ fn map_gpio(peripherals: &mut Peripherals) {
                 .mode5().wiredandpullup() // SDA for USART (display)
                 .mode6().pushpull() // Display reset
     });
-    peripherals
-        .GPIO_S
+    gpio
         .porta_modeh
         .write(|w_reg| {
             w_reg
                 .mode0().inputpullfilter() // NFC
                 .mode1().pushpull() // Power 2.8 V
     });
-    peripherals
-        .GPIO_S
+    gpio
         .portb_model
         .write(|w_reg| {
             w_reg
                 .mode1().input() // interrupts from display sensor
                 .mode4().input() // BUSY spi
     });
-    peripherals
-        .GPIO_S
+    gpio
         .portc_model
         .write(|w_reg| {
             w_reg
@@ -262,8 +257,7 @@ fn map_gpio(peripherals: &mut Peripherals) {
                 .mode6().pushpull() // PSRAM MOSI
                 .mode7().pushpull() // PSRAM SCK
     });
-    peripherals
-        .GPIO_S
+    gpio
         .portd_model
         .write(|w_reg| {
             w_reg
@@ -273,22 +267,41 @@ fn map_gpio(peripherals: &mut Peripherals) {
 }
 
 /// Set GPIO pins to their starting values
-fn set_gpio_pins(peripherals: &mut Peripherals) {
-    pow_set(peripherals);
-    i2c_set(peripherals);
+fn set_gpio_pins(gpio: &mut GPIO_S) {
+    pow_set(gpio);
+    i2c_set(gpio);
     visible_delay(10); // wait after power set! (epaper manual for 2.8V setup)
-    display_chip_select_set(peripherals);
-    display_data_command_clear(peripherals);
-    display_res_clear(peripherals);
-    sda_set(peripherals);
-    scl_set(peripherals);
-    flash_chip_select_set(peripherals);
-    miso_set(peripherals);
-    mosi_set(peripherals);
-    sck_clear(peripherals);
-    psram_chip_select_set(peripherals);
-    psram_miso_set(peripherals);
-    psram_mosi_clear(peripherals);
-    psram_sck_clear(peripherals);
-    nfc_pin_clear(peripherals);
+    display_chip_select_set(gpio);
+    display_data_command_clear(gpio);
+    display_res_clear(gpio);
+    sda_set(gpio);
+    scl_set(gpio);
+    flash_chip_select_set(gpio);
+    miso_set(gpio);
+    mosi_set(gpio);
+    sck_clear(gpio);
+    psram_chip_select_set(gpio);
+    psram_miso_set(gpio);
+    psram_mosi_clear(gpio);
+    psram_sck_clear(gpio);
+    nfc_pin_clear(gpio);
+}
+
+/// Set up external interrupt pins (used to get touch events from touch pad)
+fn set_external_interrupts(gpio: &mut GPIO_S) {
+    gpio
+        .extipsell
+        .write(|w_reg| w_reg.extipsel0().portb());
+    gpio
+        .extipinsell
+        .write(|w_reg| w_reg.extipinsel0().pin1());
+    gpio
+        .extirise
+        .write(|w_reg| w_reg.extirise().variant(0));
+    gpio
+        .extifall
+        .write(|w_reg| w_reg.extifall().variant(1 << 0));
+    gpio
+        .ien
+        .write(|w_reg| w_reg.extien0().set_bit());
 }

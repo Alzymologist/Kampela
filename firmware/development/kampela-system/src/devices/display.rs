@@ -1,9 +1,9 @@
 //! display control functions
 
-use efm32pg23_fix::Peripherals;
+use efm32pg23_fix::{GPIO_S, Peripherals};
 use crate::visible_delay;
 use crate::peripherals::usart::*;
-use crate::peripherals::gpio_pins::*;
+use crate::peripherals::gpio_pins::{display_res_clear, display_res_set};
 
 pub const X_SIZE: usize = 176;
 pub const Y_SIZE: usize = 264;
@@ -12,47 +12,47 @@ pub const Y_SIZE: usize = 264;
 /// Send command to EPD
 pub fn epaper_write_command(peripherals: &mut Peripherals, command_set: &[u8]) {
     // CS clear corresponds to selected chip, see epaper docs
-    display_chip_select_set(peripherals);
-    display_chip_select_clear(peripherals); // not necessary if state is known and default at start
 
-    display_data_command_clear(peripherals);
+    deselect_display(&mut peripherals.GPIO_S);
+    select_display(&mut peripherals.GPIO_S); // not necessary if state is known and default at start
+    
+    display_select_command(&mut peripherals.GPIO_S);
     for command in command_set.iter() {
         write_to_usart(peripherals, *command);
     }
-    display_chip_select_set(peripherals);
+    deselect_display(&mut peripherals.GPIO_S);
 }
 
 /// Send data to EPD
 pub fn epaper_write_data(peripherals: &mut Peripherals, data_set: &[u8]) {
-    display_chip_select_set(peripherals);
-    display_chip_select_clear(peripherals); // not necessary if state is known and default at start
+    deselect_display(&mut peripherals.GPIO_S);
+    select_display(&mut peripherals.GPIO_S); // not necessary if state is known and default at start
 
-    display_data_command_set(peripherals);
+    display_select_data(&mut peripherals.GPIO_S);
     for data in data_set.iter() {
         write_to_usart(peripherals, *data);
     }
-    display_chip_select_set(peripherals);
+    deselect_display(&mut peripherals.GPIO_S);
     //    display_data_command_clear(peripherals);
 }
 
 /// BUSY is on port B, pin [`SPI_BUSY_PIN`].
 pub fn display_is_busy(peripherals: &mut Peripherals) -> bool {
-    let portb_din_bits = peripherals.GPIO_S.portb_din.read().din().bits();
-    portb_din_bits & (1 << SPI_BUSY_PIN) == (1 << SPI_BUSY_PIN)
+    spi_is_busy(&mut peripherals.GPIO_S)
 }
 
 /// Reset EPD, should be performed in many situations
 ///
 /// Why these specific numbers for delays?
-pub fn epaper_reset(peripherals: &mut Peripherals) {
+pub fn epaper_reset(gpio: &mut GPIO_S) {
     visible_delay(1);
-    display_res_clear(peripherals);
+    display_res_clear(gpio);
     visible_delay(5);
-    display_res_set(peripherals);
+    display_res_set(gpio);
     visible_delay(10);
-    display_res_clear(peripherals);
+    display_res_clear(gpio);
     visible_delay(5);
-    display_chip_select_set(peripherals); // this is not the default state, should not be here
+    deselect_display(gpio); // this is not the default state, should not be here
     visible_delay(5);
 }
 

@@ -1,9 +1,19 @@
 //! EUSART interface
 
-use efm32pg23_fix::Peripherals;
+use efm32pg23_fix::{GPIO_S, Peripherals};
 use crate::peripherals::gpio_pins::*;
 
 pub const BAUDRATE_EUSART: u32 = 10_000_000;
+
+/// Enable psram channel
+pub fn select_psram(gpio: &mut GPIO_S) {
+    psram_chip_select_clear(gpio);
+}
+
+/// Disable psram channel
+pub fn deselect_psram(gpio: &mut GPIO_S) {
+    psram_chip_select_set(gpio);
+}
 
 /// setting up EUSART2, for PSRAM
 ///

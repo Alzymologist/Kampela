@@ -1,5 +1,3 @@
-use alloc::format;
-use core::{alloc::Layout, panic::PanicInfo};
 use alloc::string::String;
 
 use bitvec::prelude::{BitArr, Msb0, bitarr};

@@ -2,16 +2,16 @@
 
 use alloc::{format, vec::Vec};
 use efm32pg23_fix::Peripherals;
-use crate::peripherals::gpio_pins::*;
+use crate::peripherals::eusart::*;
 
 pub fn psram_reset(peripherals: &mut Peripherals) {
-    psram_chip_select_set(peripherals); // deselect PSRAM
-    psram_chip_select_clear(peripherals); // select PSRAM, explain why
+    deselect_psram(&mut peripherals.GPIO_S);
+    select_psram(&mut peripherals.GPIO_S);
     psram_write_read_byte(peripherals, PSRAM_RESET_ENABLE);
-    psram_chip_select_set(peripherals); // deselect PSRAM
-    psram_chip_select_clear(peripherals); // select PSRAM
+    deselect_psram(&mut peripherals.GPIO_S);
+    select_psram(&mut peripherals.GPIO_S);
     psram_write_read_byte(peripherals, PSRAM_RESET);
-    psram_chip_select_set(peripherals); // deselect PSRAM
+    select_psram(&mut peripherals.GPIO_S);
 }
 
 pub fn psram_write_read_byte(peripherals: &mut Peripherals, byte: u8) -> u8 {
@@ -33,7 +33,7 @@ pub fn psram_write_read_byte(peripherals: &mut Peripherals, byte: u8) -> u8 {
 pub const PSRAM_DUMMY: u8 = 0xff;
 
 pub fn psram_read_id(peripherals: &mut Peripherals) -> [u8; ID_LEN] {
-    psram_chip_select_clear(peripherals); // select PSRAM
+    select_psram(&mut peripherals.GPIO_S);
     psram_write_read_byte(peripherals, PSRAM_READ_ID);
     psram_write_slice(peripherals, &[PSRAM_DUMMY; ADDR_LEN]);
     psram_read_vec(peripherals, ID_LEN).try_into().expect("static length, always fits")
@@ -105,11 +105,11 @@ pub fn psram_read_at_address_native(peripherals: &mut Peripherals, address: Addr
 }
 
 fn psram_read_at_address_helper(peripherals: &mut Peripherals, address: AddressPsram, len: usize) -> Vec<u8> {
-    psram_chip_select_clear(peripherals); // select PSRAM
+    select_psram(&mut peripherals.GPIO_S);
     psram_write_read_byte(peripherals, PSRAM_READ);
     psram_write_slice(peripherals, &address.inner());
     let out = psram_read_vec(peripherals, len);
-    psram_chip_select_set(peripherals); // deselect PSRAM
+    deselect_psram(&mut peripherals.GPIO_S);
     out
 }
 pub fn psram_read_at_address(peripherals: &mut Peripherals, address: AddressPsram, len: usize) -> Result<Vec<u8>, MemoryError> {
@@ -153,11 +153,11 @@ pub fn psram_write_at_address_native(peripherals: &mut Peripherals, address: Add
 ///
 /// Use only as a part of function with reset.
 fn psram_write_at_address_helper(peripherals: &mut Peripherals, address: AddressPsram, slice: &[u8]) {
-    psram_chip_select_clear(peripherals); // select PSRAM
+    select_psram(&mut peripherals.GPIO_S);
     psram_write_read_byte(peripherals, PSRAM_WRITE);
     psram_write_slice(peripherals, &address.inner());
     psram_write_slice(peripherals, slice);
-    psram_chip_select_set(peripherals); // deselect PSRAM
+    deselect_psram(&mut peripherals.GPIO_S);
 }
 /// Write at address seamlessly, i.e. without wrapping.
 ///

@@ -12,6 +12,7 @@ use cortex_m_rt::{entry, exception};
 use embedded_alloc::Heap;
 
 use embedded_graphics::prelude::Point;
+use nalgebra::{linalg::SVD, Affine2, Const, OMatrix, Point2, RowVector1, RowVector3, RowVector6};
 
 use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 
@@ -20,12 +21,13 @@ static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     COUNT, 
-    devices::{power::measure_voltage, se_rng},
+    devices::{power::measure_voltage, se_rng, touch::{ft6336_read_at, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, make_text, highlight_point, burning_tank}, 
-    init::{ft6336_read_at, init_peripherals, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}, 
+    init::init_peripherals, 
     visible_delay, 
 };
 use kampela_ui::{display_def::*, uistate};
+
 
 static mut PUSHED: bool = false;
 static mut TOUCH_UNDEBOUNCE: bool = true;
@@ -110,6 +112,16 @@ fn main() -> ! {
     //let test_voltage = measure_voltage(&mut peripherals);
     //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
 
+    let affine_matrix  = Affine2::from_matrix_unchecked(
+        OMatrix::from_rows(&[
+            RowVector3::<f32>::new(1.0022, -0.0216, -4.2725),
+            RowVector3::<f32>::new(0.0061, 1.1433, -13.7305),
+            RowVector3::<f32>::new(0.0, 0.0, 1.0),
+        ])
+    );
+
+    
+
     let mut state = uistate::UIState::new(&mut se_rng::SeRng{peripherals: &mut peripherals}); 
     // line for debug init messages
     //panic!("lol: {}", test_voltage);
@@ -151,7 +163,17 @@ fn main() -> ! {
             
             let detected_y = (((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16) as i32;
             let detected_x = (((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16) as i32;
-            input = Some(Point::new(SCREEN_SIZE_X as i32 - detected_x, /*SCREEN_SIZE_Y as i32 - */detected_y));
+            let touch = Point::new(SCREEN_SIZE_X as i32 - detected_x, detected_y);
+
+            let touch_as_point2 = Point2::new(touch.x as f32, touch.y as f32);
+            let display_as_point2 = affine_matrix.transform_point(&touch_as_point2);
+            
+            input = Some(
+                Point {
+                    x: display_as_point2.coords[0] as i32,
+                    y: display_as_point2.coords[1] as i32,
+                }
+            );
 
             peripherals
                 .GPIO_S

@@ -3,8 +3,6 @@
 use efm32pg23_fix::Peripherals;
 
 use crate::peripherals::adc;
-use crate::draw::burning_tank;
-use alloc::format;
 
 /// Measure voltage
 pub fn measure_voltage(peripherals: &mut Peripherals) -> i32 {

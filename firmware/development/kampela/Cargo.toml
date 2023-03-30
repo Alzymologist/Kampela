@@ -30,6 +30,7 @@ substrate_parser = {git = "https://github.com/varovainen/substrate-parser", bran
 
 kampela-system = { path = "../kampela-system" }
 kampela-ui = { path = "../kampela-ui" , default-features = false }
+nalgebra = { version = "0.32.2", default-features = false, features = ["libm"] }
 
 [profile.release]
 codegen-units = 1
