@@ -1,9 +1,35 @@
 //! all low level usart operations
 
-use efm32pg23_fix::Peripherals;
+use efm32pg23_fix::{GPIO_S, Peripherals};
 use crate::peripherals::gpio_pins::*;
 
 pub const BAUDRATE_USART: u32 = 10_000_000;
+
+/// Select display channel
+pub fn select_display(gpio: &mut GPIO_S) {
+    display_chip_select_clear(gpio);
+}
+
+/// Deselect display channel
+pub fn deselect_display(gpio: &mut GPIO_S) {
+    display_chip_select_set(gpio);
+}
+
+/// Indicate that command is sent
+pub fn display_select_command(gpio: &mut GPIO_S) {
+    display_data_command_clear(gpio);
+}
+
+/// Indicate that data is sent
+pub fn display_select_data(gpio: &mut GPIO_S) {
+    display_data_command_set(gpio);
+}
+
+pub fn spi_is_busy(gpio: &mut GPIO_S) -> bool {
+    let portb_din_bits = gpio.portb_din.read().din().bits();
+    portb_din_bits & (1 << SPI_BUSY_PIN) == (1 << SPI_BUSY_PIN)
+}
+
 
 /*
 /// Turn USART on

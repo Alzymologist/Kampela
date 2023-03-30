@@ -2,11 +2,6 @@
 
 use efm32pg23_fix::Peripherals;
 
-//debug tools
-//TODO: remove!
-use crate::draw::burning_tank;
-use alloc::format;
-
 /// request single ADC measurement
 pub fn request_adc_measure(peripherals: &mut Peripherals) {
     peripherals
