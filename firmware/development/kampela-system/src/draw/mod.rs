@@ -30,10 +30,7 @@ use crate::devices::power::halt_for_display_power;
 const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
 
 #[derive(Debug)]
-pub enum DisplayError {
-    XBounds,
-    YBounds,
-}
+pub enum DisplayError {}
 
 /// see this <https://github.com/embedded-graphics/embedded-graphics/issues/716>
 pub fn make_text(peripherals: &mut Peripherals, text: &str) {
@@ -132,8 +129,8 @@ impl DrawTarget for FrameBuffer {
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
         for pixel in pixels {
-            if (pixel.0.x<0)|(pixel.0.x>=SCREEN_SIZE_X as i32) {return Err(DisplayError::XBounds)}
-            if (pixel.0.y<0)|(pixel.0.y>=SCREEN_SIZE_Y as i32) {return Err(DisplayError::YBounds)}
+            if (pixel.0.x<0)|(pixel.0.x>=SCREEN_SIZE_X as i32) {continue}
+            if (pixel.0.y<0)|(pixel.0.y>=SCREEN_SIZE_Y as i32) {continue}
             //transposing pizels correctly here
             let n = (pixel.0.y + pixel.0.x*SCREEN_SIZE_Y as i32) /*(pixel.0.y*176 + (175 - pixel.0.x))*/ as usize;
             //let n = if n<SHIFT_COEFFICIENT { n + SCREEN_SIZE_VALUE - SHIFT_COEFFICIENT } else { n - SHIFT_COEFFICIENT };
@@ -152,9 +149,9 @@ impl DrawTarget for FrameBuffer {
 }
 
 /// Accessibility tool: highlight a spot with size similar to typical touch area
-pub fn highlight_point(peripherals: &mut Peripherals, detected_x: u16, detected_y: u16) {
+pub fn highlight_point(peripherals: &mut Peripherals, point: Point) {
     let mut buffer = FrameBuffer::new_white();
-    Circle::with_center(Point{x: 176 - detected_x as i32, y: 264 - detected_y as i32}, 20)
+    Circle::with_center(point, 20)
         .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
         .draw(&mut buffer).unwrap();
     buffer.apply(peripherals);

@@ -1,6 +1,7 @@
 #![no_std]
 #![deny(unused_crate_dependencies)]
 
+pub mod calibration;
 pub mod display_def;
 pub mod uistate;
 
