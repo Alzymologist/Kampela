@@ -32,6 +32,7 @@ use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
 use std::{thread::sleep, time::{Duration, Instant}};
 use ux::u4;
+use clap::Parser;
 
 #[macro_use]
 extern crate lazy_static;
@@ -50,7 +51,20 @@ mod seed_entry;
 mod uistate;
 use uistate::{UIState, UpdateRequest};
 
+mod data_state;
+use data_state::AppStateInit;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short = 'I')]
+    key_was_created: bool
+}
+
 fn main() {
+    let args = Args::parse();
+    println!("{:?}", args);
+
     // Prepare
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
