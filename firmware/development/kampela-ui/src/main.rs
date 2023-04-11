@@ -1,37 +1,14 @@
 //! This is simulator to develop Kampela UI mocks
 #![cfg(feature="std")]
-use bitvec::prelude::{bitarr, BitArr, Msb0};
-use core::ops::Add;
-use embedded_graphics::{
-    geometry::AnchorPoint,
-    mono_font::{
-        ascii::{FONT_10X20, FONT_6X10},
-        MonoTextStyle,
-    },
-    prelude::Primitive,
-    primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
-    Drawable,
-};
 use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::Size,
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use embedded_text::{
-    alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
-    TextBox,
-};
-use rand::seq::SliceRandom;
-use rand::{rngs::ThreadRng, thread_rng};
-use std::{thread::sleep, time::{Duration, Instant}};
-use ux::u4;
+use rand::thread_rng;
+use std::{thread::sleep, time::Duration};
 use clap::Parser;
 
 #[macro_use]
@@ -49,10 +26,10 @@ mod restore_or_generate;
 mod seed_entry;
 
 mod uistate;
-use uistate::{UIState, UpdateRequest};
+use uistate::UIState;
 
 mod data_state;
-use data_state::AppStateInit;
+use data_state::{AppStateInit, NFCState, DataInit, StorageState};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -61,9 +38,23 @@ struct Args {
     key_was_created: bool
 }
 
+impl DataInit<Args> for AppStateInit {
+    fn new(params: Args) -> AppStateInit {
+        let storage = StorageState {
+            key_created: params.key_was_created,
+        };
+
+        AppStateInit {
+            nfc: NFCState::Empty,
+            storage: storage,
+        }
+    }
+}
+
 fn main() {
     let args = Args::parse();
-    println!("{:?}", args);
+    let init_data_state = AppStateInit::new(args);
+    println!("{:?}", init_data_state);
 
     // Prepare
     let mut display: SimulatorDisplay<BinaryColor> =

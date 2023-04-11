@@ -1,21 +1,9 @@
 use embedded_graphics::{
-    geometry::AnchorPoint,
-    mono_font::{
-        ascii::{FONT_10X20, FONT_6X10},
-        MonoTextStyle,
-    },
-    prelude::Primitive,
     primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+        Rectangle, Triangle,
     },
-    Drawable,
 };
-use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
-    pixelcolor::BinaryColor,
-    Pixel,
-};
+use embedded_graphics_core::geometry::{Point, Size};
 
 pub use kampela_display_common::display_def::*;
 

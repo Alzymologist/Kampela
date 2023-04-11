@@ -6,7 +6,6 @@ use alloc::format;
 #[cfg(feature="std")]
 use std::format;
 
-use bitvec::prelude::{bitarr, BitArr, Msb0};
 use embedded_graphics::{
     geometry::AnchorPoint,
     mono_font::{
@@ -15,19 +14,18 @@ use embedded_graphics::{
     },
     prelude::*,
     primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+        Circle, PrimitiveStyle, Rectangle,
     },
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
+    style::TextBoxStyleBuilder,
     TextBox,
 };
 use rand::{Rng, seq::SliceRandom};

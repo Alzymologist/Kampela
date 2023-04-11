@@ -2,21 +2,33 @@
 ///
 /// Note that state indicating bricked Kampela is not represented here, as it is hadnled on lower
 /// level
+#[derive(Debug, PartialEq)]
 pub struct AppStateInit {
     /// Data received through NFC channel
-    nfc: NFCState,
+    pub nfc: NFCState,
     /// Data stored in flash
-    storage: StorageState,
+    pub storage: StorageState,
 }
 
 /// Payload received through NFC channel
+#[derive(Debug, PartialEq)]
 pub enum NFCState {
     Empty,
 }
 
 /// State of Kampela on boot
+#[derive(Debug, PartialEq)]
 pub struct StorageState {
     /// Set to `true` if pin code is set and secret was generated
-    key_created: bool,
+    pub key_created: bool,
 }
 
+/// Implement this to support platform
+pub trait DataInit<InputParameters> {
+    fn new(param: InputParameters) -> AppStateInit;
+}
+
+/*
+pub struct DataState {
+    pub 
+}*/

@@ -7,32 +7,17 @@ use alloc::string::String;
 use std::string::String;
 
 use embedded_graphics::{
-    geometry::AnchorPoint,
-    mono_font::{
-        ascii::{FONT_10X20, FONT_6X10},
-        MonoTextStyle,
-    },
     prelude::Primitive,
     primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+        Line, PrimitiveStyle},
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::Point,
     pixelcolor::BinaryColor,
-    Pixel,
 };
-use embedded_text::{
-    alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
-    TextBox,
-};
-use rand::{Rng, seq::SliceRandom};
-use ux::u4;
-
-use patches::phrase::entropy_to_phrase;
+use rand::Rng;
 
 use crate::display_def::*;
 
@@ -45,15 +30,6 @@ use crate::restore_or_generate;
 pub struct EventResult {
     pub request: UpdateRequest,
     pub state: Option<UIState>,
-}
-
-impl EventResult {
-    pub fn new() -> Self {
-        EventResult {
-            request: UpdateRequest::new(),
-            state: None,
-        }
-    }
 }
 
 pub struct UpdateRequest {

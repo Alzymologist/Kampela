@@ -7,14 +7,13 @@ use alloc::{format, string::String, vec::Vec};
 use std::{format, string::String, vec::Vec};
 
 use embedded_graphics::{
-    geometry::AnchorPoint,
     mono_font::{
         ascii::{FONT_10X20, FONT_4X6, FONT_6X10},
         MonoTextStyle,
     },
     prelude::*,
     primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+        Circle, PrimitiveStyle, Rectangle,
     },
     Drawable,
 };
@@ -22,23 +21,20 @@ use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{Dimensions, Point, Size},
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
+    style::TextBoxStyleBuilder,
     TextBox,
 };
 
-use patches::phrase::{entropy_to_phrase, phrase_to_entropy, wordlist_english, Bits11, WordList, WordListElement};
+use patches::phrase::{entropy_to_phrase, phrase_to_entropy, wordlist_english, WordListElement};
 
 use crate::uistate::{EventResult, UIState, UpdateRequest};
 use crate::display_def::*;
 
 const WORD_LENGTH: usize = 8;
 const MAX_SEED: usize = 24;
-const SHORT_SEED: usize = 12;
-
 
 const PHRASE_AREA: Rectangle = Rectangle::new(
     Point::new(GAP as i32, GAP as i32),
@@ -170,17 +166,6 @@ impl SeedBuffer {
         }
     }
 
-    pub fn words_entered(&self) -> usize {
-        self.seed_phrase.len()
-    }
-
-    pub fn last_word(&self) -> &str {
-        match self.seed_phrase.last() {
-            Some(a) => a.word(),
-            None => "",
-        }
-    }
-
     pub fn len(&self) -> usize {
         self.seed_phrase.len()
     }
@@ -283,14 +268,6 @@ impl Proposal {
                 }
             }
             out
-        }
-    }
-
-    pub fn get_only_word(&mut self) -> WordListElement {
-        if let Some(a) = self.guess.pop() {
-            a
-        } else {
-            panic!()
         }
     }
 }
@@ -440,43 +417,12 @@ impl SeedEntryState {
         Ok(EventResult {request, state})
     }
 
-    fn draw_progress<D>(&self, display: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
-    {
-        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
-        let textbox_style = TextBoxStyleBuilder::new()
-            .alignment(HorizontalAlignment::Left)
-            .vertical_alignment(VerticalAlignment::Middle)
-            .build();
-        let bounds = Rectangle::new(
-            Point::new(0, 0),
-            Size::new(SCREEN_SIZE_X, BUTTON_TOP as u32),
-        );
-
-        TextBox::with_textbox_style(
-            &format!("Words entered: {}", self.seed_phrase.proposed_phrase()),
-            PHRASE_AREA,
-            character_style,
-            textbox_style,
-        )
-        .draw(display)?;
-        //TextBox::with_textbox_style(&format!("Words entered: {}, last word: {}", self.seed_phrase.words_entered(), self.seed_phrase.last_word()), WORD_AREA, character_style, textbox_style)
-
-        Ok(())
-    }
-
     fn draw_back_button<D>(&self, display: &mut D) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
         let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
-        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
-        let textbox_style = TextBoxStyleBuilder::new()
-            .alignment(HorizontalAlignment::Center)
-            .vertical_alignment(VerticalAlignment::Middle)
-            .build();
-
+        
         BACK_BUTTON_AREA
             .clone()
             .into_styled(thin_stroke)
