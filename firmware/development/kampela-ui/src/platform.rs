@@ -7,16 +7,18 @@ use crate::uistate::EventResult;
 
 /// Implement this on platform to make crate work
 pub trait Platform<R: Rng + ?Sized> {
-    fn rng(&mut self) -> &mut R;
+    type Lock;
 
-    fn pin(&mut self) -> &mut Pincode;
+    fn rng(&mut self, l: Self::Lock) -> &mut R;
 
-    fn pin_rng(&mut self) -> (&mut Pincode, &mut R);
+    fn pin(&mut self, l: Self::Lock) -> &mut Pincode;
 
-    fn handle_pin_event<D>(&mut self, point: Point, fast_display: &mut D) -> Result<EventResult, D::Error> where
+    fn pin_rng(&mut self, l: Self::Lock) -> (&mut Pincode, &mut R);
+
+    fn handle_pin_event<D>(&mut self, point: Point, fast_display: &mut D, l: Self::Lock) -> Result<EventResult, D::Error> where
         D: DrawTarget<Color = BinaryColor>,
     {
-        let (mut a, mut b) = self.pin_rng();
+        let (a, b) = self.pin_rng(l);
         a.handle_event(point, b, fast_display)
     }
 }

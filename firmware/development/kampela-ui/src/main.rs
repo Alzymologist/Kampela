@@ -7,7 +7,7 @@ use embedded_graphics_core::{
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use rand::{Rng, rngs::ThreadRng, thread_rng};
+use rand::{rngs::ThreadRng, thread_rng};
 use std::{thread::sleep, time::Duration};
 use clap::Parser;
 
@@ -74,15 +74,17 @@ impl DesktopSimulator {
 }
 
 impl Platform<ThreadRng> for DesktopSimulator {
-    fn rng(&mut self) -> &mut ThreadRng {
+    type Lock = ();
+
+    fn rng(&mut self, _: Self::Lock) -> &mut ThreadRng {
         &mut self.rng
     }
 
-    fn pin(&mut self) -> &mut Pincode {
+    fn pin(&mut self, _: Self::Lock) -> &mut Pincode {
         &mut self.pin
     }
 
-    fn pin_rng(&mut self) -> (&mut Pincode, &mut ThreadRng) {
+    fn pin_rng(&mut self, _: Self::Lock) -> (&mut Pincode, &mut ThreadRng) {
         (&mut self.pin, &mut self.rng)
     }
 }
@@ -124,7 +126,7 @@ fn main() {
             //no-op for non-EPD
         }
         if update.read_slow() {
-            match state.render(&mut display) {
+            match state.render(&mut display, ()) {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
@@ -144,7 +146,7 @@ fn main() {
                     point,
                 } => {
                     println!("{}", point);
-                        match state.handle_event(point, &mut display) {
+                        match state.handle_event(point, &mut display, ()) {
                             Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };

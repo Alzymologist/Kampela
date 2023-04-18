@@ -26,8 +26,6 @@ use crate::display_def::*;
 
 use crate::platform::Platform;
 
-use crate::pin::Pincode;
-
 use crate::seed_entry::SeedEntryState;
 
 use crate::restore_or_generate;
@@ -109,7 +107,7 @@ pub enum Screen {
 }
 
 impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
-    pub fn new(mut platform: P) -> Self {
+    pub fn new(platform: P) -> Self {
         UIState {
             screen: Screen::PinEntry,
             platform: platform,
@@ -122,6 +120,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
         &mut self,
         point: Point,
         fast_display: &mut D,
+        l: <P as Platform<R>>::Lock,
     ) -> Result<UpdateRequest, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
@@ -130,7 +129,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
         let mut new_screen = None;
         match self.screen {
             Screen::PinEntry => {
-                let res = self.platform.handle_pin_event(point, fast_display)?;
+                let res = self.platform.handle_pin_event(point, fast_display, l)?;
                 out = res.request;
                 new_screen = res.state;
             }
@@ -164,7 +163,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
     }
 
     /// Display new screen state; should be called only when needed, is slow
-    pub fn render<D>(&mut self, display: &mut D) -> Result<(), D::Error>
+    pub fn render<D>(&mut self, display: &mut D, l: <P as Platform<R>>::Lock) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
@@ -172,7 +171,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
         display.bounding_box().into_styled(clear).draw(display)?;
         match self.screen {
             Screen::PinEntry => {
-                self.platform.pin().draw(display)?;
+                self.platform.pin(l).draw(display)?;
             }
             Screen::OnboardingRestoreOrGenerate => {
                 restore_or_generate::draw(display)?;
