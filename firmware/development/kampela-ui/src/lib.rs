@@ -1,6 +1,7 @@
 #![no_std]
 
 pub mod uistate;
+pub mod platform;
 
 pub mod display_def;
 mod pin;

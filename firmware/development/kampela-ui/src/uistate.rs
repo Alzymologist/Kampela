@@ -2,9 +2,12 @@
 
 #[cfg(not(feature="std"))]
 use alloc::string::String;
-
+#[cfg(not(feature="std"))]
+use core::marker::PhantomData;
 #[cfg(feature="std")]
 use std::string::String;
+#[cfg(feature="std")]
+use std::marker::PhantomData;
 
 use embedded_graphics::{
     prelude::Primitive,
@@ -21,6 +24,8 @@ use rand::Rng;
 
 use crate::display_def::*;
 
+use crate::platform::Platform;
+
 use crate::pin::Pincode;
 
 use crate::seed_entry::SeedEntryState;
@@ -29,7 +34,7 @@ use crate::restore_or_generate;
 
 pub struct EventResult {
     pub request: UpdateRequest,
-    pub state: Option<UIState>,
+    pub state: Option<Screen>,
 }
 
 pub struct UpdateRequest {
@@ -85,8 +90,17 @@ impl Default for UpdateRequest {
 }
 
 /// State of UI
-pub enum UIState {
-    PinEntry(Pincode),
+pub struct UIState<P, R> where
+    P: Platform<R>,
+    R: Rng + ?Sized,
+{
+    screen: Screen,
+    platform: P,
+    p1: PhantomData<R>,
+}
+
+pub enum Screen {
+    PinEntry,
     OnboardingRestoreOrGenerate,
     OnboardingRestore(SeedEntryState),
     OnboardingBackup(String),
@@ -94,55 +108,57 @@ pub enum UIState {
     End,
 }
 
-impl UIState {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        UIState::PinEntry(Pincode::new(rng))
-        //        UIState::OnboardingRestore(SeedEntryState::new())
+impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
+    pub fn new(mut platform: P) -> Self {
+        UIState {
+            screen: Screen::PinEntry,
+            platform: platform,
+            p1: PhantomData,
+        }
     }
 
     /// Read user touch event
-    pub fn handle_event<D, R: Rng + ?Sized>(
+    pub fn handle_event<D>(
         &mut self,
         point: Point,
-        rng: &mut R,
         fast_display: &mut D,
     ) -> Result<UpdateRequest, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
         let mut out = UpdateRequest::new();
-        match self {
-            UIState::PinEntry(ref mut pincode) => {
-                let res = pincode.handle_event(point, rng, fast_display)?;
+        let mut new_screen = None;
+        match self.screen {
+            Screen::PinEntry => {
+                let res = self.platform.handle_pin_event(point, fast_display)?;
                 out = res.request;
-                if let Some(a) = res.state {
-                    *self = a;
-                }
+                new_screen = res.state;
             }
-            UIState::OnboardingRestoreOrGenerate => match point.x {
+            Screen::OnboardingRestoreOrGenerate => match point.x {
                 0..=100 => {
-                    *self = UIState::OnboardingRestore(SeedEntryState::new());
+                    new_screen = Some(Screen::OnboardingRestore(SeedEntryState::new()));
                     out.set_slow();
                 }
                 150..=300 => {
-                    *self = UIState::OnboardingBackup(String::new());
+                    new_screen = Some(Screen::OnboardingBackup(String::new()));
                     out.set_slow();
                 }
                 _ => {},
             },
-            UIState::OnboardingRestore(ref mut a) => {
+            Screen::OnboardingRestore(ref mut a) => {
                 let res = a.handle_event(point, fast_display)?;
                 out = res.request;
-                if let Some(b) = res.state {
-                    *self = b;
-                }
+                new_screen = res.state;
             }
-            UIState::OnboardingBackup(_) => {
-                *self = UIState::End;
+            Screen::OnboardingBackup(_) => {
+                new_screen = Some(Screen::End);
                 out.set_slow();
             }
-            UIState::Locked => (),
-            UIState::End => (),
+            Screen::Locked => (),
+            Screen::End => (),
+        }
+        if let Some(a) = new_screen {
+           self.screen = a;
         }
         Ok(out)
     }
@@ -154,17 +170,17 @@ impl UIState {
     {
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         display.bounding_box().into_styled(clear).draw(display)?;
-        match self {
-            UIState::PinEntry(ref pin) => {
-                pin.draw(display)?;
+        match self.screen {
+            Screen::PinEntry => {
+                self.platform.pin().draw(display)?;
             }
-            UIState::OnboardingRestoreOrGenerate => {
+            Screen::OnboardingRestoreOrGenerate => {
                 restore_or_generate::draw(display)?;
             }
-            UIState::OnboardingRestore(ref entry) => {
+            Screen::OnboardingRestore(ref entry) => {
                 entry.draw(display)?;
             }
-            UIState::Locked => {
+            Screen::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
                 Line::new(
                     Point::new(0, 0),

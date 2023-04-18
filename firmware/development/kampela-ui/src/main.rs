@@ -7,7 +7,7 @@ use embedded_graphics_core::{
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use rand::thread_rng;
+use rand::{Rng, rngs::ThreadRng, thread_rng};
 use std::{thread::sleep, time::Duration};
 use clap::Parser;
 
@@ -21,7 +21,12 @@ const SLOW_UPDATE_TIME: Duration = Duration::new(1, 0);
 pub mod display_def;
 pub use display_def::*;
 
+mod platform;
+use platform::Platform;
+
 mod pin;
+use pin::Pincode;
+
 mod restore_or_generate;
 mod seed_entry;
 
@@ -51,6 +56,38 @@ impl DataInit<Args> for AppStateInit {
     }
 }
 
+#[derive(Debug)]
+struct DesktopSimulator {
+    rng: ThreadRng,
+    pin: Pincode,
+}
+
+impl DesktopSimulator {
+    pub fn new() -> Self {
+        let mut rng = thread_rng();
+        let pin = Pincode::new(&mut rng);
+        Self {
+            rng: thread_rng(),
+            pin: pin,
+        }
+    }
+}
+
+impl Platform<ThreadRng> for DesktopSimulator {
+    fn rng(&mut self) -> &mut ThreadRng {
+        &mut self.rng
+    }
+
+    fn pin(&mut self) -> &mut Pincode {
+        &mut self.pin
+    }
+
+    fn pin_rng(&mut self) -> (&mut Pincode, &mut ThreadRng) {
+        (&mut self.pin, &mut self.rng)
+    }
+}
+
+
 fn main() {
     let args = Args::parse();
     let init_data_state = AppStateInit::new(args);
@@ -60,10 +97,9 @@ fn main() {
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
 
-    // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
-    let mut rng = thread_rng();
+    let desktop = DesktopSimulator::new();
 
-    let mut state = UIState::new(&mut rng);
+    let mut state = UIState::new(desktop);
 
     // Draw
     let output_settings = OutputSettingsBuilder::new()
@@ -108,7 +144,7 @@ fn main() {
                     point,
                 } => {
                     println!("{}", point);
-                        match state.handle_event(point, &mut rng, &mut display) {
+                        match state.handle_event(point, &mut display) {
                             Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };

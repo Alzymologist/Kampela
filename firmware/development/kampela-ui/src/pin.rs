@@ -32,7 +32,7 @@ use rand::{Rng, seq::SliceRandom};
 use ux::u4;
 
 use crate::display_def::*;
-use crate::uistate::{EventResult, UIState, UpdateRequest};
+use crate::uistate::{EventResult, Screen, UpdateRequest};
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -199,6 +199,7 @@ where
 const PIN_CODE_MOCK: [u4; PIN_LEN] = [u4::new(0); PIN_LEN];
 
 /// UI state for pin code entry stage
+#[derive(Debug)]
 pub struct Pincode {
     code: [u4; PIN_LEN],
     position: usize,
@@ -265,12 +266,12 @@ impl Pincode {
     }
 
     /// Check pin code; decision making for whether to leave this screen and how
-    fn check_pin(&self) -> Option<UIState> {
+    fn check_pin(&self) -> Option<Screen> {
         if self.position == PIN_LEN {
             if self.code == PIN_CODE_MOCK {
-                Some(UIState::OnboardingRestoreOrGenerate)
+                Some(Screen::OnboardingRestoreOrGenerate)
             } else {
-                Some(UIState::Locked)
+                Some(Screen::Locked)
             }
         } else {
             None
