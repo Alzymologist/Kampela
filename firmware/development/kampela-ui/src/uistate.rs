@@ -88,13 +88,11 @@ impl Default for UpdateRequest {
 }
 
 /// State of UI
-pub struct UIState<P, R> where
-    P: Platform<R>,
-    R: Rng + ?Sized,
+pub struct UIState<P> where
+    P: Platform,
 {
     screen: Screen,
     platform: P,
-    p1: PhantomData<R>,
 }
 
 pub enum Screen {
@@ -106,12 +104,11 @@ pub enum Screen {
     End,
 }
 
-impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
+impl <P: Platform> UIState<P> {
     pub fn new(platform: P) -> Self {
         UIState {
             screen: Screen::PinEntry,
             platform: platform,
-            p1: PhantomData,
         }
     }
 
@@ -120,7 +117,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
         &mut self,
         point: Point,
         fast_display: &mut D,
-        h: &mut <P as Platform<R>>::HAL,
+        h: &mut <P as Platform>::HAL,
     ) -> Result<UpdateRequest, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
@@ -163,7 +160,7 @@ impl <P: Platform<R>, R: Rng + ?Sized> UIState<P, R> {
     }
 
     /// Display new screen state; should be called only when needed, is slow
-    pub fn render<D>(&mut self, display: &mut D, h: &mut <P as Platform<R>>::HAL) -> Result<(), D::Error>
+    pub fn render<D>(&mut self, display: &mut D, h: &mut <P as Platform>::HAL) -> Result<(), D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {

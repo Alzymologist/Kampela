@@ -83,10 +83,11 @@ impl DesktopSimulator {
     }
 }
 
-impl Platform<ThreadRng> for DesktopSimulator {
+impl Platform for DesktopSimulator {
     type HAL = HALHandle;
+    type Rng<'a> = &'a mut ThreadRng;
 
-    fn rng(h: &mut Self::HAL) -> &mut ThreadRng {
+    fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
         &mut h.rng
     }
 

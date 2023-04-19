@@ -26,7 +26,7 @@ use kampela_system::{
     init::init_peripherals, 
     visible_delay, 
 };
-use kampela_ui::{display_def::*, uistate};
+use kampela_ui::{display_def::*, uistate, pin::Pincode, platform::Platform};
 
 
 static mut PUSHED: bool = false;
@@ -85,6 +85,33 @@ fn IADC() {
     }
 }
 
+struct Hardware {
+    pin: Pincode,
+}
+
+impl Hardware {
+    pub fn new(h: &mut Peripherals) -> Self {
+        let pin = Pincode::new(&mut Self::rng(h));
+        Self {
+            pin: pin,
+        }
+
+    }
+}
+
+impl Platform for Hardware {
+    type HAL = Peripherals;
+    type Rng<'a> = se_rng::SeRng<'a>;
+
+    fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
+        se_rng::SeRng{peripherals: h}
+    }
+
+    fn pin(&mut self) -> &mut Pincode {
+        &mut self.pin
+    }
+}
+
 #[entry]
 fn main() -> ! {
     {
@@ -120,9 +147,9 @@ fn main() -> ! {
         ])
     );
 
-    
+    let hardware = Hardware::new(&mut peripherals);
 
-    let mut state = uistate::UIState::new(&mut se_rng::SeRng{peripherals: &mut peripherals}); 
+    let mut state = uistate::UIState::new(hardware); 
     // line for debug init messages
     //panic!("lol: {}", test_voltage);
 
@@ -148,7 +175,7 @@ fn main() -> ! {
         if update.read_slow() {
             //let test_voltage = measure_voltage(&mut peripherals);
             //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
-            state.render(&mut slow_screen);
+            state.render(&mut slow_screen, &mut peripherals);
             slow_screen.apply(&mut peripherals);
             peripherals
                 .GPIO_S
@@ -160,7 +187,8 @@ fn main() -> ! {
         // 2. read input if possible
         if peripherals.GPIO_S.if_.read().extif0().bit_is_set() {
             let touch_data = ft6336_read_at::<LEN_NUM_TOUCHES>(&mut peripherals, FT6X36_REG_NUM_TOUCHES).unwrap();
-            
+
+            if touch_data[0] == 1 {
             let detected_y = (((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16) as i32;
             let detected_x = (((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16) as i32;
             let touch = Point::new(SCREEN_SIZE_X as i32 - detected_x, detected_y);
@@ -174,6 +202,7 @@ fn main() -> ! {
                     y: display_as_point2.coords[1] as i32,
                 }
             );
+            }
 
             peripherals
                 .GPIO_S
@@ -183,7 +212,7 @@ fn main() -> ! {
 
         // 3. handle input
         if let Some(point) = input {
-            update = state.handle_event(point, &mut se_rng::SeRng{peripherals: &mut peripherals}, &mut slow_screen).unwrap();
+            update = state.handle_event(point, &mut slow_screen, &mut peripherals).unwrap();
             input = None;
         }
 
