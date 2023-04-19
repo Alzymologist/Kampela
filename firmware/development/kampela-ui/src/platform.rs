@@ -7,18 +7,25 @@ use crate::uistate::EventResult;
 
 /// Implement this on platform to make crate work
 pub trait Platform<R: Rng + ?Sized> {
-    type Lock;
+    /// Peripherals access should be external to this type since it is used elsewhere in general;
+    /// Thus an external object HAL would be passed to all operations. Generally it should happen
+    /// within mutex lock, so make sure to set up some kind of critical section aroung this object.
+    type HAL;
 
-    fn rng(&mut self, l: Self::Lock) -> &mut R;
+    /// RNG getter
+    fn rng(h: &mut Self::HAL) -> &mut R;
 
-    fn pin(&mut self, l: Self::Lock) -> &mut Pincode;
+    /// Device-specific "global" storage and management of pin state
+    fn pin(&mut self) -> &mut Pincode;
 
-    fn pin_rng(&mut self, l: Self::Lock) -> (&mut Pincode, &mut R);
-
-    fn handle_pin_event<D>(&mut self, point: Point, fast_display: &mut D, l: Self::Lock) -> Result<EventResult, D::Error> where
+    /// Special pin handle event that might use some generic
+    ///
+    /// TODO: remove this
+    fn handle_pin_event<D>(&mut self, point: Point, fast_display: &mut D, h: &mut Self::HAL) -> Result<EventResult, D::Error> where
         D: DrawTarget<Color = BinaryColor>,
     {
-        let (a, b) = self.pin_rng(l);
-        a.handle_event(point, b, fast_display)
+        let rng = Self::rng(h);
+        let pin = self.pin();
+        pin.handle_event(point, rng, fast_display)
     }
 }

@@ -56,36 +56,42 @@ impl DataInit<Args> for AppStateInit {
     }
 }
 
+struct HALHandle {
+    pub rng: ThreadRng,
+}
+
+impl HALHandle {
+    pub fn new() -> Self {
+        let rng = thread_rng();
+        Self {
+            rng: rng,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct DesktopSimulator {
-    rng: ThreadRng,
     pin: Pincode,
 }
 
 impl DesktopSimulator {
-    pub fn new() -> Self {
-        let mut rng = thread_rng();
-        let pin = Pincode::new(&mut rng);
+    pub fn new(h: &mut HALHandle) -> Self {
+        let pin = Pincode::new(&mut h.rng);
         Self {
-            rng: thread_rng(),
             pin: pin,
         }
     }
 }
 
 impl Platform<ThreadRng> for DesktopSimulator {
-    type Lock = ();
+    type HAL = HALHandle;
 
-    fn rng(&mut self, _: Self::Lock) -> &mut ThreadRng {
-        &mut self.rng
+    fn rng(h: &mut Self::HAL) -> &mut ThreadRng {
+        &mut h.rng
     }
 
-    fn pin(&mut self, _: Self::Lock) -> &mut Pincode {
+    fn pin(&mut self) -> &mut Pincode {
         &mut self.pin
-    }
-
-    fn pin_rng(&mut self, _: Self::Lock) -> (&mut Pincode, &mut ThreadRng) {
-        (&mut self.pin, &mut self.rng)
     }
 }
 
@@ -99,7 +105,8 @@ fn main() {
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
 
-    let desktop = DesktopSimulator::new();
+    let mut h = HALHandle::new();
+    let desktop = DesktopSimulator::new(&mut h);
 
     let mut state = UIState::new(desktop);
 
@@ -126,7 +133,7 @@ fn main() {
             //no-op for non-EPD
         }
         if update.read_slow() {
-            match state.render(&mut display, ()) {
+            match state.render(&mut display, &mut h) {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
@@ -146,7 +153,7 @@ fn main() {
                     point,
                 } => {
                     println!("{}", point);
-                        match state.handle_event(point, &mut display, ()) {
+                        match state.handle_event(point, &mut display, &mut h) {
                             Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };

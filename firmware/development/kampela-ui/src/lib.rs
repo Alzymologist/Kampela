@@ -4,7 +4,7 @@ pub mod uistate;
 pub mod platform;
 
 pub mod display_def;
-mod pin;
+pub mod pin;
 mod seed_entry;
 mod restore_or_generate;
 
