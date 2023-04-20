@@ -69,9 +69,9 @@ const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
 };
 
 /// Number of pin digits
-const PIN_LEN: usize = 6;
+const PIN_LEN: usize = 4;
 
-const PIN_COUNTER_DIAMETER: u32 = 16;
+const PIN_COUNTER_DIAMETER: u32 = 26;
 
 /// Positions of pin code counter dots
 const PIN_COUNT_POSITIONS: [Point; PIN_LEN] = {
