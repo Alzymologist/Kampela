@@ -204,14 +204,16 @@ pub struct Pincode {
     code: [u4; PIN_LEN],
     position: usize,
     permutation: [u4; PIN_BUTTON_COUNT],
+    pin_set: bool,
 }
 
 impl Pincode {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R, pin_set: bool) -> Self {
         Pincode {
             code: [u4::new(0); PIN_LEN],
             position: 0,
             permutation: get_pinkeys(rng),
+            pin_set: pin_set,
         }
     }
 
@@ -268,10 +270,14 @@ impl Pincode {
     /// Check pin code; decision making for whether to leave this screen and how
     fn check_pin(&self) -> Option<Screen> {
         if self.position == PIN_LEN {
-            if self.code == PIN_CODE_MOCK {
-                Some(Screen::OnboardingRestoreOrGenerate)
+            if self.pin_set {
+                if self.code == PIN_CODE_MOCK {
+                    Some(Screen::End)
+                } else {
+                    Some(Screen::Locked)
+                }
             } else {
-                Some(Screen::Locked)
+                Some(Screen::OnboardingRestoreOrGenerate)
             }
         } else {
             None

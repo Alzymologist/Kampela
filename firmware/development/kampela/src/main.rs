@@ -87,13 +87,17 @@ fn IADC() {
 
 struct Hardware {
     pin: Pincode,
+    display: FrameBuffer,
 }
 
 impl Hardware {
     pub fn new(h: &mut Peripherals) -> Self {
-        let pin = Pincode::new(&mut Self::rng(h));
+        let pin_set = false; // TODO query storage
+        let pin = Pincode::new(&mut Self::rng(h), pin_set);
+        let mut display = FrameBuffer::new_white();
         Self {
             pin: pin,
+            display: display,
         }
 
     }
@@ -102,13 +106,26 @@ impl Hardware {
 impl Platform for Hardware {
     type HAL = Peripherals;
     type Rng<'a> = se_rng::SeRng<'a>;
+    type Display = FrameBuffer;
 
     fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
         se_rng::SeRng{peripherals: h}
     }
 
-    fn pin(&mut self) -> &mut Pincode {
+    fn pin(&self) -> &Pincode {
+        &self.pin
+    }
+
+    fn pin_mut(&mut self) -> &mut Pincode {
         &mut self.pin
+    }
+
+    fn display(&mut self) -> &mut <Self as Platform>::Display {
+        &mut self.display
+    }
+
+    fn pin_display(&mut self) -> (&mut Pincode, &mut <Self as Platform>::Display) {
+        (&mut self.pin, &mut self.display)
     }
 }
 
@@ -157,7 +174,6 @@ fn main() -> ! {
     update.set_slow();
 
     // display abstraction
-    let mut slow_screen = FrameBuffer::new_white();
 
     let mut input = None;
 
@@ -166,7 +182,7 @@ fn main() -> ! {
         if update.read_fast() {
             //let test_voltage = measure_voltage(&mut peripherals);
             //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
-            slow_screen.apply_fast(&mut peripherals);
+            state.display().apply_fast(&mut peripherals);
             peripherals
                 .GPIO_S
                 .if_
@@ -175,8 +191,8 @@ fn main() -> ! {
         if update.read_slow() {
             //let test_voltage = measure_voltage(&mut peripherals);
             //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
-            state.render(&mut slow_screen, &mut peripherals);
-            slow_screen.apply(&mut peripherals);
+            state.render::<FrameBuffer>();
+            state.display().apply(&mut peripherals);
             peripherals
                 .GPIO_S
                 .if_
@@ -212,7 +228,7 @@ fn main() -> ! {
 
         // 3. handle input
         if let Some(point) = input {
-            update = state.handle_event(point, &mut slow_screen, &mut peripherals).unwrap();
+            update = state.handle_event::<FrameBuffer>(point, &mut peripherals).unwrap();
             input = None;
         }
 

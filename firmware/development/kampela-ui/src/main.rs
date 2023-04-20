@@ -72,13 +72,16 @@ impl HALHandle {
 #[derive(Debug)]
 struct DesktopSimulator {
     pin: Pincode,
+    display: SimulatorDisplay<BinaryColor>,
 }
 
 impl DesktopSimulator {
     pub fn new(h: &mut HALHandle) -> Self {
-        let pin = Pincode::new(&mut h.rng);
+        let pin = Pincode::new(&mut h.rng, false);
+        let display = SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
         Self {
             pin: pin,
+            display: display,
         }
     }
 }
@@ -86,14 +89,28 @@ impl DesktopSimulator {
 impl Platform for DesktopSimulator {
     type HAL = HALHandle;
     type Rng<'a> = &'a mut ThreadRng;
+    type Display = SimulatorDisplay<BinaryColor>;
 
     fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
         &mut h.rng
     }
 
-    fn pin(&mut self) -> &mut Pincode {
+    fn pin(&self) -> &Pincode {
+        &self.pin
+    }
+
+    fn pin_mut(&mut self) -> &mut Pincode {
         &mut self.pin
     }
+
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
+    }
+
+    fn pin_display(&mut self) -> (&mut Pincode, &mut Self::Display) {
+        (&mut self.pin, &mut self.display)
+    }
+
 }
 
 
@@ -102,9 +119,11 @@ fn main() {
     let init_data_state = AppStateInit::new(args);
     println!("{:?}", init_data_state);
 
+    /*
     // Prepare
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
+*/
 
     let mut h = HALHandle::new();
     let desktop = DesktopSimulator::new(&mut h);
@@ -129,22 +148,22 @@ fn main() {
     loop {
         // display event; it would be delayed
         if update.read_fast() {
-            window.update(&display);
+            window.update(state.display());
             println!("skip {} events in fast update", window.events().count());
             //no-op for non-EPD
         }
         if update.read_slow() {
-            match state.render(&mut display, &mut h) {
+            match state.render::<SimulatorDisplay<BinaryColor>>() {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
             sleep(SLOW_UPDATE_TIME);
-            window.update(&display);
+            window.update(state.display());
             println!("skip {} events in slow update", window.events().count());
         }
 
         // this collects ui events, do not remove or simulator will crash
-        window.update(&display);
+        window.update(state.display());
 
         // handle input (only pushes are valid in Kampela)
         for event in window.events() {
@@ -154,7 +173,7 @@ fn main() {
                     point,
                 } => {
                     println!("{}", point);
-                        match state.handle_event(point, &mut display, &mut h) {
+                        match state.handle_event::<SimulatorDisplay<BinaryColor>>(point, &mut h) {
                             Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };

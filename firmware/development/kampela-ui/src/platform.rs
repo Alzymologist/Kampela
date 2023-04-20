@@ -12,22 +12,34 @@ pub trait Platform {
     /// within mutex lock, so make sure to set up some kind of critical section aroung this object.
     type HAL;
 
+    /// Sufficiently good random source used everywhere
     type Rng<'a>: Rng + Sized;
+
+    /// Device-specific screen canvas abstraction
+    type Display: DrawTarget<Color = BinaryColor>;
 
     /// RNG getter
     fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a>;
 
-    /// Device-specific "global" storage and management of pin state
-    fn pin(&mut self) -> &mut Pincode;
+    /// Device-specific "global" storage and management of pincode state RO
+    fn pin(&self) -> &Pincode;
 
-    /// Special pin handle event that might use some generic
-    ///
-    /// TODO: remove this
-    fn handle_pin_event<D>(&mut self, point: Point, fast_display: &mut D, h: &mut Self::HAL) -> Result<EventResult, D::Error> where
-        D: DrawTarget<Color = BinaryColor>,
-    {
-        let mut rng = Self::rng(h);
-        let pin = self.pin();
-        pin.handle_event(point, &mut rng, fast_display)
+    /// Device-specific "global" storage and management of pincode state RW
+    fn pin_mut(&mut self) -> &mut Pincode;
+
+    fn display(&mut self) -> &mut Self::Display;
+
+    fn pin_display(&mut self) -> (&mut Pincode, &mut Self::Display);
+
+    fn handle_pin_event(&mut self, point: Point, h: &mut Self::HAL) -> Result<EventResult, <Self::Display as DrawTarget>::Error> {
+        let (a, b) = self.pin_display();
+        a.handle_event(point, &mut Self::rng(h), b)
     }
+
+    fn draw_pincode(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
+        let (a, b) = self.pin_display();
+        a.draw(b)
+    }
+
 }
+

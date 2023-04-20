@@ -17,7 +17,7 @@ use embedded_graphics::{
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::Point,
+    geometry::{Dimensions, Point},
     pixelcolor::BinaryColor,
 };
 use rand::Rng;
@@ -112,21 +112,23 @@ impl <P: Platform> UIState<P> {
         }
     }
 
+    pub fn display(&mut self) -> &mut <P as Platform>::Display {
+        self.platform.display()
+    }
+
     /// Read user touch event
     pub fn handle_event<D>(
         &mut self,
         point: Point,
-        fast_display: &mut D,
         h: &mut <P as Platform>::HAL,
-    ) -> Result<UpdateRequest, D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
+    ) -> Result<UpdateRequest, <<P as Platform>::Display as DrawTarget>::Error>
     {
+        let fast_display = self.platform.display();
         let mut out = UpdateRequest::new();
         let mut new_screen = None;
         match self.screen {
             Screen::PinEntry => {
-                let res = self.platform.handle_pin_event(point, fast_display, h)?;
+                let res = self.platform.handle_pin_event(point, h)?;
                 out = res.request;
                 new_screen = res.state;
             }
@@ -160,15 +162,14 @@ impl <P: Platform> UIState<P> {
     }
 
     /// Display new screen state; should be called only when needed, is slow
-    pub fn render<D>(&mut self, display: &mut D, h: &mut <P as Platform>::HAL) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
+    pub fn render<D>(&mut self) -> Result<(), <<P as Platform>::Display as DrawTarget>::Error>
     {
+        let display = self.platform.display();
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         display.bounding_box().into_styled(clear).draw(display)?;
         match self.screen {
             Screen::PinEntry => {
-                self.platform.pin().draw(display)?;
+                self.platform.draw_pincode()?;
             }
             Screen::OnboardingRestoreOrGenerate => {
                 restore_or_generate::draw(display)?;
