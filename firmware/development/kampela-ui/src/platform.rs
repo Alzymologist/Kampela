@@ -44,6 +44,11 @@ pub trait Platform {
 
     /// Set new seed
     fn set_entropy(&mut self, e: &[u8]);
+    
+    /// Getter for pincode and canvas
+    fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display);
+   
+    //----derivatives----
 
     fn generate_seed_entropy(h: &mut Self::HAL) -> [u8; ENTROPY_LEN] {
         let mut entropy: [u8; ENTROPY_LEN]= [0; ENTROPY_LEN];
@@ -70,9 +75,6 @@ pub trait Platform {
         p.draw(d)
     }
 
-    /// Getter for pincode and canvas
-    fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display);
-    
     fn draw_backup(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
         let (s, d) = self.entropy_display();
         draw_backup_screen(s, d)

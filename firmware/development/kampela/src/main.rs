@@ -5,7 +5,7 @@
 extern crate alloc;
 extern crate core;
 
-use alloc::format;
+use alloc::{format, vec::Vec};
 use core::{alloc::Layout, panic::PanicInfo};
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m_rt::{entry, exception};
@@ -87,16 +87,19 @@ fn IADC() {
 
 struct Hardware {
     pin: Pincode,
+    entropy: Vec<u8>,
     display: FrameBuffer,
 }
 
 impl Hardware {
     pub fn new(h: &mut Peripherals) -> Self {
+        let entropy = Vec::new();
         let pin_set = false; // TODO query storage
         let pin = Pincode::new(&mut Self::rng(h), pin_set);
         let mut display = FrameBuffer::new_white();
         Self {
             pin: pin,
+            entropy: entropy,
             display: display,
         }
 
@@ -126,6 +129,14 @@ impl Platform for Hardware {
 
     fn pin_display(&mut self) -> (&mut Pincode, &mut <Self as Platform>::Display) {
         (&mut self.pin, &mut self.display)
+    }
+
+    fn set_entropy(&mut self, e: &[u8]) {
+        self.entropy = e.to_vec(); // TODO: dedicated array storage maybe
+    }
+
+    fn entropy_display(&mut self) -> (&Vec<u8>, &mut <Self as Platform>::Display) {
+        (&self.entropy, &mut self.display)
     }
 }
 
