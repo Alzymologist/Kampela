@@ -205,6 +205,7 @@ pub struct Pincode {
     position: usize,
     permutation: [u4; PIN_BUTTON_COUNT],
     pin_set: bool,
+    pin_incorrect: bool,
 }
 
 impl Pincode {
@@ -214,6 +215,7 @@ impl Pincode {
             position: 0,
             permutation: get_pinkeys(rng),
             pin_set: pin_set,
+            pin_incorrect: false,
         }
     }
 
@@ -222,12 +224,26 @@ impl Pincode {
         self.permutation = get_pinkeys(rng);
     }
 
+    fn reset_position(&mut self) {
+        self.position = 0;
+    }
+
     /// User pushed a button
     pub fn input<R: Rng + ?Sized>(&mut self, rng: &mut R, key: u4) {
         self.code[self.position] = key;
         self.position += 1;
         self.shuffle(rng);
     }
+
+    /// User pushed a button on pincode check
+    pub fn input_repeat<R: Rng + ?Sized>(&mut self, rng: &mut R, key: u4) {
+        if self.code[self.position] != key {
+            self.pin_incorrect = true;
+        }
+        self.position += 1;
+        self.shuffle(rng);
+    }
+
 
     fn handle_button<D, R: Rng + ?Sized>(
         &mut self,
@@ -251,6 +267,29 @@ impl Pincode {
         Ok(out)
     }
 
+    fn handle_button_repeat<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<UpdateRequest, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let mut out = UpdateRequest::new();
+        for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
+            if area.contains(point) {
+                let key = self.permutation[index].clone();
+                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
+                self.input_repeat(rng, key);
+                out.set_both();
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+
 
     /// Input event (user touched screen in pin entry mode)
     pub fn handle_event<D, R: Rng + ?Sized>(
@@ -267,9 +306,24 @@ impl Pincode {
         Ok(EventResult {request, state})
     }
 
+    pub fn handle_event_repeat<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<EventResult, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let request = self.handle_button_repeat(point, rng, fast_display)?;
+        let state = self.check_pin_repeat();
+        Ok(EventResult {request, state})
+    }
+
     /// Check pin code; decision making for whether to leave this screen and how
-    fn check_pin(&self) -> Option<Screen> {
+    fn check_pin(&mut self) -> Option<Screen> {
         if self.position == PIN_LEN {
+            self.reset_position();
             if self.pin_set {
                 if self.code == PIN_CODE_MOCK {
                     Some(Screen::End)
@@ -283,6 +337,23 @@ impl Pincode {
             None
         }
     }
+
+    /// Check pin code on onboarding: user should enter it correctly twice/
+    fn check_pin_repeat(&mut self) -> Option<Screen> {
+        if self.position == PIN_LEN {
+            self.reset_position();
+            if self.pin_incorrect {
+                self.pin_incorrect = false;
+                Some(Screen::PinRepeat)
+            } else {
+                // TODO record pincode and seedphrase; reboot
+                Some(Screen::End)
+            }
+        } else {
+            None
+        }
+    }
+
 
     pub fn draw_counter<D>(&self, display: &mut D) -> Result<(), D::Error>
     where

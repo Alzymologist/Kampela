@@ -183,7 +183,9 @@ impl SeedBuffer {
     }
 
     pub fn submit_word(&mut self, word: WordListElement) {
-        self.seed_phrase.push(word);
+        if self.seed_phrase.len()<MAX_SEED {
+            self.seed_phrase.push(word);
+        }
     }
 
     pub fn validate(&mut self) -> bool {
@@ -286,9 +288,10 @@ impl SeedEntryState {
         }
     }
 
-    pub fn new_state(&self) -> Option<Screen> {
-        if let Some(ref a) = self.seed_phrase.ready {
-            Some(Screen::OnboardingBackup(entropy_to_phrase(&a).unwrap()))
+    fn new_state(&self, seed: &mut Option<Vec<u8>>) -> Option<Screen> {
+        if let Some(a) = &self.seed_phrase.ready {
+            *seed = Some(a.clone());
+            Some(Screen::OnboardingBackup) // TODO (entropy_to_phrase(&a).unwrap()))
         } else { None }
     }
 
@@ -405,15 +408,12 @@ impl SeedEntryState {
         Ok(out)
     }
 
-
-
-    /// Input event (user touched screen in pin entry mode)
-    pub fn handle_event<D>(&mut self, point: Point, fast_display: &mut D) -> Result<EventResult, D::Error>
+    pub fn handle_event<D>(&mut self, point: Point, seed: &mut Option<Vec<u8>>, fast_display: &mut D) -> Result<EventResult, D::Error>
     where
         D: DrawTarget<Color = BinaryColor>,
     {
         let request = self.handle_button(point, fast_display)?;
-        let state = self.new_state();
+        let state = self.new_state(seed);
         Ok(EventResult {request, state})
     }
 

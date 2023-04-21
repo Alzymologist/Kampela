@@ -30,6 +30,8 @@ use pin::Pincode;
 mod restore_or_generate;
 mod seed_entry;
 
+mod backup;
+
 mod uistate;
 use uistate::UIState;
 
@@ -73,6 +75,7 @@ impl HALHandle {
 struct DesktopSimulator {
     pin: Pincode,
     display: SimulatorDisplay<BinaryColor>,
+    seed: Vec<u8>,
 }
 
 impl DesktopSimulator {
@@ -82,6 +85,7 @@ impl DesktopSimulator {
         Self {
             pin: pin,
             display: display,
+            seed: Vec::new(),
         }
     }
 }
@@ -109,6 +113,14 @@ impl Platform for DesktopSimulator {
 
     fn pin_display(&mut self) -> (&mut Pincode, &mut Self::Display) {
         (&mut self.pin, &mut self.display)
+    }
+
+    fn set_entropy(&mut self, e: &[u8]) {
+        self.seed = e.to_vec();
+    }
+
+    fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display) {
+        (&self.seed, &mut self.display)
     }
 
 }

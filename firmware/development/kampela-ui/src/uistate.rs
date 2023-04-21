@@ -2,12 +2,8 @@
 
 #[cfg(not(feature="std"))]
 use alloc::string::String;
-#[cfg(not(feature="std"))]
-use core::marker::PhantomData;
 #[cfg(feature="std")]
 use std::string::String;
-#[cfg(feature="std")]
-use std::marker::PhantomData;
 
 use embedded_graphics::{
     prelude::Primitive,
@@ -20,7 +16,6 @@ use embedded_graphics_core::{
     geometry::{Dimensions, Point},
     pixelcolor::BinaryColor,
 };
-use rand::Rng;
 
 use crate::display_def::*;
 
@@ -99,7 +94,8 @@ pub enum Screen {
     PinEntry,
     OnboardingRestoreOrGenerate,
     OnboardingRestore(SeedEntryState),
-    OnboardingBackup(String),
+    OnboardingBackup,
+    PinRepeat,
     Locked,
     End,
 }
@@ -138,19 +134,29 @@ impl <P: Platform> UIState<P> {
                     out.set_slow();
                 }
                 150..=300 => {
-                    new_screen = Some(Screen::OnboardingBackup(String::new()));
+                    self.platform.generate_seed(h);
+                    new_screen = Some(Screen::OnboardingBackup);
                     out.set_slow();
                 }
                 _ => {},
             },
             Screen::OnboardingRestore(ref mut a) => {
-                let res = a.handle_event(point, fast_display)?;
+                let mut seed = None;
+                let res = a.handle_event(point, &mut seed, fast_display)?;
+                if let Some(b) = seed {
+                    self.platform.set_entropy(&b);
+                }
                 out = res.request;
                 new_screen = res.state;
             }
-            Screen::OnboardingBackup(_) => {
-                new_screen = Some(Screen::End);
+            Screen::OnboardingBackup => {
+                new_screen = Some(Screen::PinRepeat);
                 out.set_slow();
+            }
+            Screen::PinRepeat => {
+                let res = self.platform.handle_pin_event_repeat(point, h)?;
+                out = res.request;
+                new_screen = res.state;
             }
             Screen::Locked => (),
             Screen::End => (),
@@ -191,6 +197,12 @@ impl <P: Platform> UIState<P> {
                 )
                 .into_styled(linestyle)
                 .draw(display)?;
+            }
+            Screen::OnboardingBackup => {
+                self.platform.draw_backup()?;
+            }
+            Screen::PinRepeat => {
+                self.platform.draw_pincode()?;
             }
             _ => {}
         }

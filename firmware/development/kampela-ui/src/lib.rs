@@ -6,6 +6,7 @@ pub mod platform;
 pub mod display_def;
 pub mod pin;
 mod seed_entry;
+pub mod backup;
 mod restore_or_generate;
 
 #[macro_use]
