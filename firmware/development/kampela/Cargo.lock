@@ -52,6 +52,7 @@ dependencies = [
  "kampela-ui",
  "lazy_static",
  "nalgebra",
+ "nfca-parser",
  "panic-halt",
  "parity-scale-codec",
  "patches",
@@ -329,6 +330,21 @@ checksum = "28d997bd5e24a5928dd43e46dc529867e207907fe0b239c3477d924f7f2ca320"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "crc"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86ec7a15cbe22e59248fc7eadb1907dab5ba09372595da4d73dd805ed4417dfe"
+dependencies = [
+ "crc-catalog",
+]
+
+[[package]]
+name = "crc-catalog"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cace84e55f07e7301bae1c519df89cdad8cc3cd868413d3fdbdeca9ff3db484"
 
 [[package]]
 name = "critical-section"
@@ -932,6 +948,15 @@ name = "nb"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "546c37ac5d9e56f55e73b677106873d9d9f5190605e41a856503623648488cae"
+
+[[package]]
+name = "nfca-parser"
+version = "0.1.0"
+source = "git+https://github.com/Alzymologist/NfcA-parser?rev=d281dc3fbccc55a7d070263a1bf9e2cba5364984#d281dc3fbccc55a7d070263a1bf9e2cba5364984"
+dependencies = [
+ "bitvec",
+ "crc",
+]
 
 [[package]]
 name = "nodrop"

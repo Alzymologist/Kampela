@@ -16,3 +16,4 @@ mod peripherals;
 pub mod devices;
 pub mod draw;
 
+pub use peripherals::ldma::{BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock};
