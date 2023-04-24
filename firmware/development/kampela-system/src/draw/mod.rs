@@ -21,10 +21,10 @@ use embedded_text::{
     TextBox,
 };
 use kampela_display_common::display_def::*;
+use cortex_m::asm::delay;
 
 pub mod display;
 use display::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
-use crate::visible_delay;
 use crate::devices::power::halt_for_display_power;
 
 const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
@@ -85,7 +85,7 @@ impl FrameBuffer {
         halt_for_display_power(peripherals);
         epaper_hw_init(peripherals);
         epaper_draw_stuff_differently(peripherals, self.0.into_inner());
-        visible_delay(10);
+        delay(100000);
         epaper_deep_sleep(peripherals);
         // Hack to prevent touch trigger on power surge
         peripherals
@@ -99,7 +99,7 @@ impl FrameBuffer {
         halt_for_display_power(peripherals);
         epaper_hw_init(peripherals);
         epaper_draw_stuff_quickly(peripherals, self.0.into_inner());
-        visible_delay(10);
+        delay(100000);
         epaper_deep_sleep(peripherals);
         // Hack to prevent touch trigger on power surge
         peripherals
@@ -162,6 +162,6 @@ pub fn highlight_point(peripherals: &mut Peripherals, point: Point) {
 pub fn burning_tank(peripherals: &mut Peripherals, text: String) {
     epaper_hw_init(peripherals);
     make_text(peripherals, &text);
-    visible_delay(1000);
+    delay(10000000);
     epaper_deep_sleep(peripherals);
 }

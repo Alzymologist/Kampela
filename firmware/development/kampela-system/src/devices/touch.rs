@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use efm32pg23_fix::Peripherals;
-use crate::visible_delay;
+use cortex_m::asm::delay;
 use crate::peripherals::i2c::{acknowledge_i2c_tx, check_i2c_errors, I2CError, mstop_i2c_wait_and_clear, read_i2c_rx};
 
 pub const FT6X36_REG_CHIPID: u8 = 0xA3;
@@ -22,7 +22,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
             .I2C0_S
             .cmd
             .write(|w_reg| w_reg.abort().set_bit());
-        visible_delay(10);
+        delay(10000);
     }
 
     // clear pending commands and tx
@@ -30,7 +30,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.clearpc().set_bit().cleartx().set_bit());
-    visible_delay(10);
+    delay(10000);
 
     // clear rx buffer content
     while peripherals
@@ -45,7 +45,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
             .rxdata
             .read()
             .bits();
-        visible_delay(10);
+        delay(10000);
     }
     
     // clear interrupt flags
@@ -69,12 +69,12 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(0b1110000));
-    visible_delay(10);
+    delay(10000);
     peripherals
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.start().set_bit());
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
     
@@ -83,7 +83,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(position));
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
 
@@ -92,7 +92,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(data));
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
     
@@ -100,7 +100,7 @@ pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) ->
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.stop().set_bit());
-    visible_delay(10);
+    delay(10000);
     
     mstop_i2c_wait_and_clear(peripherals)?;
     
@@ -127,7 +127,7 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
             .I2C0_S
             .cmd
             .write(|w_reg| w_reg.abort().set_bit());
-        visible_delay(10);
+        delay(10000);
     }
 
     // clear pending commands and tx
@@ -135,7 +135,7 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.clearpc().set_bit().cleartx().set_bit());
-    visible_delay(10);
+    delay(10000);
 
     // clear rx buffer content
     while peripherals
@@ -150,7 +150,7 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
             .rxdata
             .read()
             .bits();
-        visible_delay(10);
+        delay(10000);
     }
     
     // clear interrupt flags
@@ -174,12 +174,12 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(0b1110000));
-    visible_delay(10);
+    delay(10000);
     peripherals
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.start().set_bit());
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
     
@@ -188,7 +188,7 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(position));
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
 
@@ -197,12 +197,12 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
         .I2C0_S
         .cmd
         .write(|w_reg| w_reg.start().set_bit());
-    visible_delay(10);
+    delay(10000);
     peripherals
         .I2C0_S
         .txdata
         .write(|w_reg| w_reg.txdata().variant(0b1110001));
-    visible_delay(10);
+    delay(10000);
 
     acknowledge_i2c_tx(peripherals)?;
     
@@ -215,18 +215,18 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
                 .I2C0_S
                 .cmd
                 .write(|w_reg| w_reg.nack().set_bit());
-            visible_delay(10);
+            delay(10000);
             peripherals
                 .I2C0_S
                 .cmd
                 .write(|w_reg| w_reg.stop().set_bit());
-            visible_delay(10);
+            delay(10000);
         } else {
             peripherals
                 .I2C0_S
                 .cmd
                 .write(|w_reg| w_reg.ack().set_bit());
-            visible_delay(10);
+            delay(10000);
         }
     }
     

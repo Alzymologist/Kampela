@@ -24,5 +24,5 @@ pub fn measure_voltage(peripherals: &mut Peripherals) -> i32 {
 
 /// Stops until power is sufficient for display refresh
 pub fn halt_for_display_power(peripherals: &mut Peripherals) {
-    while measure_voltage(peripherals) < 2800 {}
+//    while measure_voltage(peripherals) < 5000 {}
 }

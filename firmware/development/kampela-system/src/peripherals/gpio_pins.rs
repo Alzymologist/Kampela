@@ -1,7 +1,7 @@
 //! Map GPIO pins
 
+use cortex_m::asm::delay;
 use efm32pg23_fix::GPIO_S;
-use crate::visible_delay;
 
 pub const FLASH_CS_PIN: u8 = 0;
 pub const DISP_CS_PIN: u8 = 2;
@@ -270,7 +270,7 @@ fn map_gpio(gpio: &mut GPIO_S) {
 fn set_gpio_pins(gpio: &mut GPIO_S) {
     pow_set(gpio);
     i2c_set(gpio);
-    visible_delay(10); // wait after power set! (epaper manual for 2.8V setup)
+    delay(100000); // wait after power set! (epaper manual for 2.8V setup)
     display_chip_select_set(gpio);
     display_data_command_clear(gpio);
     display_res_clear(gpio);

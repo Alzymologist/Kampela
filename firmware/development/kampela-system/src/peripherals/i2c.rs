@@ -1,7 +1,7 @@
 
 use efm32pg23_fix::Peripherals;
 use crate::peripherals::gpio_pins::*;
-use crate::visible_delay;
+use cortex_m::asm::delay;
 
 #[derive(Debug)]
 pub enum I2CError {
@@ -48,12 +48,12 @@ pub fn init_i2c(peripherals: &mut Peripherals) {
         .I2C0_S
         .ctrl
         .write(|w_reg| w_reg.corerst().enable());
-    visible_delay(10);
+    delay(10000);
     peripherals
         .I2C0_S
         .ctrl
         .write(|w_reg| w_reg.corerst().disable());
-    visible_delay(10);
+    delay(100000);
 
 }
 
@@ -74,7 +74,7 @@ pub fn read_i2c_rx(peripherals: &mut Peripherals) -> Result<u8, I2CError> {
         .read()
         .rxdata()
         .bits();
-    visible_delay(10);
+    delay(100000);
 
     // Errata I2C_E303, patch follows sdk
     if peripherals.I2C0_S.status.read().rxdatav().bit_is_clear() & peripherals.I2C0_S.status.read().rxfull().bit_is_set() {
@@ -83,7 +83,7 @@ pub fn read_i2c_rx(peripherals: &mut Peripherals) -> Result<u8, I2CError> {
             .rxdata
             .read()
             .bits();
-        visible_delay(10);
+        delay(100000);
         peripherals
             .I2C0_S
             .if_
@@ -136,7 +136,7 @@ pub fn acknowledge_i2c_tx(peripherals: &mut Peripherals) -> Result<(), I2CError>
                 .I2C0_S
                 .cmd
                 .write(|w_reg| w_reg.stop().set_bit());
-            visible_delay(10);
+            delay(100000);
             return Err(I2CError::TransferNack)
         }
     }

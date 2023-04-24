@@ -1,7 +1,7 @@
 //! high level functions to draw on EPD
 
 use efm32pg23_fix::Peripherals;
-use crate::visible_delay;
+use cortex_m::asm::delay;
 use crate::devices::display::*;
 
 pub const BUFSIZE: usize = 5808;
@@ -48,14 +48,14 @@ pub fn epaper_draw_stuff_quickly(peripherals: &mut Peripherals, stuff: [u8; BUFS
 pub fn epaper_deep_sleep(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x10]); // from manual, enter deep sleep
     epaper_write_data(peripherals, &[0x01]); // ?
-    visible_delay(100); // why delay, from where the number?
+    delay(100000); // why delay, from where the number?
 }
 /// EPD init, also should be performed to wake screen from sleep
 pub fn epaper_hw_init(peripherals: &mut Peripherals) {
     epaper_reset(&mut peripherals.GPIO_S);
     while display_is_busy(peripherals) {}
     epaper_write_command(peripherals, &[0x12]);
-    visible_delay(10);
+    delay(10000);
     while display_is_busy(peripherals) {}
 }
 

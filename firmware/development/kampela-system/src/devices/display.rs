@@ -1,7 +1,7 @@
 //! display control functions
 
 use efm32pg23_fix::{GPIO_S, Peripherals};
-use crate::visible_delay;
+use cortex_m::asm::delay;
 use crate::peripherals::usart::*;
 use crate::peripherals::gpio_pins::{display_res_clear, display_res_set};
 
@@ -45,15 +45,15 @@ pub fn display_is_busy(peripherals: &mut Peripherals) -> bool {
 ///
 /// Why these specific numbers for delays?
 pub fn epaper_reset(gpio: &mut GPIO_S) {
-    visible_delay(1);
+    delay(1000);
     display_res_clear(gpio);
-    visible_delay(5);
+    delay(5000);
     display_res_set(gpio);
-    visible_delay(10);
+    delay(10000);
     display_res_clear(gpio);
-    visible_delay(5);
+    delay(5000);
     deselect_display(gpio); // this is not the default state, should not be here
-    visible_delay(5);
+    delay(5000);
 }
 
 /*
@@ -82,7 +82,7 @@ pub fn epaper_hw_init_fast(peripherals: &mut Peripherals) {
 /// Last command in drawing protocol; actually starts display action
 pub fn epaper_update(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x12]);
-    visible_delay(100);
+    delay(100000);
     while display_is_busy(peripherals) {}
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xF7]); // ?
@@ -93,12 +93,12 @@ pub fn epaper_update(peripherals: &mut Peripherals) {
 /// Faster version of display action initiation
 pub fn epaper_update_fast(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x12]);
-    visible_delay(100);
+    delay(100000);
     while display_is_busy(peripherals) {}
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xC7]); // ?
     epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    visible_delay(1); // why delay, from where the number?
+    delay(1000); // why delay, from where the number?
     while display_is_busy(peripherals) {}
 }
 
@@ -108,7 +108,7 @@ pub fn epaper_update_part(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xFF]); // ?
     epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    visible_delay(1); // why delay, from where the number?
+    delay(1000); // why delay, from where the number?
     while display_is_busy(peripherals) {}
 }
 

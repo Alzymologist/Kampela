@@ -16,16 +16,3 @@ mod peripherals;
 pub mod devices;
 pub mod draw;
 
-/// Ticks counter.
-pub static mut COUNT: u32 = 0;
-
-/// Make visible delay. For blinker. Input is delay time in ms.
-pub fn visible_delay(ticks_ms: u32) {
-    unsafe {
-        let end = COUNT.wrapping_add(ticks_ms);
-
-        while end > COUNT {
-            cortex_m::asm::wfi();
-        }
-    }
-}
