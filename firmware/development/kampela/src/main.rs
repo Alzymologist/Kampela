@@ -2,36 +2,51 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
+#[macro_use]
 extern crate alloc;
 extern crate core;
 
 use alloc::{format, vec::Vec};
 use core::{alloc::Layout, panic::PanicInfo};
-use cortex_m::peripheral::syst::SystClkSource;
+use cortex_m::{asm::delay, peripheral::syst::SystClkSource};
 use cortex_m_rt::{entry, exception};
 use embedded_alloc::Heap;
 
 use embedded_graphics::prelude::Point;
+use lazy_static::lazy_static;
 use nalgebra::{linalg::SVD, Affine2, Const, OMatrix, Point2, RowVector1, RowVector3, RowVector6};
 
-use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
+use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
-    COUNT, 
     devices::{power::measure_voltage, se_rng, touch::{ft6336_read_at, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, make_text, highlight_point, burning_tank}, 
     init::init_peripherals, 
-    visible_delay, 
 };
 use kampela_ui::{display_def::*, uistate, pin::Pincode, platform::Platform};
 
+use alloc::{borrow::ToOwned, collections::BTreeMap};
 
-static mut PUSHED: bool = false;
-static mut TOUCH_UNDEBOUNCE: bool = true;
-static mut VOLTAGE: u32 = 0;
+use core::cell::RefCell;
+use core::ops::DerefMut;
+use cortex_m::interrupt::free;
+use cortex_m::interrupt::Mutex;
+
+lazy_static!{
+    static ref CORE_PERIPHERALS: Mutex<RefCell<CorePeripherals>> = Mutex::new(RefCell::new(CorePeripherals::take().unwrap()));
+    static ref PERIPHERALS: Mutex<RefCell<Option<Peripherals>>> = Mutex::new(RefCell::new(None));
+}
+
+static mut LDMA_INTERRUPT: bool = false;
+static mut GPIO_ODD_INT: bool = false;
+static mut COUNT_ODD: bool = false;
+static mut GPIO_EVEN_INT: bool = false;
+static mut COUNT_EVEN: bool = false;
+
+static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
@@ -45,14 +60,7 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-#[allow(non_snake_case)]
-#[exception]
-fn SysTick() {
-    unsafe {
-        COUNT = COUNT.wrapping_add(1);
-    }
-}
-
+/*
 fn init_systick(cortex_periph: &mut cortex_m::Peripherals) {
     let syst = &mut cortex_periph.SYST;
     const DEFAULT_HZ: u32 = 14_000_000u32;
@@ -63,27 +71,7 @@ fn init_systick(cortex_periph: &mut cortex_m::Peripherals) {
     syst.enable_counter();
     syst.enable_interrupt();
 }
-
-#[interrupt]
-fn I2C0() {
-    static mut SOMESTUFF: i32 = 0;
-    *SOMESTUFF += 1;
-}
-
-#[interrupt]
-fn GPIO_ODD() {
-    unsafe{
-        PUSHED = true;
-    }
-}
-
-#[interrupt]
-fn IADC() {
-    let measure = 0;
-    unsafe{
-        VOLTAGE = measure;
-    }
-}
+*/
 
 struct Hardware {
     pin: Pincode,
@@ -149,23 +137,38 @@ fn main() -> ! {
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
 
-    let mut cortex_periph = cortex_m::Peripherals::take().unwrap();
-    init_systick(&mut cortex_periph);
-   
+    free(|cs| {
+        let mut core_periph = CORE_PERIPHERALS.borrow(cs).borrow_mut();
+        //init_systick(&mut core_periph);
+    });
 
-    unsafe {
-        NVIC::unmask(Interrupt::GPIO_ODD);
-        //NVIC::unmask(Interrupt::TIMER1);
-        //cortex_periph.NVIC.set_priority(Interrupt::GPIO_ODD, 3);
-        //NVIC::unmask(Interrupt::I2C0);
-    }
-    
     let mut peripherals = Peripherals::take().unwrap();
 
     init_peripherals(&mut peripherals);
 
-    //let test_voltage = measure_voltage(&mut peripherals);
-    //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
+    delay(1000);
+
+    /*
+    free(|cs| {
+        let mut core_periph = CORE_PERIPHERALS.borrow(cs).borrow_mut();
+        /*
+        NVIC::unpend(Interrupt::LDMA);
+        NVIC::mask(Interrupt::LDMA);
+        unsafe {
+            core_periph.NVIC.set_priority(Interrupt::LDMA, 3);
+            NVIC::unmask(Interrupt::LDMA);
+        }
+        */
+    });
+    */
+
+    delay(1000);
+
+    let hardware = Hardware::new(&mut peripherals);
+
+    free(|cs| {
+        PERIPHERALS.borrow(cs).replace(Some(peripherals));
+    });
 
     let affine_matrix  = Affine2::from_matrix_unchecked(
         OMatrix::from_rows(&[
@@ -175,46 +178,54 @@ fn main() -> ! {
         ])
     );
 
-    let hardware = Hardware::new(&mut peripherals);
-
     let mut state = uistate::UIState::new(hardware); 
-    // line for debug init messages
-    //panic!("lol: {}", test_voltage);
 
     let mut update = uistate::UpdateRequest::new();
     update.set_slow();
 
-    // display abstraction
-
     let mut input = None;
+    let mut touch_data = [0; LEN_NUM_TOUCHES];
+    let mut touched = false;
 
     loop {
         // 1. update ui if needed
         if update.read_fast() {
-            //let test_voltage = measure_voltage(&mut peripherals);
-            //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
-            state.display().apply_fast(&mut peripherals);
-            peripherals
-                .GPIO_S
-                .if_
-                .write(|w_reg| w_reg.extif0().clear_bit())
+            free(|cs| {
+                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                    state.display().apply_fast(peripherals);
+                    peripherals
+                        .GPIO_S
+                        .if_
+                        .write(|w_reg| w_reg.extif0().clear_bit())
+                }
+            });
         }
         if update.read_slow() {
-            //let test_voltage = measure_voltage(&mut peripherals);
-            //burning_tank(&mut peripherals, format!("voltage: {}", test_voltage));
             state.render::<FrameBuffer>();
-            state.display().apply(&mut peripherals);
-            peripherals
-                .GPIO_S
-                .if_
-                .write(|w_reg| w_reg.extif0().clear_bit());
-
+        delay(1000);
+            free(|cs| {
+                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                    state.display().apply(peripherals);
+                    peripherals
+                        .GPIO_S
+                        .if_
+                        .write(|w_reg| w_reg.extif0().clear_bit());
+                }
+            });
         }
 
         // 2. read input if possible
-        if peripherals.GPIO_S.if_.read().extif0().bit_is_set() {
-            let touch_data = ft6336_read_at::<LEN_NUM_TOUCHES>(&mut peripherals, FT6X36_REG_NUM_TOUCHES).unwrap();
 
+        free(|cs| {
+            if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                touched = peripherals.GPIO_S.if_.read().extif0().bit_is_set();
+                if touched {
+                    touch_data = ft6336_read_at::<LEN_NUM_TOUCHES>(peripherals, FT6X36_REG_NUM_TOUCHES).unwrap();
+                }
+            }
+        });
+
+        if touched {
             if touch_data[0] == 1 {
             let detected_y = (((touch_data[1] as u16 & 0b00001111) << 8) | touch_data[2] as u16) as i32;
             let detected_x = (((touch_data[3] as u16 & 0b00001111) << 8) | touch_data[4] as u16) as i32;
@@ -231,15 +242,24 @@ fn main() -> ! {
             );
             }
 
-            peripherals
-                .GPIO_S
-                .if_
-                .write(|w_reg| w_reg.extif0().clear_bit())
+            free(|cs| {
+                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                    peripherals
+                        .GPIO_S
+                        .if_
+                        .write(|w_reg| w_reg.extif0().clear_bit())
+                }
+            });
         }
+        touched = false;
 
         // 3. handle input
         if let Some(point) = input {
-            update = state.handle_event::<FrameBuffer>(point, &mut peripherals).unwrap();
+            free(|cs| {
+                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                    update = state.handle_event::<FrameBuffer>(point, peripherals).unwrap();
+                }
+            });
             input = None;
         }
 
