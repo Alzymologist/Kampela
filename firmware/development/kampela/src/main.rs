@@ -60,19 +60,6 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-/*
-fn init_systick(cortex_periph: &mut cortex_m::Peripherals) {
-    let syst = &mut cortex_periph.SYST;
-    const DEFAULT_HZ: u32 = 14_000_000u32;
-
-    syst.set_clock_source(SystClkSource::Core);
-    syst.set_reload(DEFAULT_HZ / 1_000u32);
-    syst.clear_current();
-    syst.enable_counter();
-    syst.enable_interrupt();
-}
-*/
-
 struct Hardware {
     pin: Pincode,
     entropy: Vec<u8>,
@@ -137,11 +124,6 @@ fn main() -> ! {
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
 
-    free(|cs| {
-        let mut core_periph = CORE_PERIPHERALS.borrow(cs).borrow_mut();
-        //init_systick(&mut core_periph);
-    });
-
     let mut peripherals = Peripherals::take().unwrap();
 
     init_peripherals(&mut peripherals);
@@ -170,6 +152,7 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
+    // MAGIC calibration numbers obtained through KOLIBRI tool
     let affine_matrix  = Affine2::from_matrix_unchecked(
         OMatrix::from_rows(&[
             RowVector3::<f32>::new(1.0022, -0.0216, -4.2725),
@@ -202,7 +185,6 @@ fn main() -> ! {
         }
         if update.read_slow() {
             state.render::<FrameBuffer>();
-        delay(1000);
             free(|cs| {
                 if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
                     state.display().apply(peripherals);
