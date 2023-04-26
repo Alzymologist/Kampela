@@ -8,7 +8,7 @@ pub const LEN_CHIPID: usize = 1;
 
 pub const FT6X36_REG_NUM_TOUCHES: u8 = 0x02;
 pub const LEN_NUM_TOUCHES: usize = 5;
-
+/*
 pub fn ft6336_write_to(peripherals: &mut Peripherals, position: u8, data: u8) -> Result<(), I2CError> {
     // abort unexpected processes
     if peripherals
@@ -240,4 +240,4 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
     
     Ok(rx_data_collected.try_into().expect("constant size, always fit"))
 }
-
+*/

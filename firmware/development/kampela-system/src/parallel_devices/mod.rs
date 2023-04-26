@@ -6,27 +6,32 @@ use efm32pg23_fix::Peripherals;
 pub mod touch;
 pub mod display;
 
+/// Default (non-blocking) delay for operation start
+const DELAY: usize = 10000;
+
 /// Asynchronous procedures should implement this.
 ///
-/// To call, iterate over
-///
-/// ```
-/// let device = Operation::new()
-/// loop {
-///     if device.advance_check() {
-///         free(|cs| {
-///             if let Ok(Some(a)) = device.advance(&mut peripherals) { return a }
-///         });
-///     }
-/// }
-/// ```
-///
+/// To call, iterate over advance()
 pub trait Operation {
     type DesiredOutput;
+    type StateEnum;
 
     fn new() -> Self;
 
-    fn advance_check(&mut self) -> bool;
+    /// Generally delayed state transition
+    fn wind(&mut self, state: Self::StateEnum, delay: usize);
 
-    fn advance(&mut self, peripherals: &mut Peripherals) -> Self::DesiredOutput;
+    /// Call this repeatedly to progress through operation
+    fn advance(&mut self) -> Self::DesiredOutput;
+
+    /// change state instantly
+    fn change(&mut self, state: Self::StateEnum) {
+        self.wind(state, 0);
+    }
+
+    /// delayed change state with default delay
+    fn wind_d(&mut self, state: Self::StateEnum) {
+        self.wind(state, DELAY);
+    }
+
 }

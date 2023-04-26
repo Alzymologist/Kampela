@@ -46,3 +46,20 @@ pub fn in_free<F>(mut action: F)
     });
 }
 
+/// Mutexed global access to peripherals
+pub fn if_in_free<F>(mut action: F) -> Result<bool, FreeError>
+    where F: FnMut(&mut Peripherals) -> bool
+{
+    free(|cs| {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            return Ok(action(peripherals))
+        } else {
+            return Err(FreeError::MutexLocked)
+        }
+    })
+}
+
+#[derive(Debug)]
+pub enum FreeError {
+    MutexLocked,
+}

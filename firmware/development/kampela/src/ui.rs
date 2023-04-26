@@ -6,8 +6,8 @@ use alloc::vec::Vec;
 use lazy_static::lazy_static;
 
 use kampela_system::{
-    PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::measure_voltage, se_rng, touch::{ft6336_read_at, FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    PERIPHERALS, CORE_PERIPHERALS, in_free, if_in_free,
+    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     parallel_devices::{Operation, touch},
     draw::{FrameBuffer, make_text, burning_tank}, 
     init::init_peripherals,
@@ -55,17 +55,14 @@ impl UI {
                 self.status = UIStatus::Listen;
             },
             UIStatus::TouchOperation(ref mut touch) => {
-                let mut input = None;
-                if touch.advance_check() {
-                    in_free(|peripherals|
-                    if let Ok(Some(touch)) = touch.advance(peripherals) {
-                        input = convert(touch)
-                    });
-                    if let Some(point) = input {
+                match touch.advance() {
+                    Ok(Some(touch)) => if let Some(point) = convert(touch) {
                         in_free(|peripherals| self.update = self.state.handle_event::<FrameBuffer>(point, peripherals).unwrap());
-                    }
-                    self.status = UIStatus::Listen;
-                }
+                        self.status = UIStatus::Listen;
+                    },
+                    Ok(None) => {},
+                    Err(e) => panic!("{:?}", e),
+                } 
             },
         }
     }
@@ -75,19 +72,21 @@ impl UI {
         if self.update.read_fast() {
             self.state.display().request_fast();
             self.status = UIStatus::DisplayOperation;
+            return;
         }
         if self.update.read_slow() {
             self.state.render::<FrameBuffer>();
             self.state.display().request_full();
             self.status = UIStatus::DisplayOperation;
+            return;
         }
         
         // 2. read input if possible
-        in_free(|peripherals|
-                if peripherals.GPIO_S.if_.read().extif0().bit_is_set() {
-                    self.status = UIStatus::TouchOperation(touch::Read::new());
-                }
-        );
+        if if_in_free(|peripherals|
+            peripherals.GPIO_S.if_.read().extif0().bit_is_set()
+        ).unwrap() {
+            self.status = UIStatus::TouchOperation(touch::Read::new());
+        };
 
     }
 }
