@@ -15,5 +15,34 @@ pub mod init;
 mod peripherals;
 pub mod devices;
 pub mod draw;
+pub mod parallel_devices;
+
+use efm32pg23_fix::{CorePeripherals, Peripherals};
 
 pub use peripherals::ldma::{BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock};
+
+use core::cell::RefCell;
+use core::ops::DerefMut;
+use cortex_m::interrupt::free;
+use cortex_m::interrupt::Mutex;
+
+use lazy_static::lazy_static;
+
+lazy_static!{
+    pub static ref CORE_PERIPHERALS: Mutex<RefCell<CorePeripherals>> = Mutex::new(RefCell::new(CorePeripherals::take().unwrap()));
+    pub static ref PERIPHERALS: Mutex<RefCell<Option<Peripherals>>> = Mutex::new(RefCell::new(None));
+}
+
+use core::ops::FnMut;
+
+/// Mutexed global access to peripherals
+pub fn in_free<F>(mut action: F)
+    where F: FnMut(&mut Peripherals)
+{
+    free(|cs| {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            action(peripherals);
+        }
+    });
+}
+

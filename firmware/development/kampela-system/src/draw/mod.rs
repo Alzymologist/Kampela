@@ -24,10 +24,12 @@ use kampela_display_common::display_def::*;
 use cortex_m::asm::delay;
 
 pub mod display;
-use display::{epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
-use crate::devices::power::halt_for_display_power;
+use display::{display_is_busy, epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
+use crate::devices::power::{check_fast_display_power, check_full_display_power};
 
 const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
+
+use crate::in_free; 
 
 #[derive(Debug)]
 pub enum DisplayError {}
@@ -71,41 +73,94 @@ impl<'a> Drawable for TextToPrint<'a> {
 /// Virtual display data storage
 type PixelData = BitArr!(for SCREEN_SIZE_VALUE, in u8, Msb0);
 
+/// Display's updating progress
+///
+/// This is intentionally done without typestates, as typesafety it offers is outweighted by
+/// reallocations made in new item creation.
+enum DisplayState {
+    /// Initial state, where we can change framebuffer. If this was typestate, this would be Zero.
+    Idle,
+    /// Fast update was requested; waiting for power
+    FastRequested,
+    /// Slow update was requested; waiting for power
+    FullRequested,
+    /// Display not available due to update cycle
+    UpdatingNow,
+}
+
 /// A virtual display that could be written to EPD simultaneously
-pub struct FrameBuffer(PixelData);
+pub struct FrameBuffer {
+    data: PixelData,
+    display_state: DisplayState,
+}
 
 impl FrameBuffer {
     /// Create new virtual display and fill it with ON pixels
     pub fn new_white() -> Self {
-        Self(bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize))
+        Self {
+            data: bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize),
+            display_state: DisplayState::Idle,
+        }
     }
 
     /// Send display data to real EPD; invokes full screen refresh
-    pub fn apply(&self, peripherals: &mut Peripherals) {
-        halt_for_display_power(peripherals);
+    fn apply(&self, peripherals: &mut Peripherals) {
         epaper_hw_init(peripherals);
-        epaper_draw_stuff_differently(peripherals, self.0.into_inner());
+        epaper_draw_stuff_differently(peripherals, self.data.into_inner());
         delay(100000);
-        epaper_deep_sleep(peripherals);
-        // Hack to prevent touch trigger on power surge
-        peripherals
-                    .GPIO_S
-                    .if_
-                    .write(|w_reg| w_reg.extif0().clear_bit());
     }
 
     /// Send display data to real EPD in a fast partial way
-    pub fn apply_fast(&self, peripherals: &mut Peripherals) {
-        halt_for_display_power(peripherals);
+    fn apply_fast(&self, peripherals: &mut Peripherals) {
         epaper_hw_init(peripherals);
-        epaper_draw_stuff_quickly(peripherals, self.0.into_inner());
+        epaper_draw_stuff_quickly(peripherals, self.data.into_inner());
         delay(100000);
+    }
+
+    /// Start full display update sequence
+    pub fn request_full(&mut self) {
+        self.display_state = DisplayState::FullRequested;
+    }
+
+    /// Start partial fast display update sequence
+    pub fn request_fast(&mut self) {
+        self.display_state = DisplayState::FastRequested;
+    }
+
+    /// Move through display update progress
+    pub fn advance(&mut self) -> bool {
+        in_free(|peripherals| if display_is_busy(peripherals) { return });
+        match self.display_state {
+            DisplayState::Idle => true,
+            DisplayState::FastRequested => {
+                in_free(|peripherals|
+                if check_fast_display_power(peripherals) {        
+                    self.apply_fast(peripherals);
+                    self.display_state = DisplayState::UpdatingNow;
+                }
+                );
+                false
+            },
+            DisplayState::FullRequested => {
+                in_free(|peripherals|
+                if check_full_display_power(peripherals) {        
+                    self.apply(peripherals);
+                    self.display_state = DisplayState::UpdatingNow;
+                }
+                );
+                false
+            },
+            DisplayState::UpdatingNow => {
+                in_free(|peripherals| self.sleep(peripherals));
+                false
+            },
+        }
+    }
+
+    /// Reset display to idle state
+    fn sleep(&mut self, peripherals: &mut Peripherals) {
         epaper_deep_sleep(peripherals);
-        // Hack to prevent touch trigger on power surge
-        peripherals
-                    .GPIO_S
-                    .if_
-                    .write(|w_reg| w_reg.extif0().clear_bit());
+        self.display_state = DisplayState::Idle;
     }
 }
 
@@ -134,7 +189,7 @@ impl DrawTarget for FrameBuffer {
             //transposing pizels correctly here
             let n = (pixel.0.y + pixel.0.x*SCREEN_SIZE_Y as i32) /*(pixel.0.y*176 + (175 - pixel.0.x))*/ as usize;
             //let n = if n<SHIFT_COEFFICIENT { n + SCREEN_SIZE_VALUE - SHIFT_COEFFICIENT } else { n - SHIFT_COEFFICIENT };
-            let mut pixel_update = self.0.get_mut(n).expect("checked the bounds");
+            let mut pixel_update = self.data.get_mut(n).expect("checked the bounds");
             match pixel.1 {
                 BinaryColor::Off => {
                     *pixel_update = true; //white
@@ -146,15 +201,6 @@ impl DrawTarget for FrameBuffer {
         }
         Ok(())
     }
-}
-
-/// Accessibility tool: highlight a spot with size similar to typical touch area
-pub fn highlight_point(peripherals: &mut Peripherals, point: Point) {
-    let mut buffer = FrameBuffer::new_white();
-    Circle::with_center(point, 20)
-        .into_styled(PrimitiveStyle::with_fill(BinaryColor::On))
-        .draw(&mut buffer).unwrap();
-    buffer.apply(peripherals);
 }
 
 /// Emergency debug function that spits out errors

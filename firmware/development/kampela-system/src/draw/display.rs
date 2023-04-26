@@ -3,15 +3,9 @@
 use efm32pg23_fix::Peripherals;
 use cortex_m::asm::delay;
 use crate::devices::display::*;
+pub use crate::devices::display::display_is_busy;
 
 pub const BUFSIZE: usize = 5808;
-
-/// Drawing protocol from some exapmle (does not work apparently)
-pub fn epaper_draw_stuff(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
-    epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
-    epaper_write_data(peripherals, &stuff);
-    epaper_update(peripherals);
-}
 
 /// Normal drawing protocol, with full screen clearing
 pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; BUFSIZE]) {
@@ -19,9 +13,9 @@ pub fn epaper_draw_stuff_differently(peripherals: &mut Peripherals, stuff: [u8; 
     epaper_write_command(peripherals, &[0x4E]);
     epaper_write_data(peripherals, &[0x00]);
     epaper_write_command(peripherals, &[0x4F]);
-epaper_write_data(peripherals, &[0x07]);
+    epaper_write_data(peripherals, &[0x07]);
     epaper_write_command(peripherals, &[0x24]); // from manual, Y: "Write Black and White image to RAM"
-epaper_write_data(peripherals, &stuff);
+    epaper_write_data(peripherals, &stuff);
     epaper_write_command(peripherals, &[0x26]);
     epaper_write_data(peripherals, &stuff);
     epaper_update(peripherals);
@@ -50,6 +44,7 @@ pub fn epaper_deep_sleep(peripherals: &mut Peripherals) {
     epaper_write_data(peripherals, &[0x01]); // ?
     delay(100000); // why delay, from where the number?
 }
+
 /// EPD init, also should be performed to wake screen from sleep
 pub fn epaper_hw_init(peripherals: &mut Peripherals) {
     epaper_reset(&mut peripherals.GPIO_S);
