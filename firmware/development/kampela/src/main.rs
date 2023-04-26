@@ -20,10 +20,9 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 
 mod ui;
 use ui::UI;
-/*
 mod nfc;
-use nfc::{BufferStatus, process_nfc_buffer_miller_only};
-*/
+use nfc::{BufferInfo, BufferStatus, process_nfc_buffer_miller_only};
+
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
@@ -46,7 +45,7 @@ use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_w
 
 
 lazy_static!{
-//    static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
+    static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
 }
 
 static mut LDMA_INTERRUPT: bool = false;
@@ -69,7 +68,6 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
     loop {}
 }
 
-/*
 #[interrupt]
 fn LDMA() {
     free(|cs| {
@@ -90,7 +88,6 @@ fn LDMA() {
         }
     });
 }
-*/
 
 
 #[entry]
@@ -136,7 +133,6 @@ fn main() -> ! {
 
     delay(1000);
 
-    /*
     free(|cs| {
         let mut core_periph = CORE_PERIPHERALS.borrow(cs).borrow_mut();
         NVIC::unpend(Interrupt::LDMA);
@@ -146,7 +142,6 @@ fn main() -> ! {
             NVIC::unmask(Interrupt::LDMA);
         }
     });
-*/
 
     delay(1000);
 
@@ -169,7 +164,6 @@ fn main() -> ! {
     loop {
         ui.advance();
         //nfc.advance();
-      /*  
         // 4. non-UI loop time
         process_nfc_buffer_miller_only(&mut frame_set, &nfc_buffer);
 
@@ -181,7 +175,6 @@ fn main() -> ! {
             panic!("{:?}", map)
         }
 
-*/
     }
 
 }

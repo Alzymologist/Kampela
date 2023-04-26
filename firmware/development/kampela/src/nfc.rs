@@ -3,6 +3,17 @@
 
 use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
 use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
+use alloc::{borrow::ToOwned, vec::Vec};
+
+use kampela_system::{
+    PERIPHERALS, CORE_PERIPHERALS, in_free,
+    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    draw::{FrameBuffer, make_text, burning_tank}, 
+    init::init_peripherals,
+    BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
+};
+use cortex_m::interrupt::free;
+use crate::BUFFER_INFO;
 
 pub const FREQ: u16 = 22;
 
