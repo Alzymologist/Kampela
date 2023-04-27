@@ -7,8 +7,7 @@ use lazy_static::lazy_static;
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free, if_in_free,
-    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    parallel_devices::{Operation, touch},
+    devices::{Operation, power::measure_voltage, se_rng, touch::{Read, LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES}},
     draw::{FrameBuffer, make_text, burning_tank}, 
     init::init_peripherals,
     BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
@@ -85,7 +84,7 @@ impl UI {
         if if_in_free(|peripherals|
             peripherals.GPIO_S.if_.read().extif0().bit_is_set()
         ).unwrap() {
-            self.status = UIStatus::TouchOperation(touch::Read::new());
+            self.status = UIStatus::TouchOperation(Read::new());
         };
 
     }
@@ -101,7 +100,7 @@ enum UIStatus {
     /// Screen update started
     DisplayOperation,
     /// Touch event processing
-    TouchOperation(touch::Read<LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES>),
+    TouchOperation(Read<LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES>),
 }
 
 struct Hardware {
