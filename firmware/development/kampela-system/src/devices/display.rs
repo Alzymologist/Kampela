@@ -56,29 +56,6 @@ pub fn epaper_reset(gpio: &mut GPIO_S) {
     delay(5000);
 }
 
-/*
-pub fn epaper_hw_init_fast(peripherals: &mut Peripherals) {
-    epaper_hw_init(peripherals);
-
-    epaper_write_command(peripherals, &[0x18]); // from manual, temperature sensor read
-    epaper_write_data(peripherals, &[0x80]); // ?
-
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "load temperature value"
-    epaper_write_data(peripherals, &[0xB1]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual
-    while display_is_busy(peripherals) {}
-
-    epaper_write_command(peripherals, &[0x1A]); // Y: "Write to temperature register"?
-    epaper_write_data(peripherals, &[0x64, 0x00]); // ?
-
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "load temperature value" - again?
-    epaper_write_data(peripherals, &[0x91]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual - again?
-    while display_is_busy(peripherals) {}
-}
-*/
-
-
 /// Last command in drawing protocol; actually starts display action
 pub fn epaper_update(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x12]);
@@ -87,18 +64,6 @@ pub fn epaper_update(peripherals: &mut Peripherals) {
     epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
     epaper_write_data(peripherals, &[0xF7]); // ?
     epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    while display_is_busy(peripherals) {}
-}
-
-/// Faster version of display action initiation
-pub fn epaper_update_fast(peripherals: &mut Peripherals) {
-    epaper_write_command(peripherals, &[0x12]);
-    delay(100000);
-    while display_is_busy(peripherals) {}
-    epaper_write_command(peripherals, &[0x22]); // from manual, Y: "Display Update Control"
-    epaper_write_data(peripherals, &[0xC7]); // ?
-    epaper_write_command(peripherals, &[0x20]); // from manual, Y: "Activate Display Update Sequence"
-    delay(1000); // why delay, from where the number?
     while display_is_busy(peripherals) {}
 }
 
