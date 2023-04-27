@@ -15,6 +15,7 @@ pub mod init;
 mod peripherals;
 pub mod devices;
 pub mod draw;
+pub mod parallel;
 
 use efm32pg23_fix::{CorePeripherals, Peripherals};
 

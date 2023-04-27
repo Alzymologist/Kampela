@@ -2,6 +2,11 @@
 //!
 //! This matches devices::touch blocking flow; TODO: replace that flow with this one
 
+use efm32pg23_fix::Peripherals;
+use crate::peripherals::i2c::{acknowledge_i2c_tx, check_i2c_errors, I2CError, mstop_i2c_wait_and_clear, ReadI2C};
+use crate::parallel::{DELAY, Operation};
+use crate::{in_free, if_in_free};
+
 pub const FT6X36_REG_CHIPID: u8 = 0xA3;
 pub const LEN_CHIPID: usize = 1;
 
@@ -246,12 +251,6 @@ pub fn ft6336_read_at<const LEN: usize>(peripherals: &mut Peripherals, position:
 }
 */
 
-use efm32pg23_fix::Peripherals;
-use crate::peripherals::i2c::{acknowledge_i2c_tx, check_i2c_errors, I2CError, mstop_i2c_wait_and_clear, read_i2c_rx};
-use crate::devices::{DELAY, Operation};
-use crate::{in_free, if_in_free};
-
-
 /// Touchpad driver async state machine; value represents timer counter to counteract hardware line
 /// weirdness - on count to 0 operation is supposed to be executed. Timer check does not capture
 /// critical section, operation does.
@@ -473,7 +472,7 @@ pub enum ReadLoopState {
     /// Wait and ack
     AckRead,
     /// Read cycle
-    Read,
+    Read(ReadI2C),
     /// Stop reading and report result
     Aftermath,
 }
@@ -513,28 +512,30 @@ impl <const LEN: usize> Operation for ReadLoop<LEN> {
         match self.state {
             ReadLoopState::AckRead => {
                 acknowledge_i2c_tx()?;
-                self.change(ReadLoopState::Read);
+                self.change(ReadLoopState::Read(ReadI2C::new()));
                 Ok(None)
             },
-            ReadLoopState::Read => {
-                self.value[self.position] = read_i2c_rx()?;
-                if self.position == LEN-1 {
-                    in_free(|peripherals| 
-                        peripherals
-                            .I2C0_S
-                            .cmd
-                            .write(|w_reg| w_reg.nack().set_bit())
-                    );
-                    self.wind_d(ReadLoopState::Aftermath);
-                } else {
-                    in_free(|peripherals|
-                        peripherals
-                            .I2C0_S
-                            .cmd
-                            .write(|w_reg| w_reg.ack().set_bit())
-                    );
-                    self.wind_d(ReadLoopState::Read);
-                    self.position += 1;
+            ReadLoopState::Read(ref mut a) => {
+                if let Some(b) = a.advance()? {
+                    self.value[self.position] = b;
+                    if self.position == LEN-1 {
+                        in_free(|peripherals| 
+                            peripherals
+                                .I2C0_S
+                                .cmd
+                                .write(|w_reg| w_reg.nack().set_bit())
+                        );
+                        self.wind_d(ReadLoopState::Aftermath);
+                    } else {
+                        in_free(|peripherals|
+                            peripherals
+                                .I2C0_S
+                                .cmd
+                                .write(|w_reg| w_reg.ack().set_bit())
+                        );
+                        self.wind_d(ReadLoopState::Read(ReadI2C::new()));
+                        self.position += 1;
+                    }
                 }
                 Ok(None)
             },
