@@ -65,7 +65,10 @@ impl NfcPacket {
         }
     }
     pub fn as_raw(&self) -> [u8; NFC_PACKET_FULL_SIZE] {
-        [self.total_length_info.to_vec(), self.data.to_vec()].concat().try_into().expect("static known length")
+        [self.total_length_info.to_vec(), self.data.to_vec()]
+            .concat()
+            .try_into()
+            .expect("static known length")
     }
     pub fn from_raw(raw: [u8; NFC_PACKET_FULL_SIZE]) -> Self {
         let (total_length_info, data) = raw.split_at(TOTAL_LEN_INFO_SIZE);

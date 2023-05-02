@@ -6,7 +6,7 @@
 use raptorq::{Encoder, ObjectTransmissionInformation};
 use std::convert::TryFrom;
 
-use kampela_common::{KAMPELA_DECODER_MEMORY, NfcPacket, NFC_PAYLOAD_SIZE};
+use kampela_common::{NfcPacket, KAMPELA_DECODER_MEMORY, NFC_PAYLOAD_SIZE};
 
 use crate::error::ErrorCompanion;
 
@@ -29,11 +29,12 @@ pub fn pack_nfc(input: &[u8]) -> Result<Vec<NfcPacket>, ErrorCompanion> {
     };
 
     // ObjectTransmissionInformation, compatible with Kampela memory abilities
-    let object_transmission_information = ObjectTransmissionInformation::generate_encoding_parameters_exposed(
-        payload_length as u64,
-        NFC_PAYLOAD_SIZE,
-        KAMPELA_DECODER_MEMORY,
-    );
+    let object_transmission_information =
+        ObjectTransmissionInformation::generate_encoding_parameters_exposed(
+            payload_length as u64,
+            NFC_PAYLOAD_SIZE,
+            KAMPELA_DECODER_MEMORY,
+        );
 
     // Raptorq Encoder, using ObjectTransmissionInformation
     let raptor_encoder = Encoder::new(input, object_transmission_information);
