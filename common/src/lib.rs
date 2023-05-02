@@ -20,19 +20,9 @@ use sp_core::{ByteArray, H256};
 /// NFC payload size, in bytes.
 ///
 /// Is used to calculate the number of packets in `raptorq`.
+///
+/// To match exactly with actual packet length, must be `8*n + 4`
 pub const NFC_PAYLOAD_SIZE: u16 = 244;
-
-/// Packet ID size, in bytes.
-///
-/// ID is attached to each packet during serialization.
-///
-/// Is set upstream in `raptorq` crate.
-pub const PACKET_ID_SIZE: u16 = 4;
-
-/// Size of NFC payload with ID, in bytes.
-///
-/// NFC payload with ID is produced by `raptorq` crate serialization.
-pub const NFC_PAYLOAD_WITH_ID_SIZE: usize = (NFC_PAYLOAD_SIZE + PACKET_ID_SIZE) as usize;
 
 /// Size of transmitted data length info, in bytes.
 ///
@@ -49,16 +39,16 @@ pub const TOTAL_LEN_INFO_SIZE: usize = 4;
 /// Full packet must be transferrable in single `transceive` operation.
 ///
 /// Size of standard Miller frames filtered during NFC capture.
-pub const NFC_PACKET_FULL_SIZE: usize = NFC_PAYLOAD_WITH_ID_SIZE + TOTAL_LEN_INFO_SIZE;
+pub const NFC_PACKET_FULL_SIZE: usize = NFC_PAYLOAD_SIZE as usize + TOTAL_LEN_INFO_SIZE;
 
 #[derive(Debug)]
 pub struct NfcPacket {
     total_length_info: [u8; TOTAL_LEN_INFO_SIZE],
-    data: [u8; NFC_PAYLOAD_WITH_ID_SIZE],
+    data: [u8; NFC_PAYLOAD_SIZE as usize],
 }
 
 impl NfcPacket {
-    pub fn construct(total_length: u32, data: [u8; NFC_PAYLOAD_WITH_ID_SIZE]) -> Self {
+    pub fn construct(total_length: u32, data: [u8; NFC_PAYLOAD_SIZE as usize]) -> Self {
         Self {
             total_length_info: total_length.to_be_bytes(),
             data,
@@ -70,7 +60,7 @@ impl NfcPacket {
             .try_into()
             .expect("static known length")
     }
-    pub fn from_raw(raw: [u8; NFC_PACKET_FULL_SIZE]) -> Self {
+    pub fn from_raw(raw: [u8; NFC_PAYLOAD_SIZE as usize]) -> Self {
         let (total_length_info, data) = raw.split_at(TOTAL_LEN_INFO_SIZE);
         Self {
             total_length_info: total_length_info.try_into().expect("static known length"),
@@ -80,7 +70,7 @@ impl NfcPacket {
     pub fn payload_length(&self) -> usize {
         u32::from_be_bytes(self.total_length_info) as usize
     }
-    pub fn data(&self) -> [u8; NFC_PAYLOAD_WITH_ID_SIZE] {
+    pub fn data(&self) -> [u8; NFC_PAYLOAD_SIZE as usize] {
         self.data
     }
 }
