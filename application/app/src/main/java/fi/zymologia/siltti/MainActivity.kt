@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
         // instance rather than starting a new instance of the Activity.
         // Define your filters and desired technology types
         val filters = arrayOf(IntentFilter(ACTION_TAG_DISCOVERED))
-        // val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name))
+        val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
 
         // And enable your Activity to receive NFC events. Note that there
         // is no need to manually disable dispatch in onPause() as the system
@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
             this,
             pendingIntent,
             filters,
-            null
+            techTypes
         )
     }
 
@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity() {
     // TODO: move to bg thread
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (NfcAdapter.ACTION_TAG_DISCOVERED == intent.action) {
+        if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
             packagesSent.reset()
             val tag = if (Build.VERSION.SDK_INT >= 33) {
                 intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
@@ -183,34 +183,23 @@ class MainActivity : ComponentActivity() {
             }
             Log.d("NFC tag", tag.toString())
 
-            Ndef.get(tag)?.let { ndef ->
-                if (transmitData.size < (packagesSent.count.value ?: 0)) {
-                    packagesSent.reset()
-                }
-                ndef.connect()
-                Log.d("max length", ndef.maxSize.toString())
+            NfcA.get(tag)?.let { tech ->
                 try {
-                    while (ndef.isConnected) {
-                        Log.d("connected", "1")
-                        val ndefRecord = NdefRecord(
-                            TNF_UNKNOWN,
-                            null,
-                            null,
-                            transmitData.getOrNull(packagesSent.count.value ?: 0)
-                        )
-                        Log.d("Record formed", "1")
-                        val ndefMessage = NdefMessage(ndefRecord)
-                        Log.d("Message formed", "1")
-                        ndef.writeNdefMessage(ndefMessage)
-                        Log.d("Message sent", "1")
+                    while (true) {
+                        if (transmitData.size < (packagesSent.count.value ?: 0)) {
+                            packagesSent.reset()
+                        }
+                        tech.connect()
+                        tech.transceive(transmitData.getOrNull(packagesSent.count.value ?: 0))
                         packagesSent.inc()
                         Log.d("sent: ", packagesSent.count.value.toString())
+                        tech.close()
+
                     }
                 } catch (e: java.lang.Exception) {
                     Log.d("NFC link crashed", e.message ?: "unknown")
                 }
                 Log.d("NFC TX", "done")
-                ndef.close()
             }
             packagesSent.disable()
         }
