@@ -5,7 +5,7 @@ use sp_core::H256;
 use std::{convert::TryInto, sync::Arc};
 
 use kampela_common::{
-    Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue, Transaction,
+    Bytes, DerivationInfo, Encryption, MultiSigner, NfcPacket, SpecsKey, SpecsValue, Transaction,
     TransmittableContent,
 };
 
@@ -98,7 +98,7 @@ impl FromQr for Bytes {
 #[derive(Debug)]
 pub enum Action {
     Success,
-    Transmit(Vec<Vec<u8>>),
+    Transmit(Vec<NfcPacket>),
 }
 
 #[derive(Debug)]
@@ -108,7 +108,7 @@ pub struct Transmittable {
 }
 
 impl Transmittable {
-    pub fn into_packets(self) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
+    pub fn into_packets(self) -> Result<Vec<NfcPacket>, ErrorCompanion> {
         let encoded_data = self.content.encode();
         let signature_maker = SignatureMaker::new(self.signature_maker);
         pack_nfc(&signature_maker.signed_data(encoded_data))
@@ -209,7 +209,12 @@ impl Action {
     pub fn as_transmittable(&self) -> Option<Vec<Vec<u8>>> {
         match &self {
             Action::Success => None,
-            Action::Transmit(packets) => Some(packets.to_owned()),
+            Action::Transmit(packets) => Some(
+                packets
+                    .iter()
+                    .map(|packet| packet.as_raw().to_vec())
+                    .collect(),
+            ),
         }
     }
 }

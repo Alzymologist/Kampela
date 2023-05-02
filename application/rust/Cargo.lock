@@ -550,7 +550,7 @@ dependencies = [
  "hex",
  "kampela-common",
  "parity-scale-codec",
- "raptorq",
+ "raptorq 1.7.0 (git+https://github.com/Alzymologist/raptorq?rev=99f99972e96787a98c4f6e6ee77aafe7a03e29d1)",
  "sled",
  "sp-core",
  "substrate_parser",
@@ -1637,7 +1637,7 @@ name = "qr_reader"
 version = "0.1.0"
 dependencies = [
  "hex",
- "raptorq",
+ "raptorq 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
 ]
 
@@ -1742,6 +1742,11 @@ name = "raptorq"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "655b020bbf5c89791160a30f0d4706d8ec7aa5718d6a198f6df19c400e4f4470"
+
+[[package]]
+name = "raptorq"
+version = "1.7.0"
+source = "git+https://github.com/Alzymologist/raptorq?rev=99f99972e96787a98c4f6e6ee77aafe7a03e29d1#99f99972e96787a98c4f6e6ee77aafe7a03e29d1"
 
 [[package]]
 name = "redox_syscall"
