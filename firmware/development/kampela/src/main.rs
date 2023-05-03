@@ -29,7 +29,7 @@ static HEAP: Heap = Heap::empty();
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
     devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, make_text, burning_tank}, 
+    draw::{FrameBuffer, burning_tank}, 
     init::init_peripherals,
     BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };

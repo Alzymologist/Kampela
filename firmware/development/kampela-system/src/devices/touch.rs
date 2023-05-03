@@ -508,7 +508,7 @@ impl <const LEN: usize> Operation for ReadLoop<LEN> {
 
 
     fn advance(&mut self) -> Result<Option<[u8; LEN]>, I2CError> {
-        if self.count() { return Ok(None) }; // TODO this whole loop
+        if self.count() { return Ok(None) };
         match self.state {
             ReadLoopState::AckRead => {
                 acknowledge_i2c_tx()?;

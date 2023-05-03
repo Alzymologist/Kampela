@@ -23,75 +23,27 @@ use embedded_text::{
 use kampela_display_common::display_def::*;
 use cortex_m::asm::delay;
 
-pub mod display;
-use display::{display_is_busy, epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init, epaper_deep_sleep};
+use crate::devices::display::{FastDraw, FullDraw, Request, display_is_busy, epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init_cs, epaper_deep_sleep};
 use crate::devices::power::{check_fast_display_power, check_full_display_power};
 
 const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
 
-use crate::in_free; 
+use crate::{if_in_free, in_free, parallel::Operation}; 
 
 #[derive(Debug)]
 pub enum DisplayError {}
 
-/// see this <https://github.com/embedded-graphics/embedded-graphics/issues/716>
-pub fn make_text(peripherals: &mut Peripherals, text: &str) {
-    let mut buffer = FrameBuffer::new_white();
-    let to_print = TextToPrint{line: text};
-    to_print.draw(&mut buffer).unwrap();
-    buffer.apply(peripherals);
-}
 
-
-pub struct TextToPrint<'a> {
-    pub line: &'a str,
-}
-
-/// For custom font, see this <https://github.com/embedded-graphics/examples/blob/main/eg-0.7/examples/text-custom-font.rs>
-impl<'a> Drawable for TextToPrint<'a> {
-    type Color = BinaryColor;
-    type Output = ();
-    fn draw<D>(
-        &self, 
-        target: &mut D
-    ) -> Result<Self::Output, <D as DrawTarget>::Error>
-    where
-        D: DrawTarget<Color = Self::Color> 
-    {
-        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
-        let textbox_style = TextBoxStyleBuilder::new()
-            .height_mode(HeightMode::FitToText)
-            .alignment(HorizontalAlignment::Justified)
-            .paragraph_spacing(5)
-            .build();
-        let bounds = Rectangle::new(Point::zero(), Size::new(SCREEN_SIZE_X, 0));
-        TextBox::with_textbox_style(self.line, bounds, character_style, textbox_style).draw(target)?;
-        Ok(())
-    }
-}
 
 /// Virtual display data storage
 type PixelData = BitArr!(for SCREEN_SIZE_VALUE, in u8, Msb0);
 
-/// Display's updating progress
-///
-/// This is intentionally done without typestates, as typesafety it offers is outweighted by
-/// reallocations made in new item creation.
-enum DisplayState {
-    /// Initial state, where we can change framebuffer. If this was typestate, this would be Zero.
-    Idle,
-    /// Fast update was requested; waiting for power
-    FastRequested,
-    /// Slow update was requested; waiting for power
-    FullRequested,
-    /// Display not available due to update cycle
-    UpdatingNow,
-}
 
 /// A virtual display that could be written to EPD simultaneously
 pub struct FrameBuffer {
     data: PixelData,
     display_state: DisplayState,
+    timer: usize,
 }
 
 impl FrameBuffer {
@@ -100,67 +52,93 @@ impl FrameBuffer {
         Self {
             data: bitarr!(u8, Msb0; 1; SCREEN_SIZE_X as usize*SCREEN_SIZE_Y as usize),
             display_state: DisplayState::Idle,
+            timer: 0,
+        }
+    }
+
+    fn count(&mut self) -> bool {
+        if self.timer == 0 {
+            false
+        } else {
+            self.timer -= 1;
+            true
         }
     }
 
     /// Send display data to real EPD; invokes full screen refresh
+    ///
+    /// this is for cs environment; do not use otherwise
     fn apply(&self, peripherals: &mut Peripherals) {
-        epaper_hw_init(peripherals);
         epaper_draw_stuff_differently(peripherals, self.data.into_inner());
-        delay(100000);
-    }
-
-    /// Send display data to real EPD in a fast partial way
-    fn apply_fast(&self, peripherals: &mut Peripherals) {
-        epaper_hw_init(peripherals);
-        epaper_draw_stuff_quickly(peripherals, self.data.into_inner());
-        delay(100000);
     }
 
     /// Start full display update sequence
     pub fn request_full(&mut self) {
-        self.display_state = DisplayState::FullRequested;
+        self.change(DisplayState::FullRequested(Request::<FullDraw>::new()));
     }
 
     /// Start partial fast display update sequence
     pub fn request_fast(&mut self) {
-        self.display_state = DisplayState::FastRequested;
+        self.change(DisplayState::FastRequested(Request::<FastDraw>::new()));
+    }
+}
+
+/// Display's updating progress
+///
+/// This is intentionally done without typestates, as typesafety it offers is outweighted by
+/// reallocations made in new item creation.
+pub enum DisplayState {
+    /// Initial state, where we can change framebuffer. If this was typestate, this would be Zero.
+    Idle,
+    /// Fast update was requested; waiting for power
+    FastRequested(Request<FastDraw>),
+    /// Slow update was requested; waiting for power
+    FullRequested(Request<FullDraw>),
+    /// Display not available due to update cycle
+    UpdatingNow,
+}
+
+impl Operation for FrameBuffer {
+    type DesiredOutput = bool;
+    type StateEnum = DisplayState;
+
+    fn new() -> Self {
+        Self::new_white()
+    }
+
+    fn wind(&mut self, state: DisplayState, delay: usize) {
+        self.display_state = state;
+        self.timer = delay;
     }
 
     /// Move through display update progress
-    pub fn advance(&mut self) -> bool {
-        in_free(|peripherals| if display_is_busy(peripherals) { return });
+    fn advance(&mut self) -> bool {
+        if self.count() { return false };
+        if display_is_busy() != Ok(false) { return false };
         match self.display_state {
             DisplayState::Idle => true,
-            DisplayState::FastRequested => {
-                in_free(|peripherals|
-                if check_fast_display_power(peripherals) {        
-                    self.apply_fast(peripherals);
-                    self.display_state = DisplayState::UpdatingNow;
-                }
-                );
+            DisplayState::FastRequested(ref mut a) => {
+                if check_fast_display_power() {        
+                    if a.advance() {
+                        self.wind_d(DisplayState::UpdatingNow)
+                    }
+                };
                 false
             },
-            DisplayState::FullRequested => {
-                in_free(|peripherals|
-                if check_full_display_power(peripherals) {        
-                    self.apply(peripherals);
-                    self.display_state = DisplayState::UpdatingNow;
-                }
-                );
+            DisplayState::FullRequested(ref mut a) => {
+                if check_fast_display_power() {        
+                    if a.advance() {
+                        self.wind_d(DisplayState::UpdatingNow)
+                    }
+                };
                 false
             },
             DisplayState::UpdatingNow => {
-                in_free(|peripherals| self.sleep(peripherals));
+                in_free(|peripherals| epaper_deep_sleep(peripherals));
+                self.display_state = DisplayState::Idle;
                 false
             },
         }
-    }
-
-    /// Reset display to idle state
-    fn sleep(&mut self, peripherals: &mut Peripherals) {
-        epaper_deep_sleep(peripherals);
-        self.display_state = DisplayState::Idle;
     }
 }
 
@@ -203,10 +181,48 @@ impl DrawTarget for FrameBuffer {
     }
 }
 
+
+//**** Debug stuff ****//
+
+/// see this <https://github.com/embedded-graphics/embedded-graphics/issues/716>
+fn make_text(peripherals: &mut Peripherals, text: &str) {
+    let mut buffer = FrameBuffer::new_white();
+    let to_print = TextToPrint{line: text};
+    to_print.draw(&mut buffer).unwrap();
+    buffer.apply(peripherals);
+}
+
+struct TextToPrint<'a> {
+    pub line: &'a str,
+}
+
+/// For custom font, see this <https://github.com/embedded-graphics/examples/blob/main/eg-0.7/examples/text-custom-font.rs>
+impl<'a> Drawable for TextToPrint<'a> {
+    type Color = BinaryColor;
+    type Output = ();
+    fn draw<D>(
+        &self, 
+        target: &mut D
+    ) -> Result<Self::Output, <D as DrawTarget>::Error>
+    where
+        D: DrawTarget<Color = Self::Color> 
+    {
+        let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        let textbox_style = TextBoxStyleBuilder::new()
+            .height_mode(HeightMode::FitToText)
+            .alignment(HorizontalAlignment::Justified)
+            .paragraph_spacing(5)
+            .build();
+        let bounds = Rectangle::new(Point::zero(), Size::new(SCREEN_SIZE_X, 0));
+        TextBox::with_textbox_style(self.line, bounds, character_style, textbox_style).draw(target)?;
+        Ok(())
+    }
+}
+
 /// Emergency debug function that spits out errors
 /// TODO: replace by power drain in production!
 pub fn burning_tank(peripherals: &mut Peripherals, text: String) {
-    epaper_hw_init(peripherals);
+    epaper_hw_init_cs(peripherals);
     make_text(peripherals, &text);
     delay(10000000);
     epaper_deep_sleep(peripherals);

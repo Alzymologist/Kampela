@@ -59,7 +59,7 @@ pub fn if_in_free<F>(mut action: F) -> Result<bool, FreeError>
     })
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FreeError {
     MutexLocked,
 }
