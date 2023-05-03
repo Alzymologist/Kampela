@@ -4,9 +4,6 @@ import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_MUTABLE
 import android.content.Intent
 import android.content.IntentFilter
-import android.nfc.NdefMessage
-import android.nfc.NdefRecord
-import android.nfc.NdefRecord.TNF_UNKNOWN
 import android.nfc.NfcAdapter
 import android.nfc.NfcAdapter.*
 import android.nfc.Tag
@@ -48,11 +45,11 @@ class MainActivity : ComponentActivity() {
         if (!ks.aliases().toList().contains("AndroidKeyStore")) {
             val kpg = KeyPairGenerator.getInstance(
                 KeyProperties.KEY_ALGORITHM_EC,
-                "AndroidKeyStore"
+                "AndroidKeyStore",
             )
             val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
                 "AndroidKeyStore",
-                KeyProperties.PURPOSE_SIGN
+                KeyProperties.PURPOSE_SIGN,
             ).run {
                 setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
                 build()
@@ -106,6 +103,7 @@ class MainActivity : ComponentActivity() {
         */
 
         nfcAdapter = getDefaultAdapter(this)
+        Log.d("blem start" , "999");
         if (nfcAdapter == null) {
             Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
             finish()
@@ -114,6 +112,7 @@ class MainActivity : ComponentActivity() {
             Log.d("NFC support status", nfcAdapter!!.isEnabled.toString())
         }
         Log.d("NFC enabled", nfcAdapter?.isEnabled.toString())
+        /*
         val intent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
@@ -121,9 +120,9 @@ class MainActivity : ComponentActivity() {
             this,
             0,
             intent,
-            FLAG_MUTABLE
+            PendingIntent.FLAG_MUTABLE,
         )
-
+*/
         val dbName = this.filesDir.toString()
         setContent {
             SilttiTheme {
@@ -132,11 +131,11 @@ class MainActivity : ComponentActivity() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    color = MaterialTheme.colors.background,
                 ) {
                     ScreenScaffold(
                         dbName,
-                        count
+                        count,
                     ) { newData: List<ByteArray> ->
                         transmitData = newData
                     }
@@ -147,12 +146,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d("resume blem", "1")
+        val intent = Intent(this, javaClass).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_MUTABLE,
+        )
         // An Intent to start your current Activity. Flag to singleTop
         // to imply that it should only be delivered to the current
         // instance rather than starting a new instance of the Activity.
         // Define your filters and desired technology types
-        val filters = arrayOf(IntentFilter(ACTION_TAG_DISCOVERED))
-        val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
+        val filters = arrayOf(IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED))
+        val techTypes = arrayOf(arrayOf<String>(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
 
         // And enable your Activity to receive NFC events. Note that there
         // is no need to manually disable dispatch in onPause() as the system
@@ -162,19 +171,21 @@ class MainActivity : ComponentActivity() {
             this,
             pendingIntent,
             filters,
-            techTypes
+            techTypes,
         )
     }
 
     override fun onPause() {
         super.onPause()
+        Log.d("pause blem", "1")
         nfcAdapter!!.disableForegroundDispatch(this)
     }
 
     // TODO: move to bg thread
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
+        Log.d("NFC blem", "1")
+        if (ACTION_TAG_DISCOVERED == intent.action) {
             packagesSent.reset()
             val tag = if (Build.VERSION.SDK_INT >= 33) {
                 intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
@@ -183,18 +194,20 @@ class MainActivity : ComponentActivity() {
             }
             Log.d("NFC tag", tag.toString())
 
-            NfcA.get(tag)?.let { tech ->
+            IsoDep.get(tag)?.let { tech ->
+                Log.d("max length", tech.maxTransceiveLength.toString())
                 try {
+                    Log.d("blem status", "connecting")
                     while (true) {
                         if (transmitData.size < (packagesSent.count.value ?: 0)) {
                             packagesSent.reset()
                         }
+                        Log.d("sending:", transmitData.getOrNull(packagesSent.count.value ?: 0)?.contentToString() ?: "empty")
                         tech.connect()
                         tech.transceive(transmitData.getOrNull(packagesSent.count.value ?: 0))
+                        tech.close()
                         packagesSent.inc()
                         Log.d("sent: ", packagesSent.count.value.toString())
-                        tech.close()
-
                     }
                 } catch (e: java.lang.Exception) {
                     Log.d("NFC link crashed", e.message ?: "unknown")
