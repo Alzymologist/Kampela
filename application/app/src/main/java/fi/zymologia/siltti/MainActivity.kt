@@ -181,7 +181,7 @@ class MainActivity : ComponentActivity() {
                             }
                         } catch (e: TagLostException) {
                             Log.d("Tag lost", "message $e")
-                            return
+                            break
                         } catch (e: IOException) {
                             Log.d("IOException", "message $e")
                         }
