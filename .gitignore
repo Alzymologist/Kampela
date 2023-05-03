@@ -24,8 +24,10 @@ fp-info-cache
 *.ses
 
 # Exported BOM files
-*.xml
+/hardware/**.xml
 *.csv
+
+**/.idea/
 
 # Rust
 # Siltti compiled code

@@ -154,14 +154,14 @@ class MainActivity : ComponentActivity() {
             this,
             0,
             intent,
-            PendingIntent.FLAG_MUTABLE,
+            FLAG_MUTABLE,
         )
         // An Intent to start your current Activity. Flag to singleTop
         // to imply that it should only be delivered to the current
         // instance rather than starting a new instance of the Activity.
         // Define your filters and desired technology types
         val filters = arrayOf(IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED))
-        val techTypes = arrayOf(arrayOf<String>(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
+        val techTypes = arrayOf(arrayOf<String>(NfcA::class.java.name))
 
         // And enable your Activity to receive NFC events. Note that there
         // is no need to manually disable dispatch in onPause() as the system
@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
             this,
             pendingIntent,
             filters,
-            techTypes,
+            null, // techTypes,
         )
     }
 
@@ -186,32 +186,29 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         Log.d("NFC blem", "1")
         if (ACTION_TAG_DISCOVERED == intent.action) {
-            packagesSent.reset()
-            val tag = if (Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
-            } else {
-                intent.getParcelableExtra(EXTRA_TAG)
-            }
+            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             Log.d("NFC tag", tag.toString())
 
-            IsoDep.get(tag)?.let { tech ->
+            NfcA.get(tag)?.let { tech ->
                 Log.d("max length", tech.maxTransceiveLength.toString())
                 try {
                     Log.d("blem status", "connecting")
+                    tech.connect()
                     while (true) {
                         if (transmitData.size < (packagesSent.count.value ?: 0)) {
                             packagesSent.reset()
                         }
                         Log.d("sending:", transmitData.getOrNull(packagesSent.count.value ?: 0)?.contentToString() ?: "empty")
-                        tech.connect()
-                        tech.transceive(transmitData.getOrNull(packagesSent.count.value ?: 0))
-                        tech.close()
+
+                        tech.transceive(transmitData.getOrNull(packagesSent.count.value ?: 0)?.copyOfRange(0, 10))
+
                         packagesSent.inc()
                         Log.d("sent: ", packagesSent.count.value.toString())
                     }
                 } catch (e: java.lang.Exception) {
                     Log.d("NFC link crashed", e.message ?: "unknown")
                 }
+                tech.close()
                 Log.d("NFC TX", "done")
             }
             packagesSent.disable()

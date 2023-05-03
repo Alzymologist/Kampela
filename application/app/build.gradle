@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "fi.zymologia.siltti"
-        minSdk 30
+        minSdk 33
         targetSdk 33
         versionCode 1
         versionName "milestone 2"

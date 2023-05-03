@@ -1,5 +1,6 @@
 package fi.zymologia.nfctester
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentFilter
@@ -36,15 +37,15 @@ import fi.zymologia.nfctester.ui.theme.NFCTesterTheme
 class MainActivity : ComponentActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private var pendingIntent: PendingIntent? = null
-    private val payload by viewModels<Paload>()
+    private val payload by viewModels<Payload>()
     private var llmode: Boolean = false
-    private var nfca: Boolean = true
+    private var nfca: Boolean = false
     private var repeat: Int = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this)
+        nfcAdapter = getDefaultAdapter(this)
         if (nfcAdapter == null) {
             Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show()
             finish()
@@ -56,12 +57,21 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(this, javaClass).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
-        pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_MUTABLE
-        )
+        pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_MUTABLE,
+            )
+        } else {
+            PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                0,
+            )
+        }
 
         setContent {
             NFCTesterTheme {
@@ -69,24 +79,26 @@ class MainActivity : ComponentActivity() {
                 val type = payload.recordType.observeAsState()
                 val id = payload.recordId.observeAsState()
                 val pl = payload.paload.observeAsState()
+                val rep = payload.repeater.observeAsState()
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
+                    color = MaterialTheme.colors.background,
                 ) {
                     Greeting(
                         tnf,
                         type,
                         id,
                         pl,
+                        rep,
                         payload::setTNF,
                         payload::setType,
                         payload::setId,
                         payload::setPayload,
+                        payload::setRepeater,
                         { new -> llmode = new },
                         { new -> nfca = new },
-                        repeat,
-                        { new -> repeat = new }
+                        { new -> repeat = new },
                     )
                 }
             }
@@ -100,7 +112,7 @@ class MainActivity : ComponentActivity() {
         // instance rather than starting a new instance of the Activity.
         // Define your filters and desired technology types
         val filters = arrayOf(IntentFilter(ACTION_TAG_DISCOVERED))
-        val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
+        //val techTypes = arrayOf(arrayOf(NfcA::class.java.name, Ndef::class.java.name, IsoDep::class.java.name))
 
         // And enable your Activity to receive NFC events. Note that there
         // is no need to manually disable dispatch in onPause() as the system
@@ -110,7 +122,7 @@ class MainActivity : ComponentActivity() {
             this,
             pendingIntent,
             filters,
-            techTypes
+            null,
         )
     }
 
@@ -122,13 +134,12 @@ class MainActivity : ComponentActivity() {
     // TODO: move to bg thread
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (ACTION_TECH_DISCOVERED == intent.action) {
-            val tag = if (Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
-            } else {
-                intent.getParcelableExtra(EXTRA_TAG)
-            }
+        if (ACTION_TAG_DISCOVERED == intent.action) {
+            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+
             Log.d("NFC tag", tag.toString())
+
+            Toast.makeText(this, payload.getPayload().encodeHex(), Toast.LENGTH_SHORT).show()
 
             try {
                 if (llmode) {
@@ -138,7 +149,7 @@ class MainActivity : ComponentActivity() {
                             for (i in 1..repeat) {
                                 tech.connect()
 
-                                tech.transceive(payload.paload.value)
+                                tech.transceive(payload.getPayload())
                                 // Toast.makeText(this, "Sent as NfcA!", Toast.LENGTH_SHORT).show()
 
                                 tech.close()
@@ -149,7 +160,7 @@ class MainActivity : ComponentActivity() {
 
                             for (i in 1..repeat) {
                                 tech.connect()
-                                tech.transceive(payload.paload.value)
+                                tech.transceive(payload.getPayload())
                                 // Toast.makeText(this, "Sent as IsoDep!", Toast.LENGTH_SHORT).show()
                                 tech.close()
                             }
@@ -165,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                 payload.tnf.value ?: 0,
                                 payload.recordType.value,
                                 payload.recordId.value,
-                                payload.paload.value
+                                payload.getPayload(),
                             )
                             Log.d("Record formed", "1")
                             val ndefMessage = NdefMessage(ndefRecord)
@@ -180,7 +191,7 @@ class MainActivity : ComponentActivity() {
                 }
             } catch (e: java.lang.Exception) {
                 Log.d("NFC link crashed", e.message ?: "unknown")
-                Toast.makeText(this, e.message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, e.message ?: "unknown error", Toast.LENGTH_SHORT).show()
             }
         }
         Log.d("NFC", "intent processed")
@@ -193,14 +204,15 @@ fun Greeting(
     type: State<ByteArray?>,
     id: State<ByteArray?>,
     payload: State<ByteArray?>,
+    repeater: State<Int?>,
     setTnf: (String) -> Unit,
     setType: (String) -> Unit,
     setId: (String) -> Unit,
     setPayload: (String) -> Unit,
+    setRepeater: (Int) -> Unit,
     toggle: (Boolean) -> Unit,
     nfcat: (Boolean) -> Unit,
-    repeat: Int,
-    setRepeat: (Int) -> Unit
+    setRepeat: (Int) -> Unit,
 ) {
     val togglestate = remember { mutableStateOf(false) }
     val nfcatogglestate = remember { mutableStateOf(false) }
@@ -211,22 +223,35 @@ fun Greeting(
         TextField(
             value = tnf.value.toString(),
             onValueChange = setTnf,
-            label = { Text("tnf") }
+            label = { Text("tnf") },
         )
         TextField(
             value = type.value?.encodeHex() ?: "",
             onValueChange = setType,
-            label = { Text("type") }
+            label = { Text("type") },
         )
         TextField(
             value = id.value?.encodeHex() ?: "",
             onValueChange = setId,
-            label = { Text("value") }
+            label = { Text("value") },
         )
         TextField(
             value = payload.value?.encodeHex() ?: "",
             onValueChange = setPayload,
-            label = { Text("payload") }
+            label = { Text("payload") },
+        )
+        Text("Repeat in contents:")
+        TextField(
+            value = repeater.value.toString(),
+            onValueChange = { new ->
+                val a = try {
+                    new.trim().toInt()
+                } catch(_: java.lang.NumberFormatException) {
+                    1
+                }
+                setRepeater(a)
+            },
+            label = { Text("payload repeat") },
         )
         Row {
             Text("low level mode:")
@@ -243,30 +268,36 @@ fun Greeting(
                     nfcatogglestate.value = new
                     nfcat(new)
                 },
-                enabled = togglestate.value
+                enabled = togglestate.value,
             )
         }
         Text("Repeat")
         TextField(
             value = repeatModel.value.toString(),
             onValueChange = { new ->
-                repeatModel.value = new.toInt()
+                repeatModel.value = try {
+                    new.trim().toInt()
+                } catch(_: java.lang.NumberFormatException) {
+                    1
+                }
                 setRepeat(repeatModel.value)
             },
-            label = { Text("payload") }
+            label = { Text("payload") },
         )
     }
 }
 
-class Paload : ViewModel() {
+class Payload : ViewModel() {
     private var _tnf = MutableLiveData<Short>(5)
     private var _recordType = MutableLiveData<ByteArray>(null)
     private var _recordId = MutableLiveData<ByteArray>(null)
-    private var _paload = MutableLiveData<ByteArray>(byteArrayOf(1, 2, 3, 4))
+    private var _payload = MutableLiveData(byteArrayOf(0x37))
+    private var _repeater = MutableLiveData(128)
     val tnf: LiveData<Short?> = _tnf
     val recordType: LiveData<ByteArray> = _recordType
     val recordId: LiveData<ByteArray> = _recordId
-    val paload: LiveData<ByteArray> = _paload
+    val paload: LiveData<ByteArray> = _payload
+    var repeater: LiveData<Int> = _repeater
 
     fun setTNF(a: String) {
         try {
@@ -295,10 +326,22 @@ class Paload : ViewModel() {
     fun setPayload(a: String) {
         Log.d("input:", a)
         try {
-            _paload.value = a.decodeHex()
+            _payload.value = a.decodeHex()
         } catch (_: java.lang.Exception) {
             Log.d("payload manager", "payload not parsed")
         }
+    }
+
+    fun setRepeater(a: Int) {
+        _repeater.value = a
+    }
+
+    fun getPayload(): ByteArray {
+        var p = byteArrayOf()
+        repeat(_repeater.value ?: 0) {
+            p += _payload.value ?: byteArrayOf()
+        }
+        return p
     }
 }
 
