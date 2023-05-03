@@ -60,7 +60,7 @@ impl NfcPacket {
             .try_into()
             .expect("static known length")
     }
-    pub fn from_raw(raw: [u8; NFC_PAYLOAD_SIZE as usize]) -> Self {
+    pub fn from_raw(raw: [u8; NFC_PACKET_FULL_SIZE]) -> Self {
         let (total_length_info, data) = raw.split_at(TOTAL_LEN_INFO_SIZE);
         Self {
             total_length_info: total_length_info.try_into().expect("static known length"),
