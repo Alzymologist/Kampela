@@ -190,7 +190,7 @@ fun ScanScreen(
                     setAppState(Mode.Address)
                 }
             ) {
-                Text("Create address")
+                Text("Create an address")
             }
         }
     }
