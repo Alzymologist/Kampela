@@ -34,8 +34,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleOwner
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -60,7 +58,7 @@ fun KeepScreenOn() {
 fun ScanScreen(
     dbName: String,
     transmitCallback: (List<ByteArray>) -> Unit,
-    setAppState: (Mode) -> Unit
+    setAppState: (Mode) -> Unit,
 ) {
     val collection = remember { Collection() }
     val frames: MutableState<Frames?> = remember { mutableStateOf(null) }
@@ -77,7 +75,7 @@ fun ScanScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
     ) {
         AndroidView(
             factory = { context ->
@@ -124,8 +122,13 @@ fun ScanScreen(
                                         transmitCallback(
                                             transmittable.map {
                                                 it.toUByteArray().toByteArray()
-                                            }
+                                            },
                                         )
+                                        // Thanks to very smart electrical engineers in certain
+                                        // smartphone companies,
+                                        // NFC stops working when camera is on sometimes.
+                                        // This is too funny to be true but here we are.
+                                        cameraProvider.unbindAll()
                                         setAppState(Mode.TX)
                                     },
                                     collection::processFrame,
@@ -136,11 +139,11 @@ fun ScanScreen(
                                             Toast.makeText(
                                                 context,
                                                 "QR scanner error: " + e.message,
-                                                Toast.LENGTH_SHORT
+                                                Toast.LENGTH_SHORT,
                                             ).show()
                                         }
                                     },
-                                    collection::clean
+                                    collection::clean,
                                 )
                             }
                         }
@@ -150,7 +153,7 @@ fun ScanScreen(
                         lifecycleOwner,
                         cameraSelector,
                         imageAnalysis,
-                        preview
+                        preview,
                     )
                 }, executor)
                 previewView
@@ -159,14 +162,14 @@ fun ScanScreen(
                 .padding(bottom = 24.dp)
                 .border(
                     BorderStroke(1.dp, MaterialTheme.colors.primary),
-                    RoundedCornerShape(8.dp)
+                    RoundedCornerShape(8.dp),
                 )
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp)),
         )
 
         Column(
             verticalArrangement = Arrangement.Bottom,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             ScanProgressBar(
                 frames = frames,
@@ -179,18 +182,18 @@ fun ScanScreen(
                             .makeText(
                                 context,
                                 "QR scanner reset error: " + e.message,
-                                Toast.LENGTH_SHORT
+                                Toast.LENGTH_SHORT,
                             ).show()
                     }
-                }
+                },
             )
             Button(
                 onClick = {
                     transmitCallback(emptyList())
                     setAppState(Mode.Address)
-                }
+                },
             ) {
-                Text("Create address")
+                Text("Create an address")
             }
         }
     }
@@ -210,12 +213,12 @@ fun processFrame(
     startTransmission: (List<List<UByte>>) -> Unit,
     submitFrame: (List<UByte>) -> Payload,
     refreshFrames: () -> Unit,
-    clean: () -> Unit
+    clean: () -> Unit,
 ) {
     if (imageProxy.image == null) return
     val inputImage = InputImage.fromMediaImage(
         imageProxy.image!!,
-        imageProxy.imageInfo.rotationDegrees
+        imageProxy.imageInfo.rotationDegrees,
     )
 
     barcodeScanner.process(inputImage)
@@ -228,7 +231,7 @@ fun processFrame(
                         Toast.makeText(
                             context,
                             "QR parser error: " + e.message,
-                            Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT,
                         ).show()
                         clean()
                         null
@@ -247,7 +250,7 @@ fun processFrame(
                         Toast.makeText(
                             context,
                             "Payload parsing error: " + e.message,
-                            Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT,
                         ).show()
                     }
                 }
@@ -265,6 +268,6 @@ fun processFrame(
 fun allPermissionsGranted(activity: Activity) = REQUIRED_PERMISSIONS.all {
     ContextCompat.checkSelfPermission(
         activity,
-        it
+        it,
     ) == PackageManager.PERMISSION_GRANTED
 }
