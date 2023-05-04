@@ -6,3 +6,7 @@ members = [
 	"application/rust/siltti",
 	"common",
 ]
+
+exclude = [
+	"firmware",
+]

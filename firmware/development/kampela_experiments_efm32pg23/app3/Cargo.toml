@@ -1,7 +1,7 @@
 [package]
 authors = ["Vera Abramova <abramova.vera@gmail.com>"]
 edition = "2021"
-name = "app"
+name = "app3"
 version = "0.1.0"
 
 [dependencies]
