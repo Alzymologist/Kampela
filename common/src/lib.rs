@@ -22,7 +22,7 @@ use sp_core::{ByteArray, H256};
 /// Is used to calculate the number of packets in `raptorq`.
 ///
 /// To match exactly with actual packet length, must be `8*n + 4`
-pub const NFC_PAYLOAD_SIZE: u16 = 244;
+pub const NFC_PAYLOAD_SIZE: u16 = 29*8 + 4;
 
 /// Size of transmitted data length info, in bytes.
 ///

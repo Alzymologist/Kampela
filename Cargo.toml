@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+	"application/rust/database",
+	"application/rust/qr_reader",
+	"application/rust/siltti",
+	"common",
+]
