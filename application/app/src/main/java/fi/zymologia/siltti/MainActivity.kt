@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -163,6 +164,7 @@ class MainActivity : ComponentActivity() {
     public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
+            Toast.makeText(this, "Tag found!", Toast.LENGTH_SHORT).show()
             val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             Log.d("NFC tag", tag.toString())
 
