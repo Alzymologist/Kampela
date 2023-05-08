@@ -7,16 +7,17 @@ pub const DELAY: usize = 100; //This is magic; don't change without testing or U
 ///
 /// To call, iterate over advance()
 pub trait Operation {
-    type DesiredOutput;
+    type Input;
+    type Output;
     type StateEnum;
 
-    fn new() -> Self;
+    fn new(data: Self::Input) -> Self;
 
     /// Generally delayed state transition
     fn wind(&mut self, state: Self::StateEnum, delay: usize);
 
     /// Call this repeatedly to progress through operation
-    fn advance(&mut self) -> Self::DesiredOutput;
+    fn advance(&mut self) -> Self::Output;
 
     /// change state instantly
     fn change(&mut self, state: Self::StateEnum) {

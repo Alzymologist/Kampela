@@ -74,12 +74,12 @@ impl FrameBuffer {
 
     /// Start full display update sequence
     pub fn request_full(&mut self) {
-        self.change(DisplayState::FullRequested(Request::<FullDraw>::new()));
+        self.change(DisplayState::FullRequested(Request::<FullDraw>::new(self.data.into_inner())));
     }
 
     /// Start partial fast display update sequence
     pub fn request_fast(&mut self) {
-        self.change(DisplayState::FastRequested(Request::<FastDraw>::new()));
+        self.change(DisplayState::FastRequested(Request::<FastDraw>::new(self.data.into_inner())));
     }
 }
 
@@ -99,10 +99,11 @@ pub enum DisplayState {
 }
 
 impl Operation for FrameBuffer {
-    type DesiredOutput = bool;
+    type Input = ();
+    type Output = bool;
     type StateEnum = DisplayState;
 
-    fn new() -> Self {
+    fn new(_: ()) -> Self {
         Self::new_white()
     }
 

@@ -97,10 +97,11 @@ impl ReadI2C {
 }
 
 impl Operation for ReadI2C {
-    type DesiredOutput = Result<Option<u8>, I2CError>;
+    type Input = ();
+    type Output = Result<Option<u8>, I2CError>;
     type StateEnum = ReadI2CState;
 
-    fn new() -> Self {
+    fn new(_: ()) -> Self {
         Self {
             state: ReadI2CState::Init,
             value: None,
@@ -113,7 +114,7 @@ impl Operation for ReadI2C {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> Self::DesiredOutput {
+    fn advance(&mut self) -> Self::Output {
         if self.count() { return Ok(None) };
         match self.state {
             ReadI2CState::Init => {
@@ -211,7 +212,7 @@ impl Operation for ReadI2C {
 }
 
 pub fn read_i2c_sync() -> Result<u8, I2CError> {
-    let mut reader = ReadI2C::new();
+    let mut reader = ReadI2C::new(());
     loop {
         if let Some(out) = reader.advance()? {
             return Ok(out)
