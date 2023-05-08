@@ -58,6 +58,7 @@ static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
+    panic!("out of memory!");
     loop {}
 }
 
@@ -150,16 +151,9 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
-
-    let mut touch_data = [0; LEN_NUM_TOUCHES];
-    let mut touched = false;
-
     let mut frame_set: Vec<Frame> = Vec::new();
 
     let mut ui = UI::init();
-    in_free(|p| {
-        let x = se_rng::SeRng{peripherals: p};
-    });
 
     loop {
         ui.advance();

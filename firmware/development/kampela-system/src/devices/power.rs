@@ -11,7 +11,7 @@ const FULL_REFRESH_POWER: i32 = 5000;
 ///
 /// TODO: place this in background
 pub fn measure_voltage() -> i32 {
-    let out = 0;
+    let mut out = 0f32;
     in_free(|peripherals| {
     adc::reset_int_flags(peripherals);
     /*
@@ -23,7 +23,7 @@ pub fn measure_voltage() -> i32 {
     while !adc::read_int_flag(peripherals) {}
     let data = adc::read_adc(peripherals);
     
-    let out = data as f32 * 0.02110;
+    out = data as f32 * 0.02110;
 
     adc::reset_int_flags(peripherals);
     });
@@ -31,9 +31,12 @@ pub fn measure_voltage() -> i32 {
 }
 
 pub fn check_fast_display_power() -> bool {
+    return true;
     measure_voltage() > FAST_REFRESH_POWER
 }
 
 pub fn check_full_display_power() -> bool {
-    measure_voltage() > FULL_REFRESH_POWER
+    return true;
+    let v = measure_voltage();
+    if v > FULL_REFRESH_POWER { true } else { panic!("voltage: {}", v) }
 }

@@ -295,11 +295,11 @@ impl <const LEN: usize, const POS: u8> Read<LEN, POS> {
 }
 
 impl <const LEN: usize, const POS: u8> Operation for Read<LEN, POS> {
-    type Input = ();
+    type Input<'a> = ();
     type Output = Result<Option<[u8; LEN]>, I2CError>;
     type StateEnum = ReadState<LEN>;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
             state: ReadState::Init,
             buffer: [0; LEN],
@@ -312,7 +312,7 @@ impl <const LEN: usize, const POS: u8> Operation for Read<LEN, POS> {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> Result<Option<[u8; LEN]>, I2CError> {
+    fn advance(&mut self, _: ()) -> Result<Option<[u8; LEN]>, I2CError> {
         if self.count() { return Ok(None) };
         match self.state {
             ReadState::Init => {
@@ -437,11 +437,11 @@ impl <const LEN: usize, const POS: u8> Operation for Read<LEN, POS> {
                     .txdata
                     .write(|w_reg| w_reg.txdata().variant(0b1110001))
                     );
-                self.change(ReadState::Read(ReadLoop::<LEN>::new(())));
+                self.change(ReadState::Read(ReadLoop::<LEN>::new()));
                 Ok(None)
             },
             ReadState::Read(ref mut a) => {
-                if let Some (b) = a.advance()? {
+                if let Some (b) = a.advance(())? {
                     self.buffer = b;
                     self.wind_d(ReadState::Aftermath);
                 };
@@ -490,11 +490,11 @@ impl <const LEN: usize> ReadLoop<LEN> {
 }
 
 impl <const LEN: usize> Operation for ReadLoop<LEN> {
-    type Input = ();
+    type Input<'a> = ();
     type Output = Result<Option<[u8; LEN]>, I2CError>;
     type StateEnum = ReadLoopState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
             position: 0,
             value: [0; LEN],
@@ -509,16 +509,16 @@ impl <const LEN: usize> Operation for ReadLoop<LEN> {
     }
 
 
-    fn advance(&mut self) -> Result<Option<[u8; LEN]>, I2CError> {
+    fn advance(&mut self, _: ()) -> Result<Option<[u8; LEN]>, I2CError> {
         if self.count() { return Ok(None) };
         match self.state {
             ReadLoopState::AckRead => {
                 acknowledge_i2c_tx()?;
-                self.change(ReadLoopState::Read(ReadI2C::new(())));
+                self.change(ReadLoopState::Read(ReadI2C::new()));
                 Ok(None)
             },
             ReadLoopState::Read(ref mut a) => {
-                if let Some(b) = a.advance()? {
+                if let Some(b) = a.advance(())? {
                     self.value[self.position] = b;
                     if self.position == LEN-1 {
                         in_free(|peripherals| 
@@ -535,7 +535,7 @@ impl <const LEN: usize> Operation for ReadLoop<LEN> {
                                 .cmd
                                 .write(|w_reg| w_reg.ack().set_bit())
                         );
-                        self.wind_d(ReadLoopState::Read(ReadI2C::new(())));
+                        self.wind_d(ReadLoopState::Read(ReadI2C::new()));
                         self.position += 1;
                     }
                 }

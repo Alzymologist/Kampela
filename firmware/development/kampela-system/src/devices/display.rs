@@ -10,18 +10,17 @@ use crate::parallel::Operation;
 /// Draw sequence
 ///
 /// Iterate through this to perform drawing and send display to proper sleep mode
-pub struct Request<R: RequestType<Input = [u8; BUFSIZE]>> {
+pub struct Request<R: for <'a> RequestType<Input<'a> = &'a [u8]>> {
     state: RequestState<R>,
-    data: [u8; BUFSIZE],
     timer: usize,
 }
 
-pub enum RequestState<R: RequestType> {
+pub enum RequestState<R: for <'a> RequestType<Input<'a> = &'a [u8]>> {
     Init(EPDInit),
     Draw(R),
 }
 
-impl <R: RequestType<Input = [u8; BUFSIZE]>> Request<R> {
+impl <R: for <'a> RequestType<Input<'a> = &'a [u8]>> Request<R> {
     fn count(&mut self) -> bool {
         if self.timer == 0 {
             false
@@ -32,15 +31,14 @@ impl <R: RequestType<Input = [u8; BUFSIZE]>> Request<R> {
     }
 }
 
-impl <R: RequestType<Input = [u8; BUFSIZE], Output = bool>> Operation for Request<R> {
-    type Input = [u8; BUFSIZE];
+impl <R: for <'a> RequestType<Input<'a> = &'a [u8], Output = bool>> Operation for Request<R> {
+    type Input<'a> = &'a [u8];
     type Output = bool;
     type StateEnum = RequestState<R>;
 
-    fn new(data: [u8; BUFSIZE]) -> Self {
+    fn new() -> Self {
         Self {
-            state: RequestState::Init(EPDInit::new(())),
-            data: data,
+            state: RequestState::Init(EPDInit::new()),
             timer: 0,
         }
     }
@@ -50,17 +48,18 @@ impl <R: RequestType<Input = [u8; BUFSIZE], Output = bool>> Operation for Reques
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, data: Self::Input<'_>) -> bool {
         match self.state {
             RequestState::Init(ref mut a) => {
-                if a.advance() {
-                    let new_state = RequestState::Draw(R::new(self.data));
+                if a.advance(()) {
+                    let new_state = RequestState::Draw(R::new());
                     self.wind_d(new_state);
                 };
                 false
             },
             RequestState::Draw(ref mut a) => {
-                a.advance()
+                if display_is_busy() != Ok(false) { return false };
+                a.advance(data)
                 /*
         epaper_draw_stuff_quickly(peripherals, self.data.into_inner());
         or
@@ -212,13 +211,13 @@ pub enum EPDInitState {
 }
 
 impl Operation for EPDInit {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = EPDInitState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
-            state: EPDInitState::Reset(Reset::new(())),
+            state: EPDInitState::Reset(Reset::new()),
         }
     }
 
@@ -226,16 +225,17 @@ impl Operation for EPDInit {
         self.state = state;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         match self.state{
             EPDInitState::Reset(ref mut a) => {
-                if a.advance() {
-                    self.wind(EPDInitState::WakeUp(EPDCommand::<0x12>::new(())), 5000)
+                if a.advance(()) {
+                    self.wind(EPDInitState::WakeUp(EPDCommand::<0x12>::new()), 5000)
                 }
                 false
             },
             EPDInitState::WakeUp(ref mut a) => {
-                a.advance()
+                if display_is_busy() != Ok(false) { return false };
+                a.advance(())
             },
         }
     }
@@ -268,11 +268,11 @@ impl Reset {
 }
 
 impl Operation for Reset {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = ResetState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
             state: ResetState::R0,
             timer: 1000
@@ -286,7 +286,7 @@ impl Operation for Reset {
     }
 
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         if self.count() { return false };
         match self.state {
             ResetState::R0 => {
@@ -320,25 +320,31 @@ impl RequestType for FullDraw {}
 /// Fast draw sequence without full refresh
 ///
 /// display should be awake
-pub struct FastDraw<> {
+pub struct FastDraw {
     state: FastDrawState,
-    data: [u8; BUFSIZE],
     timer: usize,
 }
 
 pub enum FastDrawState {
-    Init,
+    PrepareC1(EPDCommand<0x4E>),
+    PrepareD1(EPDDataB<0x00>),
+    PrepareC2(EPDCommand<0x4F>),
+    PrepareD2(EPDDataB<0x07>),
+    PrepareC3(EPDCommand<0x3C>),
+    PrepareD3(EPDDataB<0x80>),
+    SendC1(EPDCommand<0x24>),
+    SendD1(EPDData<BUFSIZE>),
+    Update(UpdateFast),
 }
 
 impl Operation for FastDraw {
-    type Input = [u8; BUFSIZE];
+    type Input<'a> = &'a [u8];
     type Output = bool;
     type StateEnum = FastDrawState;
 
-    fn new(data: [u8; BUFSIZE]) -> Self {
+    fn new() -> Self {
         Self {
-            state: FastDrawState::Init,
-            data: data,
+            state: FastDrawState::PrepareC1(EPDCommand::<0x4E>::new()),
             timer: 0,
         }
     }
@@ -348,9 +354,59 @@ impl Operation for FastDraw {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, data: Self::Input<'_>) -> bool {
         match self.state{
-            FastDrawState::Init => true
+            FastDrawState::PrepareC1(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::PrepareD1(EPDDataB::<0x00>::new()));
+                }
+                false
+            },
+            FastDrawState::PrepareD1(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::PrepareC2(EPDCommand::<0x4F>::new()));
+                }
+                false
+            },
+            FastDrawState::PrepareC2(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::PrepareD2(EPDDataB::<0x07>::new()));
+                }
+                false
+            },
+            FastDrawState::PrepareD2(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::PrepareC3(EPDCommand::<0x3C>::new()));
+                }
+                false
+            },
+            FastDrawState::PrepareC3(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::PrepareD3(EPDDataB::<0x80>::new()));
+                }
+                false
+            },
+            FastDrawState::PrepareD3(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::SendC1(EPDCommand::<0x24>::new()));
+                }
+                false
+            },
+            FastDrawState::SendC1(ref mut a) => {
+                if a.advance(()) {
+                    self.change(FastDrawState::SendD1(EPDData::<BUFSIZE>::new()));
+                }
+                false
+            },
+            FastDrawState::SendD1(ref mut a) => {
+                if a.advance(data) {
+                    self.change(FastDrawState::Update(UpdateFast::new()));
+                }
+                false
+            },
+            FastDrawState::Update(ref mut a) => {
+                a.advance(())
+            }
         }
     }
 
@@ -361,7 +417,6 @@ impl Operation for FastDraw {
 /// display should be awake
 pub struct FullDraw {
     state: FullDrawState,
-    data: [u8; BUFSIZE],
     timer: usize,
 }
 
@@ -378,14 +433,13 @@ pub enum FullDrawState {
 }
 
 impl Operation for FullDraw {
-    type Input = [u8; BUFSIZE];
+    type Input<'a> = &'a [u8];
     type Output = bool;
     type StateEnum = FullDrawState;
 
-    fn new(data: [u8; BUFSIZE]) -> Self {
+    fn new() -> Self {
         Self {
-            state: FullDrawState::PrepareC1(EPDCommand::<0x4E>::new(())),
-            data: data,
+            state: FullDrawState::PrepareC1(EPDCommand::<0x4E>::new()),
             timer: 0,
         }
     }
@@ -395,58 +449,58 @@ impl Operation for FullDraw {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, data: Self::Input<'_>) -> bool {
         match self.state{
             FullDrawState::PrepareC1(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::PrepareD1(EPDDataB::<0x00>::new(())));
+                if a.advance(()) {
+                    self.change(FullDrawState::PrepareD1(EPDDataB::<0x00>::new()));
                 }
                 false
             },
             FullDrawState::PrepareD1(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::PrepareC2(EPDCommand::<0x4F>::new(())));
+                if a.advance(()) {
+                    self.change(FullDrawState::PrepareC2(EPDCommand::<0x4F>::new()));
                 }
                 false
             },
             FullDrawState::PrepareC2(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::PrepareD2(EPDDataB::<0x07>::new(())));
+                if a.advance(()) {
+                    self.change(FullDrawState::PrepareD2(EPDDataB::<0x07>::new()));
                 }
                 false
             },
             FullDrawState::PrepareD2(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::SendC1(EPDCommand::<0x24>::new(())));
+                if a.advance(()) {
+                    self.change(FullDrawState::SendC1(EPDCommand::<0x24>::new()));
                 }
                 false
             },
             FullDrawState::SendC1(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::SendD1(EPDData::<BUFSIZE>::new(self.data)));
+                if a.advance(()) {
+                    self.change(FullDrawState::SendD1(EPDData::<BUFSIZE>::new()));
                 }
                 false
             },
             FullDrawState::SendD1(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::SendC2(EPDCommand::<0x26>::new(())));
+                if a.advance(data) {
+                    self.change(FullDrawState::SendC2(EPDCommand::<0x26>::new()));
                 }
                 false
             },
             FullDrawState::SendC2(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::SendD2(EPDData::<BUFSIZE>::new(self.data)));
+                if a.advance(()) {
+                    self.change(FullDrawState::SendD2(EPDData::<BUFSIZE>::new()));
                 }
                 false
             },
             FullDrawState::SendD2(ref mut a) => {
-                if a.advance() {
-                    self.change(FullDrawState::Update(UpdateFull::new(())));
+                if a.advance(data) {
+                    self.change(FullDrawState::Update(UpdateFull::new()));
                 }
                 false
             },
             FullDrawState::Update(ref mut a) => {
-                a.advance()
+                a.advance(())
             }
         }
     }
@@ -466,11 +520,11 @@ pub enum EPDByteState {
 }
 
 impl <const C: u8> Operation for EPDCommand<C> {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = EPDByteState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
             state: EPDByteState::Init,
             timer: 0,
@@ -482,7 +536,7 @@ impl <const C: u8> Operation for EPDCommand<C> {
         self.timer = delay;
     }
     
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         match self.state {
             EPDByteState::Init => {
                 in_free(|peripherals| {
@@ -539,11 +593,11 @@ pub struct EPDDataB<const B: u8>{
 }
 
 impl <const B: u8> Operation for EPDDataB<B> {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = EPDByteState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
             state: EPDByteState::Init,
             timer: 0,
@@ -555,7 +609,7 @@ impl <const B: u8> Operation for EPDDataB<B> {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         match self.state {
             EPDByteState::Init => {
                 in_free(|peripherals| {
@@ -606,7 +660,6 @@ impl <const B: u8> Operation for EPDDataB<B> {
 /// Send data byte `B` to EPD
 pub struct EPDData<const LEN: usize>{
     state: EPDDataState,
-    data: [u8; BUFSIZE],
     position: usize,
     timer: usize,
 }
@@ -619,14 +672,13 @@ pub enum EPDDataState {
 }
 
 impl <const LEN: usize> Operation for EPDData<LEN> {
-    type Input = [u8; BUFSIZE];
+    type Input<'a> = &'a [u8];
     type Output = bool;
     type StateEnum = EPDDataState;
 
-    fn new(data: [u8; BUFSIZE]) -> Self {
+    fn new() -> Self {
         Self {
             state: EPDDataState::Init,
-            data: data,
             position: 0,
             timer: 0,
         }
@@ -637,7 +689,7 @@ impl <const LEN: usize> Operation for EPDData<LEN> {
         self.timer = delay;
     }
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, data: Self::Input<'_>) -> bool {
         match self.state {
             EPDDataState::Init => {
                 in_free(|peripherals| {
@@ -652,9 +704,9 @@ impl <const LEN: usize> Operation for EPDData<LEN> {
                         peripherals
                             .USART0_S
                             .txdata
-                            .write(|w_reg| w_reg.txdata().variant(self.data[self.position]))
+                            .write(|w_reg| w_reg.txdata().variant(data[self.position]))
                             );
-                    if self.position < BUFSIZE {
+                    if self.position < LEN-1 {
                         self.position += 1;
                     } else {
                         self.change(EPDDataState::Aftermath);
@@ -713,13 +765,13 @@ impl UpdateFull {
 }
 
 impl Operation for UpdateFull {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = UpdateFullState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self {
-            state: UpdateFullState::Init(EPDCommand::<0x12>::new(())),
+            state: UpdateFullState::Init(EPDCommand::<0x12>::new()),
             timer: 0
         }
     }
@@ -730,29 +782,29 @@ impl Operation for UpdateFull {
     }
 
 
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         if self.count() { return false };
         match self.state {
             UpdateFullState::Init(ref mut a) => {
-                if a.advance() {
-                    self.wind_d(UpdateFullState::UpdateC1(EPDCommand::<0x22>::new(())));
+                if a.advance(()) {
+                    self.wind_d(UpdateFullState::UpdateC1(EPDCommand::<0x22>::new()));
                 }
                 false
             },
             UpdateFullState::UpdateC1(ref mut a) => {
-                if a.advance() {
-                    self.change(UpdateFullState::UpdateD1(EPDDataB::<0xF7>::new(())));
+                if a.advance(()) {
+                    self.change(UpdateFullState::UpdateD1(EPDDataB::<0xF7>::new()));
                 }
                 false
             },
             UpdateFullState::UpdateD1(ref mut a) => {
-                if a.advance() {
-                    self.change(UpdateFullState::UpdateC2(EPDCommand::<0x20>::new(())));
+                if a.advance(()) {
+                    self.change(UpdateFullState::UpdateC2(EPDCommand::<0x20>::new()));
                 }
                 false
             },
             UpdateFullState::UpdateC2(ref mut a) => {
-                if a.advance() {
+                if a.advance(()) {
                     true
                 } else {
                     false
@@ -761,4 +813,71 @@ impl Operation for UpdateFull {
         }
     }
 }
+
+pub struct UpdateFast {
+    state: UpdateFastState,
+    timer: usize,
+}
+
+pub enum UpdateFastState {
+    UpdateC1(EPDCommand<0x22>),
+    UpdateD1(EPDDataB<0xFF>),
+    UpdateC2(EPDCommand<0x20>),
+}
+
+impl UpdateFast {
+    fn count(&mut self) -> bool {
+        if self.timer == 0 {
+            false
+        } else {
+            self.timer -= 1;
+            true
+        }
+    }
+}
+
+impl Operation for UpdateFast {
+    type Input<'a> = ();
+    type Output = bool;
+    type StateEnum = UpdateFastState;
+
+    fn new() -> Self {
+        Self {
+            state: UpdateFastState::UpdateC1(EPDCommand::<0x22>::new()),
+            timer: 0
+        }
+    }
+    
+    fn wind(&mut self, state: UpdateFastState, delay: usize) {
+        self.state = state;
+        self.timer = delay;
+    }
+
+    fn advance(&mut self, _: ()) -> bool {
+        if self.count() { return false };
+        match self.state {
+            UpdateFastState::UpdateC1(ref mut a) => {
+                if a.advance(()) {
+                    self.change(UpdateFastState::UpdateD1(EPDDataB::<0xFF>::new()));
+                }
+                false
+            },
+            UpdateFastState::UpdateD1(ref mut a) => {
+                if a.advance(()) {
+                    self.change(UpdateFastState::UpdateC2(EPDCommand::<0x20>::new()));
+                }
+                false
+            },
+            UpdateFastState::UpdateC2(ref mut a) => {
+                if a.advance(()) {
+                    true
+                } else {
+                    false
+                }
+            },
+        }
+    }
+}
+
+
 

@@ -73,13 +73,13 @@ impl FrameBuffer {
     }
 
     /// Start full display update sequence
-    pub fn request_full(&mut self) {
-        self.change(DisplayState::FullRequested(Request::<FullDraw>::new(self.data.into_inner())));
+        pub fn request_full(&mut self) {
+        self.display_state = DisplayState::FullRequested(Request::<FullDraw>::new());
     }
 
     /// Start partial fast display update sequence
     pub fn request_fast(&mut self) {
-        self.change(DisplayState::FastRequested(Request::<FastDraw>::new(self.data.into_inner())));
+        self.display_state = DisplayState::FastRequested(Request::<FastDraw>::new());
     }
 }
 
@@ -99,11 +99,11 @@ pub enum DisplayState {
 }
 
 impl Operation for FrameBuffer {
-    type Input = ();
+    type Input<'a> = ();
     type Output = bool;
     type StateEnum = DisplayState;
 
-    fn new(_: ()) -> Self {
+    fn new() -> Self {
         Self::new_white()
     }
 
@@ -113,22 +113,21 @@ impl Operation for FrameBuffer {
     }
 
     /// Move through display update progress
-    fn advance(&mut self) -> bool {
+    fn advance(&mut self, _: ()) -> bool {
         if self.count() { return false };
-        if display_is_busy() != Ok(false) { return false };
         match self.display_state {
             DisplayState::Idle => true,
             DisplayState::FastRequested(ref mut a) => {
                 if check_fast_display_power() {        
-                    if a.advance() {
+                    if a.advance(&self.data.data) {
                         self.wind_d(DisplayState::UpdatingNow)
                     }
                 };
                 false
             },
             DisplayState::FullRequested(ref mut a) => {
-                if check_fast_display_power() {        
-                    if a.advance() {
+                if check_full_display_power() {
+                    if a.advance(&self.data.data) {
                         self.wind_d(DisplayState::UpdatingNow)
                     }
                 };
@@ -198,7 +197,7 @@ struct TextToPrint<'a> {
 }
 
 /// For custom font, see this <https://github.com/embedded-graphics/examples/blob/main/eg-0.7/examples/text-custom-font.rs>
-impl<'a> Drawable for TextToPrint<'a> {
+impl Drawable for TextToPrint<'_> {
     type Color = BinaryColor;
     type Output = ();
     fn draw<D>(

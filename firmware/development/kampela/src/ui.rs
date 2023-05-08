@@ -28,22 +28,15 @@ pub struct UI {
 
 impl UI {
     /// Start of UI.
-    pub fn init() -> UI {
+    pub fn init() -> Self {
         let mut update = uistate::UpdateRequest::new();
         update.set_slow();
-        let mut hardware = None;
-        loop {
-            in_free(|peripherals| {
-                hardware = Some(Hardware::new(peripherals));
-            });
-            if let Some(a) = hardware {
-                let state = uistate::UIState::new(a);
-                return Self {
-                    state: state,
-                    status: UIStatus::Listen,
-                    update: update,
-                }
-            }
+        let hardware = Hardware::new();
+        let state = uistate::UIState::new(hardware);
+        return Self {
+            state: state,
+            status: UIStatus::Listen,
+            update: update,
         }
     }
 
@@ -51,13 +44,13 @@ impl UI {
     pub fn advance(&mut self) {
         match self.status {
             UIStatus::Listen => self.listen(),
-            UIStatus::DisplayOperation => if self.state.display().advance() {
+            UIStatus::DisplayOperation => if self.state.display().advance(()) {
                 self.status = UIStatus::Listen;
             },
             UIStatus::TouchOperation(ref mut touch) => {
-                match touch.advance() {
+                match touch.advance(()) {
                     Ok(Some(touch)) => if let Some(point) = convert(touch) {
-                        in_free(|peripherals| self.update = self.state.handle_event::<FrameBuffer>(point, peripherals).unwrap());
+                        self.update = self.state.handle_event::<FrameBuffer>(point, &mut ()).unwrap();
                         self.status = UIStatus::Listen;
                     },
                     Ok(None) => {},
@@ -111,27 +104,26 @@ struct Hardware {
 }
 
 impl Hardware {
-    pub fn new(h: &mut Peripherals) -> Self {
+    pub fn new() -> Self {
         let entropy = Vec::new();
         let pin_set = false; // TODO query storage
-        let pin = Pincode::new(&mut Self::rng(h), pin_set);
-        let mut display = FrameBuffer::new_white();
+        let pin = Pincode::new(&mut Self::rng(&mut ()), pin_set);
+        let display = FrameBuffer::new_white();
         Self {
             pin: pin,
             entropy: entropy,
             display: display,
         }
-
     }
 }
 
-impl Platform for Hardware {
-    type HAL = Peripherals;
-    type Rng<'a> = se_rng::SeRng<'a>;
+impl <'a> Platform for Hardware {
+    type HAL = ();
+    type Rng<'c> = se_rng::SeRng;
     type Display = FrameBuffer;
 
-    fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
-        se_rng::SeRng{peripherals: h}
+    fn rng<'b>(_: &'b mut ()) -> Self::Rng<'static> {
+        se_rng::SeRng{}
     }
 
     fn pin(&self) -> &Pincode {
