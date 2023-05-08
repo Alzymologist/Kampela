@@ -21,7 +21,7 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, process_nfc_buffer_miller_only};
+use nfc::{BufferInfo, BufferStatus, turn_nfc_collector, NfcCollector, process_nfc_payload, process_nfc_buffer_miller_only};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -41,10 +41,11 @@ use core::ops::DerefMut;
 use cortex_m::interrupt::free;
 use cortex_m::interrupt::Mutex;
 
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
+use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*};
 
 
 lazy_static!{
+    #[derive(Debug)]
     static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
 }
 
@@ -58,7 +59,9 @@ static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
-    loop {}
+    loop {
+        panic!("out of memory")
+    }
 }
 
 #[panic_handler]
@@ -71,21 +74,33 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
 #[interrupt]
 fn LDMA() {
     free(|cs| {
-        let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-        match buffer_info.buffer_status.pass_if_done7() {
-            Ok(_) => {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            peripherals.LDMA_S.if_.reset();
+            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
+            let buffer_info_old = buffer_info.buffer_status.clone();
+            match buffer_info.buffer_status.pass_if_done7() {
+                Ok(_) => {
+                    if !buffer_info.buffer_status.is_write_halted() {
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(0b11111111));
+                    }
+                },
+/*
                 if buffer_info.buffer_status.is_write_halted() {
                     NVIC::mask(Interrupt::LDMA);
                 }
                 else {
                     if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
                         peripherals.LDMA_S.if_.reset();
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1<<7));
+//                        panic!("has reset ldma flags");
                     }
                     else {unreachable!()} // TODO
                 }
-            },
-            Err(_) => unreachable!() //TODO
+*/
+                Err(_) => {}//panic!("old: {:?}, current: {:?}", buffer_info_old, buffer_info) //TODO
+            }
         }
+        else {panic!("can not borrow peripherals in ldms interrupt")}
     });
 }
 
@@ -94,7 +109,7 @@ fn LDMA() {
 fn main() -> ! {
     {
         use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 16384;
+        const HEAP_SIZE: usize = 32768;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
@@ -154,31 +169,49 @@ fn main() -> ! {
     let mut touch_data = [0; LEN_NUM_TOUCHES];
     let mut touched = false;
 
-    let mut frame_set: Vec<Frame> = Vec::new();
+    let mut nfc_collector = NfcCollector::new();
+    let mut frames: Vec<[u8; 240]> = Vec::new();
+
+//    panic!("was still alive!");
 
     let mut ui = UI::init();
-    in_free(|p| {
-        let x = se_rng::SeRng{peripherals: p};
-    });
+
+    let mut counter = 0usize;
+    let mut counter_frames = 0usize;
 
     loop {
-        ui.advance();
+//        ui.advance();
         //nfc.advance();
         // 4. non-UI loop time
-        process_nfc_buffer_miller_only(&mut frame_set, &nfc_buffer);
+/*
+        process_nfc_buffer_miller_only(&mut frames, &nfc_buffer, &mut counter);
+//        if !nfc_buffer[80..].starts_with(&[1;10]) {panic!("{:?}", &nfc_buffer[..80])}
+        
+        counter_frames += frames.len();
+        frames.clear();
+        
+        if counter_frames > 5 {
+            panic!("frames: {counter_frames}, counter: {counter}");
+        }
+//        if counter >= 1 {panic!("counter: {counter}")}
+*/
 
-        if frame_set.len() != 0 {
-            let mut map = BTreeMap::new();
-            for element in frame_set.iter() {
-                map.entry(element).and_modify(|count| *count += 1).or_insert(1);
-            }
-            panic!("{:?}", map)
+//        panic!("was still alive!");
+
+        turn_nfc_collector(&mut nfc_collector, &nfc_buffer);
+        
+//        if let NfcCollector::InProgress{payload_length, decoder_metal} = nfc_collector {
+//            panic!("got part of nfc payload with expected length {payload_length}")
+//        }
+        
+        if let NfcCollector::Done(a) = nfc_collector {
+            let nfc_payload = process_nfc_payload(a).unwrap();
+            panic!("for nfc payload \n{:?}", nfc_payload);
         }
 
     }
-
 }
 
 
-
+// [27325, 182, 269, 269, 270, 357, 1907, 354, 278, 179, 177, 265, 360, 276, 180, 177, 181, 180, 177, 182, 259, 4601, 181, 179, 180, 179, 269, 357, 360, 272, 180, 179, 180, 179, 180, 179, 269, 180, 179, 180, 357, 359, 272, 270, 357, 183, 268, 270, 180, 269, 34034]
 
