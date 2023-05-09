@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free, if_in_free,
-    devices::{power::measure_voltage, se_rng, touch::{Read, LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES}},
+    devices::{se_rng, touch::{Read, LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES}},
     draw::{FrameBuffer, burning_tank}, 
     init::init_peripherals,
     parallel::Operation,
@@ -41,10 +41,10 @@ impl UI {
     }
 
     /// Call in event loop to progress through UI state
-    pub fn advance(&mut self) {
+    pub fn advance(&mut self, voltage: i32) {
         match self.status {
             UIStatus::Listen => self.listen(),
-            UIStatus::DisplayOperation => if self.state.display().advance(()) {
+            UIStatus::DisplayOperation => if self.state.display().advance((voltage)) {
                 self.status = UIStatus::Listen;
             },
             UIStatus::TouchOperation(ref mut touch) => {

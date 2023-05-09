@@ -275,7 +275,7 @@ impl Operation for Reset {
     fn new() -> Self {
         Self {
             state: ResetState::R0,
-            timer: 1000
+            timer: 0
         }
     }
 
@@ -291,17 +291,17 @@ impl Operation for Reset {
         match self.state {
             ResetState::R0 => {
                 in_free(|peripherals| display_res_clear(&mut peripherals.GPIO_S));
-                self.wind(ResetState::R1, 5000);
+                self.wind_d(ResetState::R1);
                 false
             },
             ResetState::R1 => {
                 in_free(|peripherals| display_res_set(&mut peripherals.GPIO_S));
-                self.wind(ResetState::R2, 10000);
+                self.wind_d(ResetState::R2);
                 false
             },
             ResetState::R2 => {
                 in_free(|peripherals| display_res_clear(&mut peripherals.GPIO_S));
-                self.wind(ResetState::R3, 5000);
+                self.wind_d(ResetState::R3);
                 false
             },
             ResetState::R3 => { // TODO: this is not ZERO operation, should it be here?

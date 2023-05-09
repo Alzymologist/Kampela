@@ -24,7 +24,7 @@ use kampela_display_common::display_def::*;
 use cortex_m::asm::delay;
 
 use crate::devices::display::{FastDraw, FullDraw, Request, display_is_busy, epaper_draw_stuff_differently, epaper_draw_stuff_quickly, epaper_hw_init_cs, epaper_deep_sleep};
-use crate::devices::power::{check_fast_display_power, check_full_display_power};
+use crate::devices::power::ADC;
 
 const SCREEN_SIZE_VALUE: usize = (SCREEN_SIZE_X*SCREEN_SIZE_Y) as usize;
 
@@ -33,7 +33,12 @@ use crate::{if_in_free, in_free, parallel::Operation};
 #[derive(Debug)]
 pub enum DisplayError {}
 
-
+/// These are voltage thresholds to allow screen updates;
+/// for wired debug, set both well below 5000
+///
+//TODO tune these values for prod; something like 12k and 8k
+const FAST_REFRESH_POWER: i32 = 4000;
+const FULL_REFRESH_POWER: i32 = 4000;
 
 /// Virtual display data storage
 type PixelData = BitArr!(for SCREEN_SIZE_VALUE, in u8, Msb0);
@@ -99,7 +104,7 @@ pub enum DisplayState {
 }
 
 impl Operation for FrameBuffer {
-    type Input<'a> = ();
+    type Input<'a> = i32;
     type Output = bool;
     type StateEnum = DisplayState;
 
@@ -113,12 +118,12 @@ impl Operation for FrameBuffer {
     }
 
     /// Move through display update progress
-    fn advance(&mut self, _: ()) -> bool {
+    fn advance(&mut self, voltage: i32) -> bool {
         if self.count() { return false };
         match self.display_state {
             DisplayState::Idle => true,
             DisplayState::FastRequested(ref mut a) => {
-                if check_fast_display_power() {        
+                if voltage > FAST_REFRESH_POWER {        
                     if a.advance(&self.data.data) {
                         self.wind_d(DisplayState::UpdatingNow)
                     }
@@ -126,7 +131,7 @@ impl Operation for FrameBuffer {
                 false
             },
             DisplayState::FullRequested(ref mut a) => {
-                if check_full_display_power() {
+                if voltage > FULL_REFRESH_POWER {
                     if a.advance(&self.data.data) {
                         self.wind_d(DisplayState::UpdatingNow)
                     }

@@ -28,9 +28,10 @@ static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    devices::{power::ADC, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, burning_tank}, 
     init::init_peripherals,
+    parallel::Operation,
     BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
 
@@ -155,10 +156,12 @@ fn main() -> ! {
 
     let mut ui = UI::init();
 
+    let mut adc = ADC::new();
+
     loop {
-        ui.advance();
+        adc.advance(());
+        ui.advance(adc.read());
         //nfc.advance();
-        // 4. non-UI loop time
         process_nfc_buffer_miller_only(&mut frame_set, &nfc_buffer);
 
         if frame_set.len() != 0 {
