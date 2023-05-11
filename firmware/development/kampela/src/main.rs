@@ -21,7 +21,7 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, process_nfc_buffer_miller_only};
+use nfc::{BufferInfo, BufferStatus, turn_nfc_collector, NfcCollector, process_nfc_payload, process_nfc_buffer_miller_only};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -42,10 +42,11 @@ use core::ops::DerefMut;
 use cortex_m::interrupt::free;
 use cortex_m::interrupt::Mutex;
 
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
+use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*};
 
 
 lazy_static!{
+    #[derive(Debug)]
     static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
 }
 
@@ -73,21 +74,33 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
 #[interrupt]
 fn LDMA() {
     free(|cs| {
-        let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-        match buffer_info.buffer_status.pass_if_done7() {
-            Ok(_) => {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            peripherals.LDMA_S.if_.reset();
+            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
+            let buffer_info_old = buffer_info.buffer_status.clone();
+            match buffer_info.buffer_status.pass_if_done7() {
+                Ok(_) => {
+                    if !buffer_info.buffer_status.is_write_halted() {
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(0b11111111));
+                    }
+                },
+/*
                 if buffer_info.buffer_status.is_write_halted() {
                     NVIC::mask(Interrupt::LDMA);
                 }
                 else {
                     if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
                         peripherals.LDMA_S.if_.reset();
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1<<7));
+//                        panic!("has reset ldma flags");
                     }
                     else {unreachable!()} // TODO
                 }
-            },
-            Err(_) => unreachable!() //TODO
+*/
+                Err(_) => {}//panic!("old: {:?}, current: {:?}", buffer_info_old, buffer_info) //TODO
+            }
         }
+        else {panic!("can not borrow peripherals in ldms interrupt")}
     });
 }
 
@@ -96,7 +109,7 @@ fn LDMA() {
 fn main() -> ! {
     {
         use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 16384;
+        const HEAP_SIZE: usize = 32768;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
@@ -152,6 +165,12 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
+    let mut nfc_collector = NfcCollector::new();
+    let mut frames: Vec<[u8; 240]> = Vec::new();
+
+    let mut counter = 0usize;
+    let mut counter_frames = 0usize;
+
     let mut frame_set: Vec<Frame> = Vec::new();
 
     let mut ui = UI::init();
@@ -161,21 +180,17 @@ fn main() -> ! {
     loop {
         adc.advance(());
         ui.advance(adc.read());
-        //nfc.advance();
+        turn_nfc_collector(&mut nfc_collector, &nfc_buffer);
         process_nfc_buffer_miller_only(&mut frame_set, &nfc_buffer);
 
-        if frame_set.len() != 0 {
-            let mut map = BTreeMap::new();
-            for element in frame_set.iter() {
-                map.entry(element).and_modify(|count| *count += 1).or_insert(1);
-            }
-            panic!("{:?}", map)
+      if let NfcCollector::Done(a) = nfc_collector {
+            let nfc_payload = process_nfc_payload(a).unwrap();
+            panic!("for nfc payload \n{:?}", nfc_payload);
         }
 
     }
-
 }
 
 
-
+// [27325, 182, 269, 269, 270, 357, 1907, 354, 278, 179, 177, 265, 360, 276, 180, 177, 181, 180, 177, 182, 259, 4601, 181, 179, 180, 179, 269, 357, 360, 272, 180, 179, 180, 179, 180, 179, 269, 180, 179, 180, 357, 359, 272, 270, 357, 183, 268, 270, 180, 269, 34034]
 
