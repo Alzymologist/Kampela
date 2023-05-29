@@ -51,7 +51,8 @@ interface Action {
     [Name=new_specs_set, Throws=ErrorCompanion]
     constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);
     
-    sequence<sequence<u8>>? as_transmittable();
+/*    [Self=ByArc]*/
+    sequence<u8>? make_packet();
 };
 
 interface SpecsKey {
@@ -101,6 +102,7 @@ enum ErrorCompanion {
     "DecodeDbMetadataValue",
     "DecodeDbSpecsKey",
     "DecodeDbSpecsValue",
+    "LTError",
     "MetadataQrDecode",
     "MetadataQrUnexpectedStructure",
     "MetadataVersion",

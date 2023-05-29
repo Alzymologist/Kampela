@@ -4,7 +4,7 @@ use efm32pg23_fix::Peripherals;
 use lazy_static::lazy_static;
 
 pub const LINK_DESCRIPTORS: u32 = 0b00000111000100000111111111110000;
-const CH_TIM0: u8 = 7;
+pub const CH_TIM0: u8 = 7;
 pub const LINK_1: u32 = 0b00000000000000000000000000010011;
 pub const LINK_2: u32 = 0b11111111111111111111111111010011;
 

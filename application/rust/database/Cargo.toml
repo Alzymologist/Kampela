@@ -9,13 +9,13 @@ edition = "2021"
 frame-metadata = {git = "https://github.com/paritytech/frame-metadata", rev = "1ea329920838b3f4170f421cde53ce7e6a15ccee", default-features = false, features = ["v14", "decode"]}
 hex = "0.4.3"
 parity-scale-codec = "3.1.5"
-raptorq = "1.7.0"
 sled = "0.34.7"
 sp-core = {version = "7.0.0", default-features = false, features = ["full_crypto"]}
 substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", rev = "9f6e9ad9229cb6a0138ac37e7ecc6b00e743762e"}
 thiserror = "1.0.35"
 
 kampela-common = {path = "../../../common"}
+lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "575678620bd45451f68a993d450beac0496fcf0a"}
 
 [lib]
 name = "database"

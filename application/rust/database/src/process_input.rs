@@ -1,8 +1,9 @@
 //! Basic processing of QR inputs.
 
+use lt_codes::encoder::Encoder;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
-use std::{convert::TryInto, sync::Arc};
+use std::{convert::TryInto, sync::{Arc, RwLock}};
 
 use kampela_common::{
     Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue, Transaction,
@@ -10,7 +11,6 @@ use kampela_common::{
 };
 
 use crate::error::ErrorCompanion;
-use crate::nfc_fountain::pack_nfc;
 use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
 use crate::storage::{MetadataStorage, MetadataValue};
 use crate::traits::{DbStorage, FromQr, FromQrAndDb};
@@ -98,7 +98,13 @@ impl FromQr for Bytes {
 #[derive(Debug)]
 pub enum Action {
     Success,
-    Transmit(Vec<Vec<u8>>),
+    Transmit(Transmit),
+}
+
+#[derive(Debug)]
+pub struct Transmit {
+    data_with_signature: Vec<u8>,
+    encoder: RwLock<Encoder>,
 }
 
 #[derive(Debug)]
@@ -108,10 +114,15 @@ pub struct Transmittable {
 }
 
 impl Transmittable {
-    pub fn into_packets(self) -> Result<Vec<Vec<u8>>, ErrorCompanion> {
+    pub fn into_transmit(self) -> Result<Transmit, ErrorCompanion> {
         let encoded_data = self.content.encode();
         let signature_maker = SignatureMaker::new(self.signature_maker);
-        pack_nfc(&signature_maker.signed_data(encoded_data))
+        let data_with_signature = signature_maker.signed_data(encoded_data);
+        let encoder = Encoder::init(&data_with_signature).map_err(|_| ErrorCompanion::LTError)?;
+        Ok(Transmit{
+            data_with_signature,
+            encoder: RwLock::new(encoder),
+        })
     }
 }
 
@@ -137,7 +148,7 @@ impl Action {
                             content: TransmittableContent::SignableTransaction(transaction),
                             signature_maker,
                         };
-                        Ok(Self::Transmit(transmittable.into_packets()?))
+                        Ok(Self::Transmit(transmittable.into_transmit()?))
                     }
                     ID_BYTES => {
                         let bytes = Bytes::from_payload_prelude_cut(payload, &encryption)?;
@@ -145,7 +156,7 @@ impl Action {
                             content: TransmittableContent::Bytes(bytes),
                             signature_maker,
                         };
-                        Ok(Self::Transmit(transmittable.into_packets()?))
+                        Ok(Self::Transmit(transmittable.into_transmit()?))
                     }
                     ID_METADATA => {
                         let metadata_storage =
@@ -161,7 +172,7 @@ impl Action {
                             content: TransmittableContent::Specs(specs_value),
                             signature_maker,
                         };
-                        Ok(Self::Transmit(transmittable.into_packets()?))
+                        Ok(Self::Transmit(transmittable.into_transmit()?))
                     }
                     a => Err(ErrorCompanion::UnknownPayloadType(a)),
                 }
@@ -188,7 +199,7 @@ impl Action {
             content: TransmittableContent::Derivation(derivation),
             signature_maker,
         };
-        Ok(Self::Transmit(transmittable.into_packets()?))
+        Ok(Self::Transmit(transmittable.into_transmit()?))
     }
 
     pub fn new_specs_set(
@@ -203,13 +214,19 @@ impl Action {
             content: TransmittableContent::SpecsSet(specs_values),
             signature_maker,
         };
-        Ok(Self::Transmit(transmittable.into_packets()?))
+        Ok(Self::Transmit(transmittable.into_transmit()?))
     }
 
-    pub fn as_transmittable(&self) -> Option<Vec<Vec<u8>>> {
-        match &self {
+    pub fn make_packet(self: &Arc<Self>) -> Option<Vec<u8>> {
+        match self.as_ref() {
             Action::Success => None,
-            Action::Transmit(packets) => Some(packets.to_owned()),
+            Action::Transmit(transmit) => {
+                let mut encoder = match transmit.encoder.write() {
+                    Ok(a) => a,
+                    Err(_) => return None,
+                };
+                encoder.make_packet(&transmit.data_with_signature).ok().map(|packet| packet.serialize().to_vec())
+            },
         }
     }
 }

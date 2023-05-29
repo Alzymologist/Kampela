@@ -17,10 +17,6 @@ use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{ByteArray, H256};
 
-/// NFC payload size, in bytes. Must be transferrable in single `transceive`
-/// operation.
-pub const NFC_PACKET_SIZE: u16 = 128;
-
 #[derive(Clone, Copy, Debug, Decode, Encode, Eq, PartialEq)]
 pub enum Encryption {
     #[codec(index = 0)]
@@ -128,27 +124,6 @@ pub struct DerivationInfo {
     pub chains: Vec<SpecsKey>,
     pub cut_path: String,
     pub has_pwd: bool,
-}
-
-#[derive(Debug, Decode, Encode)]
-pub struct NfcPacket {
-    #[codec(compact)]
-    pub payload_length: u32,
-    pub data: Vec<u8>,
-}
-
-impl NfcPacket {
-    pub fn as_raw_packet(&self) -> Vec<u8> {
-        self.encode()
-    }
-    pub fn from_raw_packet(raw: &[u8]) -> Result<Self, ErrorCommon> {
-        Self::decode(&mut &raw[..]).map_err(|_| ErrorCommon::PacketNotDecodable)
-    }
-}
-
-#[derive(Debug)]
-pub enum ErrorCommon {
-    PacketNotDecodable,
 }
 
 #[cfg(test)]

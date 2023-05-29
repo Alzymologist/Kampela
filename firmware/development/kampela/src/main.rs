@@ -21,17 +21,17 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, turn_nfc_collector, NfcCollector, process_nfc_payload, process_nfc_buffer_miller_only};
+use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    devices::{power::measure_voltage, psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, make_text, burning_tank}, 
     init::init_peripherals,
-    BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
+    BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
 
 use alloc::{borrow::ToOwned, collections::BTreeMap};
@@ -43,6 +43,10 @@ use cortex_m::interrupt::Mutex;
 
 use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*};
 
+use p256::ecdsa::{signature::{Verifier, hazmat::PrehashVerifier}, Signature, VerifyingKey};
+use sha2::Digest;
+use spki::DecodePublicKey;
+use kampela_system::devices::psram::psram_read_at_address;
 
 lazy_static!{
     #[derive(Debug)]
@@ -58,9 +62,9 @@ static mut COUNT_EVEN: bool = false;
 static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
-fn oom(_: Layout) -> ! {
+fn oom(l: Layout) -> ! {
     loop {
-        panic!("out of memory")
+        panic!("out of memory: {:?}", l)
     }
 }
 
@@ -81,7 +85,7 @@ fn LDMA() {
             match buffer_info.buffer_status.pass_if_done7() {
                 Ok(_) => {
                     if !buffer_info.buffer_status.is_write_halted() {
-                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(0b11111111));
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
                     }
                 },
 /*
@@ -109,7 +113,7 @@ fn LDMA() {
 fn main() -> ! {
     {
         use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 32768;
+        const HEAP_SIZE: usize = 24576;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
@@ -165,21 +169,28 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
-
-    let mut touch_data = [0; LEN_NUM_TOUCHES];
-    let mut touched = false;
+//    let mut touch_data = [0; LEN_NUM_TOUCHES];
+//    let mut touched = false;
 
     let mut nfc_collector = NfcCollector::new();
-    let mut frames: Vec<[u8; 240]> = Vec::new();
+//    let mut frames: Vec<[u8; 240]> = Vec::new();
 
 //    panic!("was still alive!");
 
-    let mut ui = UI::init();
+//    let mut ui = UI::init();
 
     let mut counter = 0usize;
-    let mut counter_frames = 0usize;
+//    let mut counter_frames = 0usize;
 
     loop {
+/*
+        let mut hasher = sha2::Sha256::new();
+        for _i in 0..500_000 {
+            hasher.update(&[0]);
+        }
+        let hash = hasher.finalize();
+        panic!("passed hasher successfully");
+*/
 //        ui.advance();
         //nfc.advance();
         // 4. non-UI loop time
@@ -198,20 +209,60 @@ fn main() -> ! {
 
 //        panic!("was still alive!");
 
-        turn_nfc_collector(&mut nfc_collector, &nfc_buffer);
+        turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
         
-//        if let NfcCollector::InProgress{payload_length, decoder_metal} = nfc_collector {
-//            panic!("got part of nfc payload with expected length {payload_length}")
-//        }
+        if let NfcCollector::InProgress(decoder_metal) = nfc_collector {
+            panic!("got part of nfc payload with expected length {:?}", decoder_metal.msg_len)
+        }
         
         if let NfcCollector::Done(a) = nfc_collector {
-            let nfc_payload = process_nfc_payload(a).unwrap();
-            panic!("for nfc payload \n{:?}", nfc_payload);
-        }
 
+            NVIC::mask(Interrupt::LDMA);
+            free(|cs| {
+                let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
+                buffer_info.maybe_previous_tail = PreviousTail::Lost;
+            });
+
+            let nfc_payload = process_nfc_payload(a).unwrap();
+//            panic!("processed nfc payload");
+            // calculate correct hash of the payload
+            let mut first_byte: Option<u8> = None;
+{
+            let mut hasher = sha2::Sha256::new();
+            in_free(|peripherals| {
+                for shift in 0..nfc_payload.encoded_data.total_len {
+                    let address = nfc_payload.encoded_data.start_address.try_shift(shift).unwrap();
+                    let single_element_vec = psram_read_at_address(peripherals, address, 1usize).unwrap();
+                    if shift == 0 {first_byte = Some(single_element_vec[0])}
+                    hasher.update(&single_element_vec);
+                }
+            });
+            let hash = hasher.finalize();
+            
+            // transform signature and verifying key from der-encoding into usable form
+            let signature = Signature::from_der(&nfc_payload.companion_signature).unwrap();
+            let verifying_key = VerifyingKey::from_public_key_der(&nfc_payload.companion_public_key).unwrap();
+
+//            panic!("{:?}", first_byte);
+
+            // and check
+            assert!(verifying_key
+                .verify_prehash(&hash, &signature)
+                .is_ok());
+
+}
+            let string_addition = match first_byte.unwrap() {
+                0 => format!("got bytes"),
+                1 => format!("got derivation"),
+                2 => format!("got signable transaction"),
+                3 => format!("got specs"),
+                4 => format!("got specs set"),
+                a => format!("gor unexpected {a} payload"),
+            };
+
+            panic!("got valid signed payload {string_addition}");
+        }
+        counter += 1;
     }
 }
-
-
-// [27325, 182, 269, 269, 270, 357, 1907, 354, 278, 179, 177, 265, 360, 276, 180, 177, 181, 180, 177, 182, 259, 4601, 181, 179, 180, 179, 269, 357, 360, 272, 180, 179, 180, 179, 180, 179, 269, 180, 179, 180, 357, 359, 272, 270, 357, 183, 268, 270, 180, 269, 34034]
 

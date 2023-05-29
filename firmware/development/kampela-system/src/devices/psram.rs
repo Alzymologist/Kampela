@@ -540,18 +540,18 @@ pub enum ReceivedMetadataError {
     UnexpectedRuntimeVersionFormat
 }
 
-use raptorq_metal_wrap::{ExternalAddress, LimitedDecoderMemory};
-use kampela_common::{KAMPELA_DECODER_MEMORY, NFC_PAYLOAD_SIZE};
+use lt_codes::decoder_metal::ExternalAddress;
 
 impl ExternalAddress for AddressPsram {
+    fn zero() -> Self {
+        AddressPsram::zero()
+    }
     fn shift(&mut self, position: usize) {
         *self = self.try_shift(position).unwrap(); //TODO
     }
 }
 
-impl <'a> LimitedDecoderMemory<AddressPsram> for ExternalPsram<'a> {
-    const PACKET_SIZE: u16 = NFC_PAYLOAD_SIZE;
-    const DECODER_MEMORY: u64 = KAMPELA_DECODER_MEMORY;
+impl <'a> lt_codes::decoder_metal::ExternalMemory<AddressPsram> for ExternalPsram<'a> {
     fn write_external(&mut self, address: &AddressPsram, data: &[u8]) {
          psram_write_at_address(self.peripherals, *address, data).unwrap() //TODO
     }
