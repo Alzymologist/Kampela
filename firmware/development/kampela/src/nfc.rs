@@ -7,8 +7,7 @@ use alloc::{borrow::ToOwned, vec::Vec};
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, make_text, burning_tank}, 
+    devices::{se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     init::init_peripherals,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
@@ -17,6 +16,7 @@ use crate::BUFFER_INFO;
 
 use kampela_system::devices::psram::{AddressPsram, ExternalPsram, PsramAccess, psram_read_at_address};
 use lt_codes::{decoder_metal::{DecoderMetal, ExternalData}, packet::{Packet, PACKET_SIZE}};
+
 use substrate_parser::compacts::find_compact;
 
 use core::ops::DerefMut;
@@ -174,107 +174,8 @@ pub struct MillerProcessed {
     frame_set: Vec<[u8; 240]>,
     tail: MillerTimesDown<FREQ>,
 }
-/*
-pub fn get_miller_frames(input: &[u16], maybe_previous_tail: PreviousTail) -> Option<MillerProcessed> {
-    let times_down = MillerTimesDown::<FREQ>::from_raw(input);
-    match times_down.split_first() {
-        Some((new_nose, full_frames_with_tail)) => {
-            let first_chunk = match maybe_previous_tail {
-                PreviousTail::None => Some(new_nose.to_owned()),
-                PreviousTail::Lost => None,
-                PreviousTail::Usable(previous_tail) => Some(new_nose.stitch_with_tail(&previous_tail)),
-            };
-            match full_frames_with_tail.split_last() {
-                Some((new_tail, full_frames)) => {
-                    let mut frame_set: Vec<[u8;240]> = Vec::new();
-                    if let Some(chunk) = first_chunk {
-                        if let Ok(miller_element_set) = chunk.convert() {
-                            if let Ok(frame) = miller_element_set.collect_frame() {
-                                if let Frame::Standard(standard_frame) = frame {
-                                    if standard_frame.len() == 240 {
-                                        panic!("length 240");
-                                        frame_set.push(standard_frame.try_into().expect("checked size"));
-                                    }
-                                    else if standard_frame.len() == 241 {panic!("length 241")}
-                                }
-                            }
-                        }
-                    }
-                    for chunk in full_frames.into_iter() {
-                        if let Ok(miller_element_set) = chunk.convert() {
-                            if let Ok(frame) = miller_element_set.collect_frame() {
-                                if let Frame::Standard(standard_frame) = frame {
-                                    if standard_frame.len() == 240 {
-                                        panic!("length 240");
-                                        frame_set.push(standard_frame.try_into().expect("checked size"));
-                                    }
-                                    else if standard_frame.len() == 241 {panic!("length 241")}
-                                }
-                            }
-                        }
-                    }
-                    Some(MillerProcessed {
-                        frame_set,
-                        tail: new_tail.to_owned(),
-                    })
-                },
-                None => None //panic!("can not split buffer tail")
-            }
-        },
-        None => None//panic!("can not split buffer nose"), //clean tail here TODO
-    }
-}
 
-pub fn process_nfc_buffer_miller_only(frame_set: &mut Vec<[u8; 240]>, nfc_buffer: &[u16; 4*BUF_QUARTER], counter: &mut usize) {
-    let mut read_from = None;
-    let mut maybe_previous_tail = PreviousTail::None;
-    free(|cs| {
-        let buffer_info = BUFFER_INFO.borrow(cs).borrow();
-        read_from = buffer_info.buffer_status.read_from();
-        maybe_previous_tail = buffer_info.maybe_previous_tail.clone();
-        if *counter >= 10 {panic!("at counter {counter}: {:?}", buffer_info);}
-    });
-    let decoder_input = match read_from {
-        Some(BufRegion::Reg0) => &nfc_buffer[..BUF_QUARTER],
-        Some(BufRegion::Reg1) => &nfc_buffer[BUF_QUARTER..2*BUF_QUARTER],
-        Some(BufRegion::Reg2) => &nfc_buffer[2*BUF_QUARTER..3*BUF_QUARTER],
-        Some(BufRegion::Reg3) => &nfc_buffer[3*BUF_QUARTER..],
-        None => return,
-    };
-    *counter += 1;
-    if let Some(mut miller_processed) = get_miller_frames(decoder_input, maybe_previous_tail) {
-        frame_set.append(&mut miller_processed.frame_set);
-        free(|cs| {
-            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            buffer_info.maybe_previous_tail = PreviousTail::Usable(miller_processed.tail);
-            let was_write_halted = buffer_info.buffer_status.is_write_halted();
-            buffer_info.buffer_status.pass_read_done().expect("to do");
-            if was_write_halted & ! buffer_info.buffer_status.is_write_halted() {
-                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
-//                    peripherals.LDMA_S.if_.reset();
-                    peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
-                }
-                else {panic!("can not borrow peripherals, counter: {counter}, buffer_info: {:?}, got some new frames", buffer_info)}
-            }
-        });
-    }
-    else {
-        free(|cs| {
-            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            buffer_info.maybe_previous_tail = PreviousTail::Lost;
-            let was_write_halted = buffer_info.buffer_status.is_write_halted();
-            buffer_info.buffer_status.pass_read_done().expect("to do");
-            if was_write_halted & ! buffer_info.buffer_status.is_write_halted() {
-                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
-//                    peripherals.LDMA_S.if_.reset();
-                    peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
-                }
-                else {panic!("can not borrow peripherals, counter: {counter}, buffer_info: {:?}, NO new frames", buffer_info)}
-            }
-        });
-    }
-}
-*/
+
 pub fn turn_nfc_collector_correctly(collector: &mut NfcCollector, nfc_buffer: &[u16; 4*BUF_QUARTER]) {
     let mut read_from = None;
     let mut maybe_previous_tail = PreviousTail::None;
@@ -344,61 +245,9 @@ pub fn turn_nfc_collector_correctly(collector: &mut NfcCollector, nfc_buffer: &[
             }
             else {panic!("can not borrow peripherals, buffer_info: {:?}, got some new frames", buffer_info)}
         }
-    });
-}
-/*
-pub fn turn_nfc_collector(collector: &mut NfcCollector, nfc_buffer: &[u16; 4*BUF_QUARTER]) {
-    let mut read_from = None;
-    let mut maybe_previous_tail = PreviousTail::None;
-    free(|cs| {
-        let buffer_info = BUFFER_INFO.borrow(cs).borrow();
-        read_from = buffer_info.buffer_status.read_from();
-        maybe_previous_tail = buffer_info.maybe_previous_tail.clone();
-    });
-    let decoder_input = match read_from {
-        Some(BufRegion::Reg0) => &nfc_buffer[..BUF_QUARTER],
-        Some(BufRegion::Reg1) => &nfc_buffer[BUF_QUARTER..2*BUF_QUARTER],
-        Some(BufRegion::Reg2) => &nfc_buffer[2*BUF_QUARTER..3*BUF_QUARTER],
-        Some(BufRegion::Reg3) => &nfc_buffer[3*BUF_QUARTER..],
-        None => return,
-    };
-    if let Some(miller_processed) = get_miller_frames(decoder_input, maybe_previous_tail) {
-        for frame in miller_processed.frame_set.into_iter() {
-            let nfc_packet = NfcPacket::from_raw(frame);
-            in_free(|peripherals| {
-                let mut external_psram = ExternalPsram{peripherals};
-                collector.add_packet(&mut external_psram, &nfc_packet);
-            });
-        }
-        free(|cs| {
-            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            buffer_info.maybe_previous_tail = PreviousTail::Usable(miller_processed.tail);
-            let was_write_halted = buffer_info.buffer_status.is_write_halted();
-            buffer_info.buffer_status.pass_read_done().expect("to do");
-            if was_write_halted & ! buffer_info.buffer_status.is_write_halted() {
-                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
-                    peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
-                }
-                else {panic!("can not borrow peripherals, buffer_info: {:?}, got some new frames", buffer_info)}
-            }
-        });
-    }
-    else {
-        free(|cs| {
-            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            buffer_info.maybe_previous_tail = PreviousTail::Lost;
-            let was_write_halted = buffer_info.buffer_status.is_write_halted();
-            buffer_info.buffer_status.pass_read_done().expect("to do");
-            if was_write_halted & ! buffer_info.buffer_status.is_write_halted() {
-                if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
-                    peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
-                }
-                else {panic!("can not borrow peripherals, buffer_info: {:?}, NO new frames", buffer_info)}
-            }
-        });
     }
 }
-*/
+
 pub enum NfcCollector {
     Empty,
     InProgress(DecoderMetal<AddressPsram>),

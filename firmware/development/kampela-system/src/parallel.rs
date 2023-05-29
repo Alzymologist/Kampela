@@ -1,19 +1,14 @@
-//! This module exposes self-contained async state machines that can be almost atomically advanced
-//! without locking thread in single-thread embedded system
-
-use efm32pg23_fix::Peripherals;
-
-pub mod touch;
-pub mod display;
+//! Asynchronous operation generic code
 
 /// Default (non-blocking) delay for operation start
-const DELAY: usize = 10000;
+pub const DELAY: usize = 100; //This is magic; don't change without testing or UI will get mean
 
 /// Asynchronous procedures should implement this.
 ///
 /// To call, iterate over advance()
 pub trait Operation {
-    type DesiredOutput;
+    type Input<'a>;
+    type Output;
     type StateEnum;
 
     fn new() -> Self;
@@ -22,7 +17,7 @@ pub trait Operation {
     fn wind(&mut self, state: Self::StateEnum, delay: usize);
 
     /// Call this repeatedly to progress through operation
-    fn advance(&mut self) -> Self::DesiredOutput;
+    fn advance<'a>(&mut self, data: Self::Input<'a>) -> Self::Output;
 
     /// change state instantly
     fn change(&mut self, state: Self::StateEnum) {
@@ -33,5 +28,5 @@ pub trait Operation {
     fn wind_d(&mut self, state: Self::StateEnum) {
         self.wind(state, DELAY);
     }
-
 }
+

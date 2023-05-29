@@ -7,10 +7,10 @@ use lazy_static::lazy_static;
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free, if_in_free,
-    devices::{power::measure_voltage, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    parallel_devices::{Operation, touch},
-    draw::{FrameBuffer, make_text, burning_tank}, 
+    devices::{se_rng, touch::{Read, LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES}},
+    draw::{FrameBuffer, burning_tank}, 
     init::init_peripherals,
+    parallel::Operation,
     BUF_QUARTER, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
 
@@ -28,36 +28,29 @@ pub struct UI {
 
 impl UI {
     /// Start of UI.
-    pub fn init() -> UI {
+    pub fn init() -> Self {
         let mut update = uistate::UpdateRequest::new();
         update.set_slow();
-        let mut hardware = None;
-        loop {
-            in_free(|peripherals| {
-                hardware = Some(Hardware::new(peripherals));
-            });
-            if let Some(a) = hardware {
-                let state = uistate::UIState::new(a);
-                return Self {
-                    state: state,
-                    status: UIStatus::Listen,
-                    update: update,
-                }
-            }
+        let hardware = Hardware::new();
+        let state = uistate::UIState::new(hardware);
+        return Self {
+            state: state,
+            status: UIStatus::Listen,
+            update: update,
         }
     }
 
     /// Call in event loop to progress through UI state
-    pub fn advance(&mut self) {
+    pub fn advance(&mut self, voltage: i32) {
         match self.status {
             UIStatus::Listen => self.listen(),
-            UIStatus::DisplayOperation => if self.state.display().advance() {
+            UIStatus::DisplayOperation => if self.state.display().advance((voltage)) {
                 self.status = UIStatus::Listen;
             },
             UIStatus::TouchOperation(ref mut touch) => {
-                match touch.advance() {
+                match touch.advance(()) {
                     Ok(Some(touch)) => if let Some(point) = convert(touch) {
-                        in_free(|peripherals| self.update = self.state.handle_event::<FrameBuffer>(point, peripherals).unwrap());
+                        self.update = self.state.handle_event::<FrameBuffer>(point, &mut ()).unwrap();
                         self.status = UIStatus::Listen;
                     },
                     Ok(None) => {},
@@ -85,7 +78,7 @@ impl UI {
         if if_in_free(|peripherals|
             peripherals.GPIO_S.if_.read().extif0().bit_is_set()
         ).unwrap() {
-            self.status = UIStatus::TouchOperation(touch::Read::new());
+            self.status = UIStatus::TouchOperation(Read::new());
         };
 
     }
@@ -101,7 +94,7 @@ enum UIStatus {
     /// Screen update started
     DisplayOperation,
     /// Touch event processing
-    TouchOperation(touch::Read<LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES>),
+    TouchOperation(Read<LEN_NUM_TOUCHES, FT6X36_REG_NUM_TOUCHES>),
 }
 
 struct Hardware {
@@ -111,27 +104,26 @@ struct Hardware {
 }
 
 impl Hardware {
-    pub fn new(h: &mut Peripherals) -> Self {
+    pub fn new() -> Self {
         let entropy = Vec::new();
         let pin_set = false; // TODO query storage
-        let pin = Pincode::new(&mut Self::rng(h), pin_set);
-        let mut display = FrameBuffer::new_white();
+        let pin = Pincode::new(&mut Self::rng(&mut ()), pin_set);
+        let display = FrameBuffer::new_white();
         Self {
             pin: pin,
             entropy: entropy,
             display: display,
         }
-
     }
 }
 
-impl Platform for Hardware {
-    type HAL = Peripherals;
-    type Rng<'a> = se_rng::SeRng<'a>;
+impl <'a> Platform for Hardware {
+    type HAL = ();
+    type Rng<'c> = se_rng::SeRng;
     type Display = FrameBuffer;
 
-    fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
-        se_rng::SeRng{peripherals: h}
+    fn rng<'b>(_: &'b mut ()) -> Self::Rng<'static> {
+        se_rng::SeRng{}
     }
 
     fn pin(&self) -> &Pincode {

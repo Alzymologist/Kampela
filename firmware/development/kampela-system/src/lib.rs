@@ -15,7 +15,7 @@ pub mod init;
 mod peripherals;
 pub mod devices;
 pub mod draw;
-pub mod parallel_devices;
+pub mod parallel;
 
 use efm32pg23_fix::{CorePeripherals, Peripherals};
 
@@ -59,7 +59,7 @@ pub fn if_in_free<F>(mut action: F) -> Result<bool, FreeError>
     })
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FreeError {
     MutexLocked,
 }

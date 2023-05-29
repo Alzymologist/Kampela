@@ -552,6 +552,7 @@ impl ExternalAddress for AddressPsram {
 }
 
 impl <'a> lt_codes::decoder_metal::ExternalMemory<AddressPsram> for ExternalPsram<'a> {
+
     fn write_external(&mut self, address: &AddressPsram, data: &[u8]) {
          psram_write_at_address(self.peripherals, *address, data).unwrap() //TODO
     }
