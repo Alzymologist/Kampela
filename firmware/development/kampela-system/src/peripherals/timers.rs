@@ -71,8 +71,8 @@ fn init_timer0(peripherals: &mut Peripherals) {
         .cc0_ctrl
         .write(|w_reg| {
             w_reg
-                .icevctrl().falling() // everyedge
-                .icedge().falling() // both
+                .icevctrl().falling()
+                .icedge().falling()
                 .cufoa().none()
                 .cofoa().none()
                 .cmoa().none()
@@ -94,8 +94,8 @@ fn init_timer0(peripherals: &mut Peripherals) {
         .ctrl
         .write(|w_reg| {
             w_reg
-                .risea().reloadstart()
-                .falla().stop() // reloadstart
+                .risea().none()
+                .falla().reloadstart()
                 .x2cnt().clear_bit()
     });
 

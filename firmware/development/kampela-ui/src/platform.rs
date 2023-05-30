@@ -9,7 +9,6 @@ use embedded_graphics::{pixelcolor::BinaryColor, prelude::{DrawTarget, Point}};
 use rand::Rng;
 use crate::pin::Pincode;
 use crate::uistate::EventResult;
-use patches::entropy_to_phrase;
 use crate::backup::draw_backup_screen;
 
 const ENTROPY_LEN: usize = 32; //TODO: move to appropriate place

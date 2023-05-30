@@ -72,6 +72,9 @@ impl AddressPsram {
         if (bytes[0] != 0) | (bytes[1] > 0x8f) {Err(MemoryError::Overflow)}
         else {Ok(Self(bytes[1..].try_into().expect("static length, always fits")))}
     }
+    pub fn zero() -> Self {
+        Self([0; ADDR_LEN])
+    }
     pub fn inner(&self) -> [u8; ADDR_LEN] {
         self.0
     }
@@ -80,7 +83,7 @@ impl AddressPsram {
         be_bytes[1..].copy_from_slice(&self.inner());
         u32::from_be_bytes(be_bytes)
     }
-    pub fn shift(&self, position: usize) -> Result<Self, MemoryError> {
+    pub fn try_shift(&self, position: usize) -> Result<Self, MemoryError> {
         let new_inner = self.as_u32() + position as u32;
         Self::new(new_inner)
     }
@@ -199,6 +202,7 @@ pub const PSRAM_PAGE_SIZE: u32 = 1024;
 /// Limits maximum address available to `AddressPsram([0x8f, ff, ff])`.
 pub const PSRAM_TOTAL_SIZE: u32 = 67_108_864;
 
+#[derive(Debug)]
 pub struct PsramAccess {
     pub start_address: AddressPsram,
     pub total_len: usize,
@@ -248,14 +252,14 @@ impl <'a> AddressableBuffer<ExternalPsram<'a>> for PsramAccess {
     fn read_slice(&self, ext_memory: &mut ExternalPsram<'a>, position: usize, len: usize) -> Result<Self::ReadBuffer, ParserError<ExternalPsram<'a>>> {
         if self.total_len() < position {return Err(ParserError::OutOfRange { position, total_length: self.total_len() })}
         if self.total_len() < (position + len) {return Err(ParserError::DataTooShort { position: self.total_len(), minimal_length: position + len - self.total_len() })}
-        let address = self.start_address.shift(position).map_err(ParserError::External)?;
+        let address = self.start_address.try_shift(position).map_err(ParserError::External)?;
         psram_read_at_address(ext_memory.peripherals, address, len).map_err(ParserError::External)
     }
     fn limit_length(&self, new_len: usize) -> Self {
         if new_len > self.total_len {panic!()}
         PsramAccess {
-            total_len: new_len,
             start_address: self.start_address,
+            total_len: new_len,
         }
     }
 }
@@ -275,7 +279,7 @@ impl <'a> ResolveType<ExternalPsram<'a>> for MetalRegistry {
     fn resolve_ty(&self, id: u32, ext_memory: &mut ExternalPsram<'a>) -> Result<Type<PortableForm>, ParserError<ExternalPsram<'a>>> {
         match self.registry.get(id as usize) {
             Some(entry_psram) => {
-                let address = self.start_address.shift(entry_psram.position).map_err(ParserError::External)?;
+                let address = self.start_address.try_shift(entry_psram.position).map_err(ParserError::External)?;
                 let encoded_type_data = psram_read_at_address(ext_memory.peripherals, address, entry_psram.entry_len).map_err(ParserError::External)?;
                 Type::<PortableForm>::decode_all(&mut &encoded_type_data[..]).map_err(|_| ParserError::External(MemoryError::TypeInfoDamaged{id}))
             },
@@ -387,7 +391,7 @@ impl <'a> CheckedMetadataMetal {
         position = found_compact.start_next_unit;
         
         for entry_number in 0..types_set_len {
-            let current_address = psram_data.start_address.shift(position).map_err(ReceivedMetadataError::Memory)?;
+            let current_address = psram_data.start_address.try_shift(position).map_err(ReceivedMetadataError::Memory)?;
 
             // Each `PortableType` starts with compact of the entry number.
             let entry_compact_encoded_expected = Compact(entry_number).encode();
@@ -534,5 +538,26 @@ pub enum ReceivedMetadataError {
     TailFormat,
     UnableToDecode,
     UnexpectedRuntimeVersionFormat
+}
+
+use lt_codes::decoder_metal::ExternalAddress;
+
+impl ExternalAddress for AddressPsram {
+    fn zero() -> Self {
+        AddressPsram::zero()
+    }
+    fn shift(&mut self, position: usize) {
+        *self = self.try_shift(position).unwrap(); //TODO
+    }
+}
+
+impl <'a> lt_codes::decoder_metal::ExternalMemory<AddressPsram> for ExternalPsram<'a> {
+
+    fn write_external(&mut self, address: &AddressPsram, data: &[u8]) {
+         psram_write_at_address(self.peripherals, *address, data).unwrap() //TODO
+    }
+    fn read_external(&mut self, address: &AddressPsram, len: usize) -> Vec<u8> {
+         psram_read_at_address(self.peripherals, *address, len).unwrap() //TODO
+    }
 }
 

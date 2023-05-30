@@ -1,10 +1,5 @@
 //! UI state unit; almost all inerfacing should be done through this "object"
 
-#[cfg(not(feature="std"))]
-use alloc::string::String;
-#[cfg(feature="std")]
-use std::string::String;
-
 use embedded_graphics::{
     prelude::Primitive,
     primitives::{

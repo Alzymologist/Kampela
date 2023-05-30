@@ -1,30 +1,22 @@
-#[cfg(not(feature="std"))]
-use alloc::string::String;
-#[cfg(feature="std")]
-use std::string::String;
+//! Screen for seed phrase display
 
 use patches::entropy_to_phrase;
 use embedded_graphics::{
-    geometry::AnchorPoint,
-mono_font::{
-        ascii::{FONT_10X20, FONT_8X13_BOLD, FONT_9X15},
+    mono_font::{
+        ascii::{FONT_8X13_BOLD},
         MonoTextStyle,
     },
-    prelude::*,
-    primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+    primitives::Rectangle,
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
+    style::TextBoxStyleBuilder,
     TextBox,
 };
 
@@ -46,7 +38,7 @@ pub fn draw_backup_screen<D: DrawTarget<Color = BinaryColor>>(entropy: &[u8], di
             TextBox::with_textbox_style(seed, body, character_style, textbox_style).draw(display)?;
             TextBox::with_textbox_style("touch the screen when done", bottom, character_style, textbox_style).draw(display)?;
         },
-        Err(e) => {
+        Err(_e) => {
             TextBox::with_textbox_style("System error! Seed storage corrupted; if this persists, please destroy the device", body, character_style, textbox_style).draw(display)?;
         },
     };

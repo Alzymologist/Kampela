@@ -25,29 +25,11 @@ pub fn display_select_data(gpio: &mut GPIO_S) {
     display_data_command_set(gpio);
 }
 
+/// BUSY is on port B, pin [`SPI_BUSY_PIN`].
 pub fn spi_is_busy(gpio: &mut GPIO_S) -> bool {
     let portb_din_bits = gpio.portb_din.read().din().bits();
     portb_din_bits & (1 << SPI_BUSY_PIN) == (1 << SPI_BUSY_PIN)
 }
-
-
-/*
-/// Turn USART on
-pub fn usart_on(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken0
-        .write(|w_reg| w_reg.usart0().set_bit())
-}
-
-/// Turn USART off
-pub fn usart_off(peripherals: &mut Peripherals) {
-    peripherals
-        .CMU_S
-        .clken0
-        .write(|w_reg| w_reg.usart0().clear_bit())
-}
-*/
 
 /// Initialize USART0, for EPD (display)
 ///

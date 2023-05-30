@@ -27,10 +27,18 @@ hex = {version = "0.4.3", default-features = false, features = ["alloc"]}
 parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive", "bit-vec"]}
 scale-info = {version = "2.3.0", default-features = false}
 substrate_parser = {git = "https://github.com/varovainen/substrate-parser", branch = "va-2023-03-09-traits-for-limited-ram", default-features = false, features = ["embed-display"]}
+nfca-parser = { git = "https://github.com/Alzymologist/NfcA-parser", rev = "d281dc3fbccc55a7d070263a1bf9e2cba5364984", default-features = false }
 
 kampela-system = { path = "../kampela-system" }
 kampela-ui = { path = "../kampela-ui" , default-features = false }
 nalgebra = { version = "0.32.2", default-features = false, features = ["libm"] }
+
+lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "4e2f19226db3a7ac9232eca2970384cfd7f6fe6a", default-features = false}
+kampela-common = {path = "../../../common", default-features = false}
+
+p256 = {version = "0.12.0", default-features = false, features = ["ecdsa", "pkcs8"]}
+sha2 = {version = "0.10.6", default-features = false}
+spki = {version = "0.6.0", features = ["alloc"]}
 
 [profile.release]
 codegen-units = 1

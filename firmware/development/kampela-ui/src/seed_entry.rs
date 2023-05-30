@@ -28,7 +28,7 @@ use embedded_text::{
     TextBox,
 };
 
-use patches::phrase::{entropy_to_phrase, phrase_to_entropy, wordlist_english, WordListElement};
+use patches::phrase::{phrase_to_entropy, wordlist_english, WordListElement};
 
 use crate::uistate::{EventResult, Screen, UpdateRequest};
 use crate::display_def::*;

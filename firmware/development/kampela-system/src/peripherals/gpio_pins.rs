@@ -1,5 +1,7 @@
 //! Map GPIO pins
 
+#![allow(dead_code)]
+
 use cortex_m::asm::delay;
 use efm32pg23_fix::GPIO_S;
 
@@ -11,7 +13,7 @@ pub const POW_PIN: u8 = 9;
 pub const E_MISO_PIN: u8 = 1;
 pub const E_MOSI_PIN: u8 = 2;
 pub const E_SCK_PIN: u8 = 3;
-pub const TOUCH_INT_PIN: u8 = 1;
+//pub const TOUCH_INT_PIN: u8 = 1;
 pub const PSRAM_CS_PIN: u8 = 4; // at portC
 pub const PSRAM_MISO_PIN: u8 = 5; // at portC
 pub const PSRAM_MOSI_PIN: u8 = 6; // at portC
