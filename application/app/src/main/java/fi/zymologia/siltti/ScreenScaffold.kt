@@ -23,7 +23,7 @@ val REQUEST_CODE_PERMISSIONS = 10
 fun ScreenScaffold(
     dbName: String,
     count: State<Int?>,
-    transmitCallback: (List<ByteArray>) -> Unit
+    transmitCallback: (Action?) -> Unit
 ) {
     var appState by remember { mutableStateOf(Mode.Scan) }
 

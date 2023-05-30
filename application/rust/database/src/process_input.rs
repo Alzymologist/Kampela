@@ -6,7 +6,7 @@ use sp_core::H256;
 use std::{convert::TryInto, sync::{Arc, RwLock}};
 
 use kampela_common::{
-    Bytes, DerivationInfo, Encryption, MultiSigner, NfcPacket, SpecsKey, SpecsValue, Transaction,
+    Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue, Transaction,
     TransmittableContent,
 };
 
