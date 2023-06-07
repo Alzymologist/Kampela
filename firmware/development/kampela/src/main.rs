@@ -10,7 +10,7 @@ use alloc::{format, vec::Vec};
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
 use cortex_m::{asm::delay, peripheral::syst::SystClkSource};
-use cortex_m_rt::{entry, exception};
+use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_alloc::Heap;
 
 use embedded_graphics::prelude::Point;
@@ -21,20 +21,17 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload};
-
+use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, NO_PACKETS_PREV_TURN, PARTICIPATED_PACKETS};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::ADC, psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::{FrameBuffer, burning_tank}, 
     init::init_peripherals,
-    parallel::Operation,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
-
 };
 
 use alloc::{borrow::ToOwned, collections::BTreeMap};
@@ -66,13 +63,20 @@ static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(l: Layout) -> ! {
-    panic!("out of memory: {:?}", l);
+    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames flag: {}, packets prev turn: {}, participated packets: {:?}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {NO_PACKETS_PREV_TURN}, unsafe{&PARTICIPATED_PACKETS});
+    loop {}
 }
 
 #[panic_handler]
 fn panic(panic: &PanicInfo<'_>) -> ! {
     let mut peripherals = unsafe{Peripherals::steal()};
     burning_tank(&mut peripherals, format!("{:?}", panic));
+    loop {}
+}
+
+#[exception]
+unsafe fn HardFault(exception_frame: &ExceptionFrame) -> ! {
+    panic!("hard fault: {:?}", exception_frame);
     loop {}
 }
 
@@ -89,6 +93,19 @@ fn LDMA() {
                         peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
                     }
                 },
+/*
+                if buffer_info.buffer_status.is_write_halted() {
+                    NVIC::mask(Interrupt::LDMA);
+                }
+                else {
+                    if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+                        peripherals.LDMA_S.if_.reset();
+                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1<<7));
+//                        panic!("has reset ldma flags");
+                    }
+                    else {unreachable!()} // TODO
+                }
+*/
                 Err(_) => {}//panic!("old: {:?}, current: {:?}", buffer_info_old, buffer_info) //TODO
             }
         }
@@ -101,7 +118,7 @@ fn LDMA() {
 fn main() -> ! {
     {
         use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 24576;
+        const HEAP_SIZE: usize = 0x7600;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
@@ -157,25 +174,32 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
+//    let mut touch_data = [0; LEN_NUM_TOUCHES];
+//    let mut touched = false;
+
     let mut nfc_collector = NfcCollector::new();
+//    let mut frames: Vec<[u8; 240]> = Vec::new();
+
+//    panic!("was still alive!");
+
+//    let mut ui = UI::init();
 
     let mut counter = 0usize;
+//    let mut counter_frames = 0usize;
 
-    let mut ui = UI::init();
-
-    let mut adc = ADC::new();
 
     loop {
-        adc.advance(());
-        ui.advance(adc.read());
-
+        if HEAP.free() < 1000 {panic!("heap ending! {}; counter: {counter}", HEAP.free())}
+        
         turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
-        
-        if let NfcCollector::InProgress(decoder_metal) = nfc_collector {
-            panic!("got part of nfc payload with expected length {:?}", decoder_metal.msg_len)
-        }
-        
+
+//        if let NfcCollector::InProgress(ref decoder_metal) = nfc_collector {
+//            if HEAP.free() < 1000 {panic!("heap ending! {}\ngot part of nfc payload with expected length {:?}, collected {}, buffer_filled: {}", HEAP.free(), decoder_metal.msg_len, decoder_metal.number_of_collected(), decoder_metal.number_packets_in_buffer)}
+//        }
+
         if let NfcCollector::Done(a) = nfc_collector {
+
+//            panic!("got done");
 
             NVIC::mask(Interrupt::LDMA);
             free(|cs| {
@@ -184,8 +208,10 @@ fn main() -> ! {
             });
 
             let nfc_payload = process_nfc_payload(a).unwrap();
+//            panic!("processed nfc payload");
+            // calculate correct hash of the payload
             let mut first_byte: Option<u8> = None;
-
+{
             let mut hasher = sha2::Sha256::new();
             in_free(|peripherals| {
                 for shift in 0..nfc_payload.encoded_data.total_len {
@@ -198,23 +224,30 @@ fn main() -> ! {
             let hash = hasher.finalize();
             
             // transform signature and verifying key from der-encoding into usable form
-            let signature = Signature::from_der(&nfc_payload.companion_signature).unwrap();
+            let signature = match Signature::from_der(&nfc_payload.companion_signature) {
+                Ok(a) => a,
+                Err(_) => panic!("signature recovery, slice start {:?}, length: {}", &nfc_payload.companion_signature[..10], nfc_payload.companion_signature.len()),
+            };
             let verifying_key = VerifyingKey::from_public_key_der(&nfc_payload.companion_public_key).unwrap();
 
+//            panic!("{:?}", first_byte);
+
+            // and check
             assert!(verifying_key
                 .verify_prehash(&hash, &signature)
                 .is_ok());
 
+}
             let string_addition = match first_byte.unwrap() {
-                0 => format!("got bytes"),
-                1 => format!("got derivation"),
-                2 => format!("got signable transaction"),
-                3 => format!("got specs"),
-                4 => format!("got specs set"),
-                a => format!("gor unexpected {a} payload"),
+                0 => format!("bytes"),
+                1 => format!("derivation"),
+                2 => format!("signable transaction"),
+                3 => format!("specs"),
+                4 => format!("specs set"),
+                a => format!("unexpected {a} payload"),
             };
 
-            panic!("got valid signed payload {string_addition}");
+            panic!("got valid signed payload: {string_addition}");
         }
         counter += 1;
     }

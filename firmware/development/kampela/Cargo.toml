@@ -33,12 +33,14 @@ kampela-system = { path = "../kampela-system" }
 kampela-ui = { path = "../kampela-ui" , default-features = false }
 nalgebra = { version = "0.32.2", default-features = false, features = ["libm"] }
 
-lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "4e2f19226db3a7ac9232eca2970384cfd7f6fe6a", default-features = false}
+lt-codes = {git = "https://github.com/Alzymologist/LT-codes", default-features = false}
 kampela-common = {path = "../../../common", default-features = false}
 
 p256 = {version = "0.12.0", default-features = false, features = ["ecdsa", "pkcs8"]}
 sha2 = {version = "0.10.6", default-features = false}
 spki = {version = "0.6.0", features = ["alloc"]}
+
+rand_pcg = {version = "0.3.1", default-features = false}
 
 [profile.release]
 codegen-units = 1
