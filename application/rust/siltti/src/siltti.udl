@@ -51,7 +51,6 @@ interface Action {
     [Name=new_specs_set, Throws=ErrorCompanion]
     constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);
     
-/*    [Self=ByArc]*/
     sequence<u8>? make_packet();
 };
 
