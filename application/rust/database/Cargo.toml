@@ -15,7 +15,7 @@ substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", re
 thiserror = "1.0.35"
 
 kampela-common = {path = "../../../common"}
-lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "575678620bd45451f68a993d450beac0496fcf0a"}
+lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "20c958f29a9772c8a3c8fa6e9dc2a1f3ef3557f7"}
 
 [lib]
 name = "database"

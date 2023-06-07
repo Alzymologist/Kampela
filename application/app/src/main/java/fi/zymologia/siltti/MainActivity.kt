@@ -174,6 +174,7 @@ class MainActivity : ComponentActivity() {
                         while (true) {
                             try {
                                 action.makePacket()?.let {
+                                    Log.d("======> ", it.toString())
                                     tech.transceive(it.toUByteArray().toByteArray())
                                 }
                             } catch (e: TagLostException) {

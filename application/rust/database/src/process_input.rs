@@ -225,8 +225,12 @@ impl Action {
                     Ok(a) => a,
                     Err(_) => return None,
                 };
-                encoder.make_packet(&transmit.data_with_signature).ok().map(|packet| packet.serialize().to_vec())
-            },
+                if let Ok(Some(packet)) = encoder.make_packet(&transmit.data_with_signature) {
+                    Some(packet.serialize().to_vec())
+                } else {
+                    None
+                }
+            }
         }
     }
 }
