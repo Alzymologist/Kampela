@@ -61,6 +61,7 @@ dependencies = [
  "patches",
  "rand",
  "rand_core 0.6.4",
+ "rand_pcg",
  "scale-info",
  "sha2 0.10.6",
  "spki",
@@ -906,9 +907,8 @@ dependencies = [
 [[package]]
 name = "lt-codes"
 version = "0.1.0"
-source = "git+https://github.com/Alzymologist/LT-codes?rev=4e2f19226db3a7ac9232eca2970384cfd7f6fe6a#4e2f19226db3a7ac9232eca2970384cfd7f6fe6a"
+source = "git+https://github.com/Alzymologist/LT-codes#50cab75884c976721acfa562761f99ba3fe1c75c"
 dependencies = [
- "bitvec",
  "blake2-rfc",
  "rand",
  "rand_core 0.6.4",

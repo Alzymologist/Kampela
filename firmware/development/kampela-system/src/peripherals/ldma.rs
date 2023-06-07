@@ -10,7 +10,7 @@ pub const LINK_2: u32 = 0b11111111111111111111111111010011;
 
 pub const TIMER0_CC0_ICF: u32 = 0x40048074;
 
-pub const BUF_QUARTER: usize = 1024;
+pub const BUF_QUARTER: usize = 2048;
 
 #[repr(C)]
 #[derive(Debug)]
