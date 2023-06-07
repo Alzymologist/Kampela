@@ -17,68 +17,6 @@ use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{ByteArray, H256};
 
-/// NFC payload size, in bytes.
-///
-/// Is used to calculate the number of packets in `raptorq`.
-///
-/// To match exactly with actual packet length, must be `8*n + 4`
-pub const NFC_PAYLOAD_SIZE: u16 = 244;
-
-/// Size of transmitted data length info, in bytes.
-///
-/// Transmitted data length, i.e. the size of data converted into set of
-/// packets, is needed for decoding process, and must be present in each packet.
-///
-/// Transmitted data length is limited upstream (in Signer and surrounding
-/// ecosystem) to less than `0x80000000` bytes. Thus, 4 bytes are sufficient to
-/// store the length information.
-pub const TOTAL_LEN_INFO_SIZE: usize = 4;
-
-/// Size of full NFC packet, in bytes.
-///
-/// Full packet must be transferrable in single `transceive` operation.
-///
-/// Size of standard Miller frames filtered during NFC capture.
-pub const NFC_PACKET_FULL_SIZE: usize = NFC_PAYLOAD_SIZE as usize + TOTAL_LEN_INFO_SIZE;
-
-#[derive(Debug)]
-pub struct NfcPacket {
-    total_length_info: [u8; TOTAL_LEN_INFO_SIZE],
-    data: [u8; NFC_PAYLOAD_SIZE as usize],
-}
-
-impl NfcPacket {
-    pub fn construct(total_length: u32, data: [u8; NFC_PAYLOAD_SIZE as usize]) -> Self {
-        Self {
-            total_length_info: total_length.to_be_bytes(),
-            data,
-        }
-    }
-    pub fn as_raw(&self) -> [u8; NFC_PACKET_FULL_SIZE] {
-        [self.total_length_info.to_vec(), self.data.to_vec()]
-            .concat()
-            .try_into()
-            .expect("static known length")
-    }
-    pub fn from_raw(raw: [u8; NFC_PACKET_FULL_SIZE]) -> Self {
-        let (total_length_info, data) = raw.split_at(TOTAL_LEN_INFO_SIZE);
-        Self {
-            total_length_info: total_length_info.try_into().expect("static known length"),
-            data: data.try_into().expect("static known length"),
-        }
-    }
-    pub fn payload_length(&self) -> usize {
-        u32::from_be_bytes(self.total_length_info) as usize
-    }
-    pub fn data(&self) -> [u8; NFC_PAYLOAD_SIZE as usize] {
-        self.data
-    }
-}
-
-/// Decoder memory setting, to make and un-make raptorq packets compatible with
-/// Kampela RAM abilities.
-pub const KAMPELA_DECODER_MEMORY: u64 = 4096;
-
 #[derive(Clone, Copy, Debug, Decode, Encode, Eq, PartialEq)]
 pub enum Encryption {
     #[codec(index = 0)]

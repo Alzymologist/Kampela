@@ -6,10 +6,10 @@ edition = "2021"
 [dependencies]
 database = { path = "../database" }
 qr_reader = { path = "../qr_reader" }
-uniffi = { version = "0.18.0", features=["builtin-bindgen"] }
+uniffi = { version = "0.22.0", features=["builtin-bindgen"] }
 
 [build-dependencies]
-uniffi_build = { version = "0.18.0", features = ["builtin-bindgen"] }
+uniffi_build = { version = "0.22.0", features = ["builtin-bindgen"] }
 
 [lib]
 crate-type = ["staticlib", "cdylib"]

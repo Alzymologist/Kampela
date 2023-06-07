@@ -27,6 +27,9 @@ pub enum ErrorCompanion {
     #[error("Specs storage value got damaged in the database and could not be decoded.")]
     DecodeDbSpecsValue,
 
+    #[error("Error generating LT codes.")]
+    LTError,
+
     #[error("Metadata from scanned QR could not be decoded.")]
     MetadataQrDecode,
 

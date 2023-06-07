@@ -1,24 +1,19 @@
 use embedded_graphics::{
-    geometry::AnchorPoint,
     mono_font::{
-        ascii::{FONT_10X20, FONT_4X6, FONT_6X10},
+        ascii::{FONT_10X20},
         MonoTextStyle,
     },
-    prelude::*,
-    primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+    primitives::Rectangle,
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
+    style::TextBoxStyleBuilder,
     TextBox,
 };
 
@@ -29,7 +24,6 @@ pub fn draw<D>(display: &mut D) -> Result<(), D::Error>
 where
     D: DrawTarget<Color = BinaryColor>,
 {
-    let thin_stroke = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
     let character_style = MonoTextStyle::new(&FONT_10X20, BinaryColor::On);
     let textbox_style = TextBoxStyleBuilder::new()
         .alignment(HorizontalAlignment::Center)

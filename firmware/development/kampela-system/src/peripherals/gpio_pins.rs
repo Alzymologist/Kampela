@@ -1,7 +1,9 @@
 //! Map GPIO pins
 
+#![allow(dead_code)]
+
+use cortex_m::asm::delay;
 use efm32pg23_fix::GPIO_S;
-use crate::visible_delay;
 
 pub const FLASH_CS_PIN: u8 = 0;
 pub const DISP_CS_PIN: u8 = 2;
@@ -11,7 +13,7 @@ pub const POW_PIN: u8 = 9;
 pub const E_MISO_PIN: u8 = 1;
 pub const E_MOSI_PIN: u8 = 2;
 pub const E_SCK_PIN: u8 = 3;
-pub const TOUCH_INT_PIN: u8 = 1;
+//pub const TOUCH_INT_PIN: u8 = 1;
 pub const PSRAM_CS_PIN: u8 = 4; // at portC
 pub const PSRAM_MISO_PIN: u8 = 5; // at portC
 pub const PSRAM_MOSI_PIN: u8 = 6; // at portC
@@ -270,7 +272,7 @@ fn map_gpio(gpio: &mut GPIO_S) {
 fn set_gpio_pins(gpio: &mut GPIO_S) {
     pow_set(gpio);
     i2c_set(gpio);
-    visible_delay(10); // wait after power set! (epaper manual for 2.8V setup)
+    delay(100000); // wait after power set! (epaper manual for 2.8V setup)
     display_chip_select_set(gpio);
     display_data_command_clear(gpio);
     display_res_clear(gpio);

@@ -57,7 +57,7 @@ fun KeepScreenOn() {
 @Composable
 fun ScanScreen(
     dbName: String,
-    transmitCallback: (List<ByteArray>) -> Unit,
+    transmitCallback: (Action?) -> Unit,
     setAppState: (Mode) -> Unit,
 ) {
     val collection = remember { Collection() }
@@ -118,11 +118,9 @@ fun ScanScreen(
                                     dbName,
                                     barcodeScanner,
                                     imageProxy,
-                                    { transmittable: List<List<UByte>> ->
+                                    { transmittable: Action? ->
                                         transmitCallback(
-                                            transmittable.map {
-                                                it.toUByteArray().toByteArray()
-                                            },
+                                            transmittable,
                                         )
                                         // Thanks to very smart electrical engineers in certain
                                         // smartphone companies,
@@ -189,7 +187,7 @@ fun ScanScreen(
             )
             Button(
                 onClick = {
-                    transmitCallback(emptyList())
+                    transmitCallback(null)
                     setAppState(Mode.Address)
                 },
             ) {
@@ -210,7 +208,7 @@ fun processFrame(
     dbName: String,
     barcodeScanner: BarcodeScanner,
     imageProxy: ImageProxy,
-    startTransmission: (List<List<UByte>>) -> Unit,
+    startTransmission: (Action?) -> Unit,
     submitFrame: (List<UByte>) -> Payload,
     refreshFrames: () -> Unit,
     clean: () -> Unit,
@@ -243,9 +241,7 @@ fun processFrame(
                         clean()
                         Log.e("payload content", payload.toString())
                         val action = Action.newPayload(payload, dbName, Signer())
-                        action.asTransmittable()?.let { transmittable ->
-                            startTransmission(transmittable)
-                        }
+                        startTransmission(action)
                     } catch (e: ErrorCompanion) {
                         Toast.makeText(
                             context,

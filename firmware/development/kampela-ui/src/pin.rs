@@ -6,7 +6,6 @@ use alloc::format;
 #[cfg(feature="std")]
 use std::format;
 
-use bitvec::prelude::{bitarr, BitArr, Msb0};
 use embedded_graphics::{
     geometry::AnchorPoint,
     mono_font::{
@@ -15,26 +14,25 @@ use embedded_graphics::{
     },
     prelude::*,
     primitives::{
-        Circle, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
+        Circle, PrimitiveStyle, Rectangle,
     },
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::{Point, Size},
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_text::{
     alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
+    style::TextBoxStyleBuilder,
     TextBox,
 };
 use rand::{Rng, seq::SliceRandom};
 use ux::u4;
 
 use crate::display_def::*;
-use crate::uistate::{EventResult, UIState, UpdateRequest};
+use crate::uistate::{EventResult, Screen, UpdateRequest};
 
 /// Displayed size of pin button
 const PIN_BUTTON_SIZE: Size = Size::new(40, 40);
@@ -71,9 +69,9 @@ const PIN_BUTTON_POSITIONS: [Point; PIN_BUTTON_COUNT] = {
 };
 
 /// Number of pin digits
-const PIN_LEN: usize = 6;
+const PIN_LEN: usize = 4;
 
-const PIN_COUNTER_DIAMETER: u32 = 16;
+const PIN_COUNTER_DIAMETER: u32 = 26;
 
 /// Positions of pin code counter dots
 const PIN_COUNT_POSITIONS: [Point; PIN_LEN] = {
@@ -201,18 +199,23 @@ where
 const PIN_CODE_MOCK: [u4; PIN_LEN] = [u4::new(0); PIN_LEN];
 
 /// UI state for pin code entry stage
+#[derive(Debug)]
 pub struct Pincode {
     code: [u4; PIN_LEN],
     position: usize,
     permutation: [u4; PIN_BUTTON_COUNT],
+    pin_set: bool,
+    pin_incorrect: bool,
 }
 
 impl Pincode {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    pub fn new<R: Rng + ?Sized>(rng: &mut R, pin_set: bool) -> Self {
         Pincode {
             code: [u4::new(0); PIN_LEN],
             position: 0,
             permutation: get_pinkeys(rng),
+            pin_set: pin_set,
+            pin_incorrect: false,
         }
     }
 
@@ -221,12 +224,26 @@ impl Pincode {
         self.permutation = get_pinkeys(rng);
     }
 
+    fn reset_position(&mut self) {
+        self.position = 0;
+    }
+
     /// User pushed a button
     pub fn input<R: Rng + ?Sized>(&mut self, rng: &mut R, key: u4) {
         self.code[self.position] = key;
         self.position += 1;
         self.shuffle(rng);
     }
+
+    /// User pushed a button on pincode check
+    pub fn input_repeat<R: Rng + ?Sized>(&mut self, rng: &mut R, key: u4) {
+        if self.code[self.position] != key {
+            self.pin_incorrect = true;
+        }
+        self.position += 1;
+        self.shuffle(rng);
+    }
+
 
     fn handle_button<D, R: Rng + ?Sized>(
         &mut self,
@@ -250,6 +267,29 @@ impl Pincode {
         Ok(out)
     }
 
+    fn handle_button_repeat<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<UpdateRequest, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let mut out = UpdateRequest::new();
+        for (index, area) in PIN_BUTTON_AREA_ACTIVE.iter().enumerate() {
+            if area.contains(point) {
+                let key = self.permutation[index].clone();
+                pin_button_pushed(&key, &PIN_BUTTON_AREA[index], fast_display)?;
+                self.input_repeat(rng, key);
+                out.set_both();
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+
 
     /// Input event (user touched screen in pin entry mode)
     pub fn handle_event<D, R: Rng + ?Sized>(
@@ -266,18 +306,54 @@ impl Pincode {
         Ok(EventResult {request, state})
     }
 
+    pub fn handle_event_repeat<D, R: Rng + ?Sized>(
+        &mut self,
+        point: Point,
+        rng: &mut R,
+        fast_display: &mut D,
+    ) -> Result<EventResult, D::Error>
+    where
+        D: DrawTarget<Color = BinaryColor>,
+    {
+        let request = self.handle_button_repeat(point, rng, fast_display)?;
+        let state = self.check_pin_repeat();
+        Ok(EventResult {request, state})
+    }
+
     /// Check pin code; decision making for whether to leave this screen and how
-    fn check_pin(&self) -> Option<UIState> {
+    fn check_pin(&mut self) -> Option<Screen> {
         if self.position == PIN_LEN {
-            if self.code == PIN_CODE_MOCK {
-                Some(UIState::OnboardingRestoreOrGenerate)
+            self.reset_position();
+            if self.pin_set {
+                if self.code == PIN_CODE_MOCK {
+                    Some(Screen::End)
+                } else {
+                    Some(Screen::Locked)
+                }
             } else {
-                Some(UIState::Locked)
+                Some(Screen::OnboardingRestoreOrGenerate)
             }
         } else {
             None
         }
     }
+
+    /// Check pin code on onboarding: user should enter it correctly twice/
+    fn check_pin_repeat(&mut self) -> Option<Screen> {
+        if self.position == PIN_LEN {
+            self.reset_position();
+            if self.pin_incorrect {
+                self.pin_incorrect = false;
+                Some(Screen::PinRepeat)
+            } else {
+                // TODO record pincode and seedphrase; reboot
+                Some(Screen::End)
+            }
+        } else {
+            None
+        }
+    }
+
 
     pub fn draw_counter<D>(&self, display: &mut D) -> Result<(), D::Error>
     where

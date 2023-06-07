@@ -1,42 +1,20 @@
 //! UI state unit; almost all inerfacing should be done through this "object"
 
-#[cfg(not(feature="std"))]
-use alloc::string::String;
-
-#[cfg(feature="std")]
-use std::string::String;
-
 use embedded_graphics::{
-    geometry::AnchorPoint,
-    mono_font::{
-        ascii::{FONT_10X20, FONT_6X10},
-        MonoTextStyle,
-    },
     prelude::Primitive,
     primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
+        Line, PrimitiveStyle},
     Drawable,
 };
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::{Dimensions, Point},
     pixelcolor::BinaryColor,
-    Pixel,
 };
-use embedded_text::{
-    alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
-    TextBox,
-};
-use rand::{Rng, seq::SliceRandom};
-use ux::u4;
-
-use patches::phrase::entropy_to_phrase;
 
 use crate::display_def::*;
 
-use crate::pin::Pincode;
+use crate::platform::Platform;
 
 use crate::seed_entry::SeedEntryState;
 
@@ -44,16 +22,7 @@ use crate::restore_or_generate;
 
 pub struct EventResult {
     pub request: UpdateRequest,
-    pub state: Option<UIState>,
-}
-
-impl EventResult {
-    pub fn new() -> Self {
-        EventResult {
-            request: UpdateRequest::new(),
-            state: None,
-        }
-    }
+    pub state: Option<Screen>,
 }
 
 pub struct UpdateRequest {
@@ -109,86 +78,107 @@ impl Default for UpdateRequest {
 }
 
 /// State of UI
-pub enum UIState {
-    PinEntry(Pincode),
+pub struct UIState<P> where
+    P: Platform,
+{
+    screen: Screen,
+    platform: P,
+}
+
+pub enum Screen {
+    PinEntry,
     OnboardingRestoreOrGenerate,
     OnboardingRestore(SeedEntryState),
-    OnboardingBackup(String),
+    OnboardingBackup,
+    PinRepeat,
     Locked,
     End,
 }
 
-impl UIState {
-    pub fn new<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        UIState::PinEntry(Pincode::new(rng))
-        //        UIState::OnboardingRestore(SeedEntryState::new())
+impl <P: Platform> UIState<P> {
+    pub fn new(platform: P) -> Self {
+        UIState {
+            screen: Screen::PinEntry,
+            platform: platform,
+        }
+    }
+
+    pub fn display(&mut self) -> &mut <P as Platform>::Display {
+        self.platform.display()
     }
 
     /// Read user touch event
-    pub fn handle_event<D, R: Rng + ?Sized>(
+    pub fn handle_event<D>(
         &mut self,
         point: Point,
-        rng: &mut R,
-        fast_display: &mut D,
-    ) -> Result<UpdateRequest, D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
+        h: &mut <P as Platform>::HAL,
+    ) -> Result<UpdateRequest, <<P as Platform>::Display as DrawTarget>::Error>
     {
+        let fast_display = self.platform.display();
         let mut out = UpdateRequest::new();
-        match self {
-            UIState::PinEntry(ref mut pincode) => {
-                let res = pincode.handle_event(point, rng, fast_display)?;
+        let mut new_screen = None;
+        match self.screen {
+            Screen::PinEntry => {
+                let res = self.platform.handle_pin_event(point, h)?;
                 out = res.request;
-                if let Some(a) = res.state {
-                    *self = a;
-                }
+                new_screen = res.state;
             }
-            UIState::OnboardingRestoreOrGenerate => match point.x {
+            Screen::OnboardingRestoreOrGenerate => match point.x {
                 0..=100 => {
-                    *self = UIState::OnboardingRestore(SeedEntryState::new());
+                    new_screen = Some(Screen::OnboardingRestore(SeedEntryState::new()));
                     out.set_slow();
                 }
                 150..=300 => {
-                    *self = UIState::OnboardingBackup(String::new());
+                    self.platform.generate_seed(h);
+                    new_screen = Some(Screen::OnboardingBackup);
                     out.set_slow();
                 }
                 _ => {},
             },
-            UIState::OnboardingRestore(ref mut a) => {
-                let res = a.handle_event(point, fast_display)?;
-                out = res.request;
-                if let Some(b) = res.state {
-                    *self = b;
+            Screen::OnboardingRestore(ref mut a) => {
+                let mut seed = None;
+                let res = a.handle_event(point, &mut seed, fast_display)?;
+                if let Some(b) = seed {
+                    self.platform.set_entropy(&b);
                 }
+                out = res.request;
+                new_screen = res.state;
             }
-            UIState::OnboardingBackup(_) => {
-                *self = UIState::End;
+            Screen::OnboardingBackup => {
+                new_screen = Some(Screen::PinRepeat);
                 out.set_slow();
             }
-            UIState::Locked => (),
-            UIState::End => (),
+            Screen::PinRepeat => {
+                let res = self.platform.handle_pin_event_repeat(point, h)?;
+                out = res.request;
+                new_screen = res.state;
+            }
+            Screen::Locked => (),
+            Screen::End => (),
+        }
+        if let Some(a) = new_screen {
+           self.screen = a;
         }
         Ok(out)
     }
 
     /// Display new screen state; should be called only when needed, is slow
-    pub fn render<D>(&mut self, display: &mut D) -> Result<(), D::Error>
-    where
-        D: DrawTarget<Color = BinaryColor>,
+    pub fn render<D>(&mut self) -> Result<(), <<P as Platform>::Display as DrawTarget>::Error>
     {
+        let display = self.platform.display();
         let clear = PrimitiveStyle::with_fill(BinaryColor::Off);
         display.bounding_box().into_styled(clear).draw(display)?;
-        match self {
-            UIState::PinEntry(ref pin) => {
-                pin.draw(display)?;
+        match self.screen {
+            Screen::PinEntry => {
+                self.platform.draw_pincode()?;
             }
-            UIState::OnboardingRestoreOrGenerate => {
+            Screen::OnboardingRestoreOrGenerate => {
                 restore_or_generate::draw(display)?;
             }
-            UIState::OnboardingRestore(ref entry) => {
+            Screen::OnboardingRestore(ref entry) => {
                 entry.draw(display)?;
             }
-            UIState::Locked => {
+            Screen::Locked => {
                 let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
                 Line::new(
                     Point::new(0, 0),
@@ -202,6 +192,12 @@ impl UIState {
                 )
                 .into_styled(linestyle)
                 .draw(display)?;
+            }
+            Screen::OnboardingBackup => {
+                self.platform.draw_backup()?;
+            }
+            Screen::PinRepeat => {
+                self.platform.draw_pincode()?;
             }
             _ => {}
         }

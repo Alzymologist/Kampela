@@ -29,6 +29,9 @@ scale-info = {version = "2.3.0", default-features = false}
 substrate_parser = {git = "https://github.com/varovainen/substrate-parser", branch = "va-2023-03-09-traits-for-limited-ram", default-features = false, features = ["embed-display"]}
 kampela-display-common = { path = "../kampela-display-common" }
 
+lt-codes = {git = "https://github.com/Alzymologist/LT-codes", rev = "4e2f19226db3a7ac9232eca2970384cfd7f6fe6a", default-features = false}
+kampela-common = {path = "../../../common", default-features = false}
+
 [profile.release]
 codegen-units = 1
 lto = true

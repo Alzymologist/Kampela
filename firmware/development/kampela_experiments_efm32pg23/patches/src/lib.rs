@@ -18,4 +18,3 @@ pub use phone_signature::check_phone_creds;
 pub mod phrase;
 pub use phrase::{entropy_to_phrase, phrase_to_entropy};
 
-pub mod collect_nfc_fountain;

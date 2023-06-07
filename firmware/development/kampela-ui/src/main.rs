@@ -1,37 +1,15 @@
 //! This is simulator to develop Kampela UI mocks
 #![cfg(feature="std")]
-use bitvec::prelude::{bitarr, BitArr, Msb0};
-use core::ops::Add;
-use embedded_graphics::{
-    geometry::AnchorPoint,
-    mono_font::{
-        ascii::{FONT_10X20, FONT_6X10},
-        MonoTextStyle,
-    },
-    prelude::Primitive,
-    primitives::{
-        Circle, Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle, StrokeAlignment, Triangle,
-    },
-    Drawable,
-};
 use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    geometry::{Dimensions, Point, Size},
+    geometry::Size,
     pixelcolor::BinaryColor,
-    Pixel,
 };
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use embedded_text::{
-    alignment::{HorizontalAlignment, VerticalAlignment},
-    style::{HeightMode, TextBoxStyleBuilder},
-    TextBox,
-};
-use rand::seq::SliceRandom;
 use rand::{rngs::ThreadRng, thread_rng};
-use std::{thread::sleep, time::{Duration, Instant}};
-use ux::u4;
+use std::{thread::sleep, time::Duration};
+use clap::Parser;
 
 #[macro_use]
 extern crate lazy_static;
@@ -43,22 +21,126 @@ const SLOW_UPDATE_TIME: Duration = Duration::new(1, 0);
 pub mod display_def;
 pub use display_def::*;
 
+mod platform;
+use platform::Platform;
+
 mod pin;
+use pin::Pincode;
+
 mod restore_or_generate;
 mod seed_entry;
 
+mod backup;
+
 mod uistate;
-use uistate::{UIState, UpdateRequest};
+use uistate::UIState;
+
+mod data_state;
+use data_state::{AppStateInit, NFCState, DataInit, StorageState};
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short = 'I')]
+    key_was_created: bool
+}
+
+impl DataInit<Args> for AppStateInit {
+    fn new(params: Args) -> AppStateInit {
+        let storage = StorageState {
+            key_created: params.key_was_created,
+        };
+
+        AppStateInit {
+            nfc: NFCState::Empty,
+            storage: storage,
+        }
+    }
+}
+
+struct HALHandle {
+    pub rng: ThreadRng,
+}
+
+impl HALHandle {
+    pub fn new() -> Self {
+        let rng = thread_rng();
+        Self {
+            rng: rng,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct DesktopSimulator {
+    pin: Pincode,
+    display: SimulatorDisplay<BinaryColor>,
+    seed: Vec<u8>,
+}
+
+impl DesktopSimulator {
+    pub fn new(h: &mut HALHandle) -> Self {
+        let pin = Pincode::new(&mut h.rng, false);
+        let display = SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
+        Self {
+            pin: pin,
+            display: display,
+            seed: Vec::new(),
+        }
+    }
+}
+
+impl Platform for DesktopSimulator {
+    type HAL = HALHandle;
+    type Rng<'a> = &'a mut ThreadRng;
+    type Display = SimulatorDisplay<BinaryColor>;
+
+    fn rng<'a>(h: &'a mut Self::HAL) -> Self::Rng<'a> {
+        &mut h.rng
+    }
+
+    fn pin(&self) -> &Pincode {
+        &self.pin
+    }
+
+    fn pin_mut(&mut self) -> &mut Pincode {
+        &mut self.pin
+    }
+
+    fn display(&mut self) -> &mut Self::Display {
+        &mut self.display
+    }
+
+    fn pin_display(&mut self) -> (&mut Pincode, &mut Self::Display) {
+        (&mut self.pin, &mut self.display)
+    }
+
+    fn set_entropy(&mut self, e: &[u8]) {
+        self.seed = e.to_vec();
+    }
+
+    fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display) {
+        (&self.seed, &mut self.display)
+    }
+
+}
+
 
 fn main() {
+    let args = Args::parse();
+    let init_data_state = AppStateInit::new(args);
+    println!("{:?}", init_data_state);
+
+    /*
     // Prepare
     let mut display: SimulatorDisplay<BinaryColor> =
         SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
+*/
 
-    // TODO: rng should be generic, of course; by seeing how this breaks, find how to fix it
-    let mut rng = thread_rng();
+    let mut h = HALHandle::new();
+    let desktop = DesktopSimulator::new(&mut h);
 
-    let mut state = UIState::new(&mut rng);
+    let mut state = UIState::new(desktop);
 
     // Draw
     let output_settings = OutputSettingsBuilder::new()
@@ -78,22 +160,22 @@ fn main() {
     loop {
         // display event; it would be delayed
         if update.read_fast() {
-            window.update(&display);
+            window.update(state.display());
             println!("skip {} events in fast update", window.events().count());
             //no-op for non-EPD
         }
         if update.read_slow() {
-            match state.render(&mut display) {
+            match state.render::<SimulatorDisplay<BinaryColor>>() {
                     Ok(()) => (),
                     Err(e) => println!("{:?}", e),
                 };
             sleep(SLOW_UPDATE_TIME);
-            window.update(&display);
+            window.update(state.display());
             println!("skip {} events in slow update", window.events().count());
         }
 
         // this collects ui events, do not remove or simulator will crash
-        window.update(&display);
+        window.update(state.display());
 
         // handle input (only pushes are valid in Kampela)
         for event in window.events() {
@@ -103,7 +185,7 @@ fn main() {
                     point,
                 } => {
                     println!("{}", point);
-                        match state.handle_event(point, &mut rng, &mut display) {
+                        match state.handle_event::<SimulatorDisplay<BinaryColor>>(point, &mut h) {
                             Ok(a) => update = a,
                             Err(e) => println!("{e}"),
                         };

@@ -15,17 +15,51 @@ pub mod init;
 mod peripherals;
 pub mod devices;
 pub mod draw;
+pub mod parallel;
 
-/// Ticks counter.
-pub static mut COUNT: u32 = 0;
+use efm32pg23_fix::{CorePeripherals, Peripherals};
 
-/// Make visible delay. For blinker. Input is delay time in ms.
-pub fn visible_delay(ticks_ms: u32) {
-    unsafe {
-        let end = COUNT.wrapping_add(ticks_ms);
+pub use peripherals::ldma::{BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock};
 
-        while end > COUNT {
-            cortex_m::asm::wfi();
+use core::cell::RefCell;
+use core::ops::DerefMut;
+use cortex_m::interrupt::free;
+use cortex_m::interrupt::Mutex;
+
+use lazy_static::lazy_static;
+
+lazy_static!{
+    pub static ref CORE_PERIPHERALS: Mutex<RefCell<CorePeripherals>> = Mutex::new(RefCell::new(CorePeripherals::take().unwrap()));
+    pub static ref PERIPHERALS: Mutex<RefCell<Option<Peripherals>>> = Mutex::new(RefCell::new(None));
+}
+
+use core::ops::FnMut;
+
+/// Mutexed global access to peripherals
+pub fn in_free<F>(mut action: F)
+    where F: FnMut(&mut Peripherals)
+{
+    free(|cs| {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            action(peripherals);
         }
-    }
+    });
+}
+
+/// Mutexed global access to peripherals
+pub fn if_in_free<F>(mut action: F) -> Result<bool, FreeError>
+    where F: FnMut(&mut Peripherals) -> bool
+{
+    free(|cs| {
+        if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
+            return Ok(action(peripherals))
+        } else {
+            return Err(FreeError::MutexLocked)
+        }
+    })
+}
+
+#[derive(Debug, PartialEq)]
+pub enum FreeError {
+    MutexLocked,
 }

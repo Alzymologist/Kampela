@@ -1,18 +1,24 @@
 //! Initializations for ADC module
 
 use efm32pg23_fix::Peripherals;
+use crate::in_free;
 
 /// request single ADC measurement
-pub fn request_adc_measure(peripherals: &mut Peripherals) {
-    peripherals
-        .IADC0_S
-        .cmd
-        .write(|w_reg| w_reg.singlestart().set_bit());
+pub fn request_adc_measure() {
+    in_free(|peripherals|
+        peripherals
+            .IADC0_S
+            .cmd
+            .write(|w_reg| w_reg.singlestart().set_bit())
+    );
 }
 
 /// read value from ADC
-pub fn read_adc(peripherals: &mut Peripherals) -> i32 {
-    let value = peripherals.IADC0_S.singledata.read().data().bits() & 0x00FFFFFF;
+pub fn read_adc() -> i32 {
+    let mut value = 0;
+    in_free(|peripherals|
+        value = peripherals.IADC0_S.singledata.read().data().bits() & 0x00FFFFFF
+    );
     (if value & 0x00800000 == 0 {
         value
     } else {
@@ -29,11 +35,13 @@ pub fn read_int_flag(peripherals: &mut Peripherals) -> bool {
         .bit()
 }
 
-pub fn reset_int_flags(peripherals: &mut Peripherals) {
-    peripherals
-        .IADC0_S
-        .if_
-        .reset();
+pub fn reset_int_flags() {
+    in_free(|peripherals|
+        peripherals
+            .IADC0_S
+            .if_
+            .reset()
+    );
 }
 
 /// Initialize ADC

@@ -15,7 +15,6 @@ pub fn init_cmu(cmu: &mut CMU_S) {
                 .ldma().set_bit()
                 .ldmaxbar().set_bit()
                 .timer0().set_bit()
-                .timer1().set_bit()
                 .usart0().set_bit()
     });
 

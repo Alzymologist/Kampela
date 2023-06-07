@@ -7,10 +7,11 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import fi.zymologia.siltti.Mode
+import fi.zymologia.siltti.uniffi.Action
 
 @Composable
 fun TXScreen(
-    transmitCallback: (List<ByteArray>) -> Unit,
+    transmitCallback: (Action?) -> Unit,
     setAppState: (Mode) -> Unit,
     packagesSent: State<Int?>
 ) {
@@ -25,7 +26,7 @@ fun TXScreen(
         Text("Transmitting...")
         Button(
             onClick = {
-                transmitCallback(emptyList())
+                transmitCallback(null)
                 setAppState(Mode.Scan)
             }
         ) {

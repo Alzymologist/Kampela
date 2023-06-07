@@ -24,12 +24,13 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import fi.zymologia.siltti.ui.theme.SilttiTheme
+import fi.zymologia.siltti.uniffi.Action
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 
 class MainActivity : ComponentActivity() {
-    private var transmitData: List<ByteArray> = emptyList()
+    private var transmitData: Action? = null
     private val packagesSent by viewModels<PackagesSent>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,8 +115,8 @@ class MainActivity : ComponentActivity() {
                     ScreenScaffold(
                         dbName,
                         count,
-                    ) { newData: List<ByteArray> ->
-                        transmitData = newData
+                    ) { newAction: Action? ->
+                        transmitData = newAction
                     }
                 }
             }
@@ -166,39 +167,37 @@ class MainActivity : ComponentActivity() {
             val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             Log.d("NFC tag", tag.toString())
 
-            NfcA.get(tag)?.let { tech ->
-                try {
-                    tech.connect()
-                    while (true) {
-                        if (transmitData.size <= (packagesSent.count.value ?: 0)) {
-                            packagesSent.reset()
-                        }
-                        Log.d("sending:", transmitData.getOrNull(packagesSent.count.value ?: 0)?.contentToString() ?: "empty")
-
-                        try {
-                            transmitData.getOrNull(packagesSent.count.value ?: 0)?.let {
-                                tech.transceive(it)
+            transmitData?.let {action: Action ->
+                NfcA.get(tag)?.let { tech ->
+                    try {
+                        tech.connect()
+                        while (true) {
+                            try {
+                                action.makePacket()?.let {
+                                    Log.d("======> ", it.toString())
+                                    tech.transceive(it.toUByteArray().toByteArray())
+                                }
+                            } catch (e: TagLostException) {
+                                Log.d("Tag lost", "message $e")
+                                break
+                            } catch (e: IOException) {
+                                Log.d("IOException", "message $e")
                             }
-                        } catch (e: TagLostException) {
-                            Log.d("Tag lost", "message $e")
-                            break
-                        } catch (e: IOException) {
-                            Log.d("IOException", "message $e")
+                            packagesSent.inc()
+                            Log.d("sent: ", packagesSent.count.value.toString())
                         }
-                        packagesSent.inc()
-                        Log.d("sent: ", packagesSent.count.value.toString())
+                    } catch (e: IOException) {
+                        Log.d("NFC link crashed", e.message ?: "unknown")
                     }
-                } catch (e: IOException) {
-                    Log.d("NFC link crashed", e.message ?: "unknown")
+                    try {
+                        tech.close()
+                    } catch (e: IOException) {
+                        Log.d("IOException", "message $e")
+                    }
+                    Log.d("NFC TX", "done")
                 }
-                try {
-                    tech.close()
-                } catch (e: IOException) {
-                    Log.d("IOException", "message $e")
-                }
-                Log.d("NFC TX", "done")
+                packagesSent.disable()
             }
-            packagesSent.disable()
         }
 
         Log.d("NFC", "intent processed")
