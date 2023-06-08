@@ -21,7 +21,7 @@ use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, NO_PACKETS_PREV_TURN, PARTICIPATED_PACKETS};
+use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER, NO_PACKETS_PREV_TURN, PARTICIPATED_PACKETS};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -63,7 +63,7 @@ static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(l: Layout) -> ! {
-    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames flag: {}, packets prev turn: {}, participated packets: {:?}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {NO_PACKETS_PREV_TURN}, unsafe{&PARTICIPATED_PACKETS});
+    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames: {}, frames in buffer: {}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {IN_BUFFER});
     loop {}
 }
 
@@ -178,7 +178,6 @@ fn main() -> ! {
 //    let mut touched = false;
 
     let mut nfc_collector = NfcCollector::new();
-//    let mut frames: Vec<[u8; 240]> = Vec::new();
 
 //    panic!("was still alive!");
 
@@ -193,13 +192,7 @@ fn main() -> ! {
         
         turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
 
-//        if let NfcCollector::InProgress(ref decoder_metal) = nfc_collector {
-//            if HEAP.free() < 1000 {panic!("heap ending! {}\ngot part of nfc payload with expected length {:?}, collected {}, buffer_filled: {}", HEAP.free(), decoder_metal.msg_len, decoder_metal.number_of_collected(), decoder_metal.number_packets_in_buffer)}
-//        }
-
         if let NfcCollector::Done(a) = nfc_collector {
-
-//            panic!("got done");
 
             NVIC::mask(Interrupt::LDMA);
             free(|cs| {
@@ -208,7 +201,7 @@ fn main() -> ! {
             });
 
             let nfc_payload = process_nfc_payload(a).unwrap();
-//            panic!("processed nfc payload");
+
             // calculate correct hash of the payload
             let mut first_byte: Option<u8> = None;
 {
@@ -229,8 +222,6 @@ fn main() -> ! {
                 Err(_) => panic!("signature recovery, slice start {:?}, length: {}", &nfc_payload.companion_signature[..10], nfc_payload.companion_signature.len()),
             };
             let verifying_key = VerifyingKey::from_public_key_der(&nfc_payload.companion_public_key).unwrap();
-
-//            panic!("{:?}", first_byte);
 
             // and check
             assert!(verifying_key
