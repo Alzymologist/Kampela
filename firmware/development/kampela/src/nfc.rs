@@ -1,15 +1,10 @@
 //! NFC packet collector and decoder
 
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
-use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
+use nfca_parser::{frame::Frame, miller::*};
 use alloc::{borrow::ToOwned, vec::Vec};
 
 use kampela_system::{
-    PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, burning_tank}, 
-    init::init_peripherals,
-    BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
+    PERIPHERALS, in_free, BUF_QUARTER, CH_TIM0,
 };
 use cortex_m::interrupt::free;
 use crate::BUFFER_INFO;
@@ -169,11 +164,6 @@ impl BufferStatus {
     }
 }
 
-pub struct MillerProcessed {
-    frame_set: Vec<[u8; 240]>,
-    tail: MillerTimesDown<FREQ>,
-}
-
 pub static mut GOT_FRAMES: usize = 0;
 pub static mut NO_PACKETS_PREV_TURN: usize = 0;
 pub static mut PARTICIPATED_PACKETS: Vec<u16> = Vec::new();
@@ -293,10 +283,10 @@ pub enum NfcPayloadError {
     AccessOnPayload,
     AccessOnPublicKey,
     AccessOnSignature,
-    ExcessData,
-    NoCompactPayload,
-    NoCompactPublicKey,
-    NoCompactSignature,
+//    ExcessData,
+//    NoCompactPayload,
+//    NoCompactPublicKey,
+//    NoCompactSignature,
 }
 
 #[derive(Debug)]
@@ -317,9 +307,6 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
     let mut try_encoded_data = None;
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
-        
-        let slice = psram_read_at_address(external_psram.peripherals, completed_collector.start_address, 10).unwrap();
-        
         let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactPayload)?;
         let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
         try_encoded_data = Some(PsramAccess {
@@ -336,9 +323,6 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
     let mut try_companion_signature = None;
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
-        
-        let debug_data = psram_read_at_address(external_psram.peripherals, completed_collector.start_address.try_shift(position).unwrap(), 10).unwrap();
-        
         let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactSignature)?;
         let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
         let signature_data = psram_read_at_address(external_psram.peripherals, start_address, found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;

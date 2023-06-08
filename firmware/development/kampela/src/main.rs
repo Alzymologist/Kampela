@@ -2,48 +2,42 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
-#[macro_use]
 extern crate alloc;
 extern crate core;
 
-use alloc::{format, vec::Vec};
+use alloc::format;
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
-use cortex_m::{asm::delay, peripheral::syst::SystClkSource};
+use cortex_m::asm::delay;
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_alloc::Heap;
 
-use embedded_graphics::prelude::Point;
 use lazy_static::lazy_static;
 
-use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
+use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 
 mod ui;
-use ui::UI;
+//use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER, NO_PACKETS_PREV_TURN, PARTICIPATED_PACKETS};
+use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, burning_tank}, 
+//    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    draw::burning_tank, 
     init::init_peripherals,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
-
-use alloc::{borrow::ToOwned, collections::BTreeMap};
 
 use core::cell::RefCell;
 use core::ops::DerefMut;
 use cortex_m::interrupt::free;
 use cortex_m::interrupt::Mutex;
 
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*};
-
-use p256::ecdsa::{signature::{Verifier, hazmat::PrehashVerifier}, Signature, VerifyingKey};
+use p256::ecdsa::{signature::{hazmat::PrehashVerifier}, Signature, VerifyingKey};
 use sha2::Digest;
 use spki::DecodePublicKey;
 use kampela_system::devices::psram::psram_read_at_address;
@@ -53,18 +47,17 @@ lazy_static!{
     static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
 }
 
-static mut LDMA_INTERRUPT: bool = false;
+/*
 static mut GPIO_ODD_INT: bool = false;
 static mut COUNT_ODD: bool = false;
 static mut GPIO_EVEN_INT: bool = false;
 static mut COUNT_EVEN: bool = false;
-
 static mut READER: Option<[u8;5]> = None;
+*/
 
 #[alloc_error_handler]
 fn oom(l: Layout) -> ! {
     panic!("out of memory: {:?}, heap used: {}, free: {}, got frames: {}, frames in buffer: {}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {IN_BUFFER});
-    loop {}
 }
 
 #[panic_handler]
@@ -76,8 +69,7 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
 
 #[exception]
 unsafe fn HardFault(exception_frame: &ExceptionFrame) -> ! {
-    panic!("hard fault: {:?}", exception_frame);
-    loop {}
+    panic!("hard fault: {:?}", exception_frame)
 }
 
 #[interrupt]
@@ -86,7 +78,7 @@ fn LDMA() {
         if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
             peripherals.LDMA_S.if_.reset();
             let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            let buffer_info_old = buffer_info.buffer_status.clone();
+//            let buffer_info_old = buffer_info.buffer_status.clone();
             match buffer_info.buffer_status.pass_if_done7() {
                 Ok(_) => {
                     if !buffer_info.buffer_status.is_write_halted() {
