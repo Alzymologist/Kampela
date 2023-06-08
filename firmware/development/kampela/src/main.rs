@@ -2,48 +2,42 @@
 #![no_std]
 #![feature(alloc_error_handler)]
 
-#[macro_use]
 extern crate alloc;
 extern crate core;
 
-use alloc::{format, vec::Vec};
+use alloc::format;
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
-use cortex_m::{asm::delay, peripheral::syst::SystClkSource};
+use cortex_m::asm::delay;
 use cortex_m_rt::{entry, exception, ExceptionFrame};
 use embedded_alloc::Heap;
 
-use embedded_graphics::prelude::Point;
 use lazy_static::lazy_static;
 
-use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
+use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 
 mod ui;
-use ui::UI;
+//use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, BufferStatus, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, NO_PACKETS_PREV_TURN, PARTICIPATED_PACKETS};
+use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, burning_tank}, 
+//    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    draw::burning_tank, 
     init::init_peripherals,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
-
-use alloc::{borrow::ToOwned, collections::BTreeMap};
 
 use core::cell::RefCell;
 use core::ops::DerefMut;
 use cortex_m::interrupt::free;
 use cortex_m::interrupt::Mutex;
 
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*};
-
-use p256::ecdsa::{signature::{Verifier, hazmat::PrehashVerifier}, Signature, VerifyingKey};
+use p256::ecdsa::{signature::{hazmat::PrehashVerifier}, Signature, VerifyingKey};
 use sha2::Digest;
 use spki::DecodePublicKey;
 use kampela_system::devices::psram::psram_read_at_address;
@@ -53,18 +47,17 @@ lazy_static!{
     static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
 }
 
-static mut LDMA_INTERRUPT: bool = false;
+/*
 static mut GPIO_ODD_INT: bool = false;
 static mut COUNT_ODD: bool = false;
 static mut GPIO_EVEN_INT: bool = false;
 static mut COUNT_EVEN: bool = false;
-
 static mut READER: Option<[u8;5]> = None;
+*/
 
 #[alloc_error_handler]
 fn oom(l: Layout) -> ! {
-    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames flag: {}, packets prev turn: {}, participated packets: {:?}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {NO_PACKETS_PREV_TURN}, unsafe{&PARTICIPATED_PACKETS});
-    loop {}
+    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames: {}, frames in buffer: {}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {IN_BUFFER});
 }
 
 #[panic_handler]
@@ -76,8 +69,7 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
 
 #[exception]
 unsafe fn HardFault(exception_frame: &ExceptionFrame) -> ! {
-    panic!("hard fault: {:?}", exception_frame);
-    loop {}
+    panic!("hard fault: {:?}", exception_frame)
 }
 
 #[interrupt]
@@ -86,7 +78,7 @@ fn LDMA() {
         if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
             peripherals.LDMA_S.if_.reset();
             let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-            let buffer_info_old = buffer_info.buffer_status.clone();
+//            let buffer_info_old = buffer_info.buffer_status.clone();
             match buffer_info.buffer_status.pass_if_done7() {
                 Ok(_) => {
                     if !buffer_info.buffer_status.is_write_halted() {
@@ -178,7 +170,6 @@ fn main() -> ! {
 //    let mut touched = false;
 
     let mut nfc_collector = NfcCollector::new();
-//    let mut frames: Vec<[u8; 240]> = Vec::new();
 
 //    panic!("was still alive!");
 
@@ -193,13 +184,7 @@ fn main() -> ! {
         
         turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
 
-//        if let NfcCollector::InProgress(ref decoder_metal) = nfc_collector {
-//            if HEAP.free() < 1000 {panic!("heap ending! {}\ngot part of nfc payload with expected length {:?}, collected {}, buffer_filled: {}", HEAP.free(), decoder_metal.msg_len, decoder_metal.number_of_collected(), decoder_metal.number_packets_in_buffer)}
-//        }
-
         if let NfcCollector::Done(a) = nfc_collector {
-
-//            panic!("got done");
 
             NVIC::mask(Interrupt::LDMA);
             free(|cs| {
@@ -208,7 +193,7 @@ fn main() -> ! {
             });
 
             let nfc_payload = process_nfc_payload(a).unwrap();
-//            panic!("processed nfc payload");
+
             // calculate correct hash of the payload
             let mut first_byte: Option<u8> = None;
 {
@@ -229,8 +214,6 @@ fn main() -> ! {
                 Err(_) => panic!("signature recovery, slice start {:?}, length: {}", &nfc_payload.companion_signature[..10], nfc_payload.companion_signature.len()),
             };
             let verifying_key = VerifyingKey::from_public_key_der(&nfc_payload.companion_public_key).unwrap();
-
-//            panic!("{:?}", first_byte);
 
             // and check
             assert!(verifying_key

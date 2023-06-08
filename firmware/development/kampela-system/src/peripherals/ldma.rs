@@ -1,7 +1,5 @@
-use core::ptr::addr_of;
 use cortex_m::interrupt::free;
 use efm32pg23_fix::Peripherals;
-use lazy_static::lazy_static;
 
 pub const LINK_DESCRIPTORS: u32 = 0b00000111000100000111111111110000;
 pub const CH_TIM0: u8 = 7;
@@ -146,7 +144,7 @@ pub fn init_ldma(peripherals: &mut Peripherals, nfc_descriptor_address: *const N
     );
 
     // there starts a critical section
-    free(|cs| {
+    free(|_cs| {
         peripherals
             .LDMA_S
             .ien

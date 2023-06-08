@@ -1,16 +1,10 @@
 //! NFC packet collector and decoder
 
-
-use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
-use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
+use nfca_parser::{frame::Frame, miller::*};
 use alloc::{borrow::ToOwned, vec::Vec};
 
 use kampela_system::{
-    PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::{FrameBuffer, burning_tank}, 
-    init::init_peripherals,
-    BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
+    PERIPHERALS, in_free, BUF_QUARTER, CH_TIM0,
 };
 use cortex_m::interrupt::free;
 use crate::BUFFER_INFO;
@@ -170,12 +164,7 @@ impl BufferStatus {
     }
 }
 
-pub struct MillerProcessed {
-    frame_set: Vec<[u8; 240]>,
-    tail: MillerTimesDown<FREQ>,
-}
-
-pub static mut GOT_FRAMES: bool = false;
+pub static mut GOT_FRAMES: usize = 0;
 pub static mut NO_PACKETS_PREV_TURN: usize = 0;
 pub static mut PARTICIPATED_PACKETS: Vec<u16> = Vec::new();
 pub static mut IN_BUFFER: u16 = 0;
@@ -246,7 +235,7 @@ fn process_element_set(miller_element_set: MillerElementSet, collector: &mut Nfc
         if let Frame::Standard(standard_frame) = frame {
             if standard_frame.len() >= PACKET_SIZE {
                 let serialized_packet = standard_frame[standard_frame.len() - PACKET_SIZE..].try_into().expect("static length, always fits");
-                unsafe {GOT_FRAMES = true}
+                unsafe {GOT_FRAMES += 1}
                 *no_packets_this_turn += 1;
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
@@ -294,10 +283,10 @@ pub enum NfcPayloadError {
     AccessOnPayload,
     AccessOnPublicKey,
     AccessOnSignature,
-    ExcessData,
-    NoCompactPayload,
-    NoCompactPublicKey,
-    NoCompactSignature,
+//    ExcessData,
+//    NoCompactPayload,
+//    NoCompactPublicKey,
+//    NoCompactSignature,
 }
 
 #[derive(Debug)]
@@ -315,23 +304,13 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
 
     let mut position = 0usize; // *relative* position in PsramAccess!
 
-//    panic!("in processing");
-
     let mut try_encoded_data = None;
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
-        
-        let slice = psram_read_at_address(external_psram.peripherals, completed_collector.start_address, 10).unwrap();
-        
-        let found_compact = match find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position){
-            Ok(a) => {
-                panic!("slice: {:?}, number of packets in prev turn: {}, in buffer: {}, participated packets: {:?}", slice, unsafe{NO_PACKETS_PREV_TURN}, unsafe{IN_BUFFER}, unsafe{&PARTICIPATED_PACKETS});
-                a
-            },
-            Err(_) => panic!("no compact, slice {:?}, number of packets in prev turn: {}, in buffer: {}, participated packets: {:?}", slice, unsafe{NO_PACKETS_PREV_TURN}, unsafe{IN_BUFFER}, unsafe{&PARTICIPATED_PACKETS}),
-        }; //map_err(|_| NfcPayloadError::NoCompactPayload)?;
+        let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactPayload)?;
+        let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
         try_encoded_data = Some(PsramAccess {
-            start_address: AddressPsram::new(found_compact.start_next_unit as u32).unwrap(),
+            start_address,
             total_len: found_compact.compact as usize,
         });
         position = found_compact.start_next_unit + found_compact.compact as usize;
@@ -344,12 +323,9 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
     let mut try_companion_signature = None;
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
-        
-//        let debug_data = psram_read_at_address(external_psram.peripherals, completed_collector.start_address.try_shift(position).unwrap(), 10).unwrap();
-//        panic!("debug data in signature, slice {:?}", debug_data);
-        
         let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactSignature)?;
-        let signature_data = psram_read_at_address(external_psram.peripherals, AddressPsram::new(found_compact.start_next_unit as u32).unwrap(), found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;
+        let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
+        let signature_data = psram_read_at_address(external_psram.peripherals, start_address, found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;
         try_companion_signature = Some(signature_data);
         position = found_compact.start_next_unit + found_compact.compact as usize;
     });
@@ -362,8 +338,8 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
         let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactSignature)?;
-        panic!("found compact for key length: {:?}", found_compact.compact);
-        let public_key_data = psram_read_at_address(external_psram.peripherals, AddressPsram::new(found_compact.start_next_unit as u32).unwrap(), found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;
+        let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
+        let public_key_data = psram_read_at_address(external_psram.peripherals, start_address, found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;
         try_companion_public_key = Some(public_key_data);
         position = found_compact.start_next_unit + found_compact.compact as usize;
     });
