@@ -1,6 +1,5 @@
 //! NFC packet collector and decoder
 
-
 use nfca_parser::{frame::{Frame, FrameAttributed}, miller::*, time_record_both_ways::*};
 use efm32pg23_fix::{CorePeripherals, interrupt, Interrupt, NVIC, Peripherals};
 use alloc::{borrow::ToOwned, vec::Vec};
@@ -18,8 +17,6 @@ use crate::BUFFER_INFO;
 use kampela_system::devices::psram::{AddressPsram, ExternalPsram, PsramAccess, psram_read_at_address};
 use lt_codes::{decoder_metal::{DecoderMetal, ExternalData}, packet::{Packet, PACKET_SIZE}};
 use substrate_parser::compacts::find_compact;
-
-use parity_scale_codec::{Compact, Encode};
 
 use core::ops::DerefMut;
 
@@ -317,8 +314,6 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
 
     let mut position = 0usize; // *relative* position in PsramAccess!
 
-//    panic!("in processing");
-
     let mut try_encoded_data = None;
     in_free(|peripherals| {
         let mut external_psram = ExternalPsram{peripherals};
@@ -347,7 +342,6 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
         let found_compact = find_compact::<u32, PsramAccess, ExternalPsram>(&psram_data, &mut external_psram, position).unwrap(); //.map_err(|_| NfcPayloadError::NoCompactSignature)?;
         let start_address = completed_collector.start_address.try_shift(found_compact.start_next_unit).unwrap();
         let signature_data = psram_read_at_address(external_psram.peripherals, start_address, found_compact.compact as usize).unwrap(); //.map_err(|_| NfcPayloadError::AccessOnSignature)?;
-//        panic!("debug data in signature, slice {:?}, compact value: {}, compact encoded: {:?}, start next unit: {}, position: {position}, psram data start address {:?}, start address: {:?}", debug_data, found_compact.compact, Compact(found_compact.compact).encode(), found_compact.start_next_unit, psram_data.start_address, start_address);
         try_companion_signature = Some(signature_data);
         position = found_compact.start_next_unit + found_compact.compact as usize;
     });
