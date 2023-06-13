@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
             val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             Log.d("NFC tag", tag.toString())
 
-            transmitData?.let {action: Action ->
+            transmitData?.let { action: Action ->
                 NfcA.get(tag)?.let { tech ->
                     try {
                         tech.connect()
@@ -196,7 +196,7 @@ class MainActivity : ComponentActivity() {
                     }
                     Log.d("NFC TX", "done")
                 }
-                packagesSent.disable()
+                //packagesSent.disable()
             }
         }
 
