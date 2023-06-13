@@ -1,6 +1,5 @@
 package fi.zymologia.siltti.screens
 
-import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.Button
 import androidx.compose.material.Text
@@ -13,8 +12,10 @@ import fi.zymologia.siltti.uniffi.Action
 fun TXScreen(
     transmitCallback: (Action?) -> Unit,
     setAppState: (Mode) -> Unit,
-    packagesSent: State<Int?>
+    packagesSent: State<Int?>,
+    counterReset: () -> Unit,
 ) {
+    KeepScreenOn()
     Column {
         /* TODO: count transmitted frames maybe?
         if (packagesSent.value == null) {
@@ -24,13 +25,21 @@ fun TXScreen(
         }
         */
         Text("Transmitting...")
+        Text("Sent: " + packagesSent.value)
         Button(
             onClick = {
                 transmitCallback(null)
                 setAppState(Mode.Scan)
-            }
+            },
         ) {
             Text("Stop transmission")
+        }
+        Button(
+            onClick = {
+                counterReset()
+            },
+        ) {
+            Text("Reset counter")
         }
     }
 }

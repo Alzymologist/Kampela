@@ -723,8 +723,10 @@ dependencies = [
  "embedded-text",
  "frame-metadata",
  "hex",
+ "kampela-common",
  "kampela-display-common",
  "lazy_static",
+ "lt-codes",
  "panic-halt",
  "parity-scale-codec",
  "patches",
@@ -817,6 +819,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lt-codes"
+version = "0.1.0"
+source = "git+https://github.com/Alzymologist/LT-codes?rev=4e2f19226db3a7ac9232eca2970384cfd7f6fe6a#4e2f19226db3a7ac9232eca2970384cfd7f6fe6a"
+dependencies = [
+ "bitvec",
+ "blake2-rfc",
+ "rand",
+ "rand_core 0.6.4",
+ "rand_pcg",
 ]
 
 [[package]]
@@ -971,7 +985,6 @@ dependencies = [
  "kampela-common",
  "p256",
  "pbkdf2",
- "raptorq",
  "sha2 0.10.6",
  "sp-core 12.0.0",
  "spki",
@@ -1080,9 +1093,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 
 [[package]]
-name = "raptorq"
-version = "1.7.0"
-source = "git+https://github.com/Alzymologist/raptorq?rev=f3fd22e04aa14e736f470ff9c7086faa2d3edaff#f3fd22e04aa14e736f470ff9c7086faa2d3edaff"
+name = "rand_pcg"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59cad018caf63deb318e5a4586d99a24424a364f40f1e5778c29aca23f4fc73e"
+dependencies = [
+ "rand_core 0.6.4",
+]
 
 [[package]]
 name = "ref-cast"
