@@ -115,6 +115,7 @@ class MainActivity : ComponentActivity() {
                     ScreenScaffold(
                         dbName,
                         count,
+                        {packagesSent.disable()}
                     ) { newAction: Action? ->
                         transmitData = newAction
                     }
@@ -209,6 +210,6 @@ class MainActivity : ComponentActivity() {
 fun DefaultPreview() {
     val count = PackagesSent().count.observeAsState()
     SilttiTheme {
-        ScreenScaffold("stub", count) {}
+        ScreenScaffold("stub", count, {}) {}
     }
 }

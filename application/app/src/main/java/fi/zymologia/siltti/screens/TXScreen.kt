@@ -13,6 +13,7 @@ fun TXScreen(
     transmitCallback: (Action?) -> Unit,
     setAppState: (Mode) -> Unit,
     packagesSent: State<Int?>,
+    counterReset: () -> Unit,
 ) {
     KeepScreenOn()
     Column {
@@ -32,6 +33,13 @@ fun TXScreen(
             },
         ) {
             Text("Stop transmission")
+        }
+        Button(
+            onClick = {
+                counterReset()
+            },
+        ) {
+            Text("Reset counter")
         }
     }
 }
