@@ -27,7 +27,7 @@ static HEAP: Heap = Heap::empty();
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
 //    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
-    draw::burning_tank, 
+    draw::{burning_tank, draw_qr}, 
     init::init_peripherals,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
@@ -168,6 +168,11 @@ fn main() -> ! {
 
 //    let mut touch_data = [0; LEN_NUM_TOUCHES];
 //    let mut touched = false;
+
+    in_free(|peripherals| {
+        let data = b"01d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27de143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e";
+        draw_qr(peripherals, data.as_slice());
+    });
 
     let mut nfc_collector = NfcCollector::new();
 
