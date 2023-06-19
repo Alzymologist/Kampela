@@ -1,1 +1,1 @@
-_heap_size = 0x7600;
+_heap_size = 0x4600;

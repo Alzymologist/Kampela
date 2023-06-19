@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 
 mod ui;
-//use ui::UI;
+use ui::UI;
 mod nfc;
 use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
 
@@ -26,9 +26,11 @@ static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
+    devices::power::ADC,
 //    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
     draw::burning_tank, 
     init::init_peripherals,
+    parallel::Operation,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
 };
 
@@ -110,7 +112,7 @@ fn LDMA() {
 fn main() -> ! {
     {
         use core::mem::MaybeUninit;
-        const HEAP_SIZE: usize = 0x7600;
+        const HEAP_SIZE: usize = 0x4600;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
@@ -173,19 +175,21 @@ fn main() -> ! {
 
 //    panic!("was still alive!");
 
-//    let mut ui = UI::init();
+    let mut ui = UI::init();
+    let mut adc = ADC::new();
 
     let mut counter = 0usize;
 //    let mut counter_frames = 0usize;
 
 
     loop {
+        adc.advance(());
+        ui.advance(adc.read());
         if HEAP.free() < 1000 {panic!("heap ending! {}; counter: {counter}", HEAP.free())}
         
         turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
 
         if let NfcCollector::Done(a) = nfc_collector {
-
             NVIC::mask(Interrupt::LDMA);
             free(|cs| {
                 let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
