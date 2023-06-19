@@ -51,6 +51,9 @@ interface Action {
     [Name=new_specs_set, Throws=ErrorCompanion]
     constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);
     
+    [Name=new_sized_transfer, Throws=ErrorCompanion]
+    constructor(u32 length, SignByCompanion signature_maker);
+    
     sequence<u8>? make_packet();
 };
 
@@ -94,6 +97,7 @@ interface SpecsSelector {
 
 [Error]
 enum ErrorCompanion {
+    "DataFill",
     "DbInternal",
     "DbSpecsEncryptionMismatch",
     "DbSpecsHashMismatch",
