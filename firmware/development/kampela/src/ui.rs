@@ -38,9 +38,13 @@ impl UI {
     /// Call in event loop to progress through UI state
     pub fn advance(&mut self, voltage: i32) {
         match self.status {
-            UIStatus::Listen => self.listen(),
-            UIStatus::DisplayOperation => if self.state.display().advance(voltage) {
-                self.status = UIStatus::Listen;
+            UIStatus::Listen => {
+                self.listen();
+            },
+            UIStatus::DisplayOperation => {
+                if self.state.display().advance(voltage) {
+                    self.status = UIStatus::Listen;
+                }
             },
             UIStatus::TouchOperation(ref mut touch) => {
                 match touch.advance(()) {

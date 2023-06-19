@@ -5,35 +5,24 @@
 use cortex_m::asm::delay;
 use efm32pg23_fix::GPIO_S;
 
-// PA
-
-pub const MCU_OK: u8 = 3;
-pub const SCL_PIN: u8 = 4;
-pub const SDA_PIN: u8 = 5;
-pub const DISP_RES_PIN: u8 = 6;
-pub const TOUCH_RES_PIN: u8 = 7;
-pub const NFC_PIN: u8 = 8;
-pub const POW_PIN: u8 = 9;
-
-// PB
-
-pub const TOUCH_INT_PIN: u8 = 1;
-pub const SPI_BUSY_PIN: u8 = 4;
-
-// PC
 pub const FLASH_CS_PIN: u8 = 0;
+pub const DISP_CS_PIN: u8 = 2;
+pub const DISP_DC_PIN: u8 = 3;
+pub const DISP_RES_PIN: u8 = 6;
+pub const POW_PIN: u8 = 9;
 pub const E_MISO_PIN: u8 = 1;
 pub const E_MOSI_PIN: u8 = 2;
 pub const E_SCK_PIN: u8 = 3;
-pub const PSRAM_CS_PIN: u8 = 4;
-pub const PSRAM_MISO_PIN: u8 = 5;
-pub const PSRAM_MOSI_PIN: u8 = 6;
-pub const PSRAM_SCK_PIN: u8 = 7;
-
-// PD
-pub const DISP_CS_PIN: u8 = 2;
-pub const DISP_DC_PIN: u8 = 3;
-
+//pub const TOUCH_INT_PIN: u8 = 1;
+pub const PSRAM_CS_PIN: u8 = 4; // at portC
+pub const PSRAM_MISO_PIN: u8 = 5; // at portC
+pub const PSRAM_MOSI_PIN: u8 = 6; // at portC
+pub const PSRAM_SCK_PIN: u8 = 7; // at portC
+pub const I2C_PIN: u8 = 4;
+pub const SCL_PIN: u8 = 3;
+pub const SDA_PIN: u8 = 5;
+pub const SPI_BUSY_PIN: u8 = 4;
+pub const NFC_PIN: u8 = 8; // at portA
 
 /// Macro to switch a specific pin on a specific port.
 ///
@@ -64,16 +53,6 @@ macro_rules! gpio_pin {
 }
 
 // Prepare GPIO pins
-
-gpio_pin!(
-    /// Set MCU_OK status:
-    /// Clear MCU_OK status:
-    /// port A, pin [`MCU_OK`].
-    mcu_ok_set,
-    mcu_ok_clear,
-    porta_dout,
-    MCU_OK
-);
 
 gpio_pin!(
     /// Set flash chip select:
@@ -116,13 +95,13 @@ gpio_pin!(
 );
 
 gpio_pin!(
-    /// Set touch reset:
-    /// Clear touch reset:
-    /// port A, pin [`TOUCH_RES_PIN`].
-    touch_res_set,
-    touch_res_clear,
+    /// i2c set:
+    /// i2c clear:
+    /// port A, pin [`I2C_PIN`].
+    i2c_set,
+    i2c_clear,
     porta_dout,
-    TOUCH_RES_PIN
+    I2C_PIN
 );
 
 gpio_pin!(
@@ -248,11 +227,10 @@ fn map_gpio(gpio: &mut GPIO_S) {
         .porta_model
         .write(|w_reg| {
             w_reg
-                .mode3().pushpull() // MCU operational indicator
-                .mode4().wiredandpullup() // SCL for USART (display)
+                .mode3().wiredandpullup() // SCL for USART (display)
+                .mode4().pushpull() // I2C power
                 .mode5().wiredandpullup() // SDA for USART (display)
                 .mode6().pushpull() // Display reset
-                .mode7().pushpull() // Touch reset
     });
     gpio
         .porta_modeh
@@ -292,8 +270,8 @@ fn map_gpio(gpio: &mut GPIO_S) {
 
 /// Set GPIO pins to their starting values
 fn set_gpio_pins(gpio: &mut GPIO_S) {
-    mcu_ok_clear(gpio);
     pow_set(gpio);
+    i2c_set(gpio);
     delay(100000); // wait after power set! (epaper manual for 2.8V setup)
     display_chip_select_set(gpio);
     display_data_command_clear(gpio);
