@@ -72,7 +72,7 @@ gpio_pin!(
     mcu_ok_set,
     mcu_ok_clear,
     porta_dout,
-    FLASH_CS_PIN
+    MCU_OK
 );
 
 gpio_pin!(
