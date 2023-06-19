@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -66,6 +68,8 @@ fun ScanScreen(
     val context = LocalContext.current
     val cameraProviderFuture =
         remember { ProcessCameraProvider.getInstance(context) }
+
+    val dummyLength = remember { mutableStateOf(3000u) }
 
     if (frames.value != null) {
         KeepScreenOn()
@@ -192,6 +196,27 @@ fun ScanScreen(
                 },
             ) {
                 Text("Create an address")
+            }
+
+            Text("Dummy payload tools")
+            TextField(
+                value = dummyLength.value.toString(),
+                onValueChange = { new: String ->
+                    dummyLength.value = try {
+                        new.trim().toUInt()
+                    } catch (_: java.lang.NumberFormatException) {
+                        3000u
+                    }
+                },
+                label = { Text("number of payloads") }
+            )
+            Button(
+                onClick = {
+                    transmitCallback(Action.newSizedTransfer(dummyLength.value, Signer()))
+                    setAppState(Mode.TX)
+                },
+            ) {
+                Text("Send dummy payload")
             }
         }
     }

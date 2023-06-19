@@ -510,6 +510,7 @@ dependencies = [
  "kampela-common",
  "lt-codes",
  "parity-scale-codec",
+ "rand 0.8.5",
  "sled",
  "sp-core",
  "substrate_parser",
@@ -1127,7 +1128,7 @@ dependencies = [
 [[package]]
 name = "lt-codes"
 version = "0.1.0"
-source = "git+https://github.com/Alzymologist/LT-codes?rev=20c958f29a9772c8a3c8fa6e9dc2a1f3ef3557f7#20c958f29a9772c8a3c8fa6e9dc2a1f3ef3557f7"
+source = "git+https://github.com/Alzymologist/LT-codes#50cab75884c976721acfa562761f99ba3fe1c75c"
 dependencies = [
  "blake2-rfc",
  "rand 0.8.5",
