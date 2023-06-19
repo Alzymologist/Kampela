@@ -6,6 +6,9 @@ use kampela_common::Encryption;
 
 #[derive(Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ErrorCompanion {
+    #[error("Cannot fill mock transfer data.")]
+    DataFill,
+
     #[error("Internal database error: {0}")]
     DbInternal(sled::Error),
 

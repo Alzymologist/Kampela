@@ -3,12 +3,16 @@
 use lt_codes::encoder::Encoder;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
-use std::{convert::TryInto, sync::{Arc, RwLock}};
+use std::{
+    convert::TryInto,
+    sync::{Arc, RwLock},
+};
 
 use kampela_common::{
-    Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue, Transaction,
-    TransmittableContent,
+    BlindTransaction, Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue,
+    Transaction, TransmittableContent,
 };
+use rand::Fill;
 
 use crate::error::ErrorCompanion;
 use crate::sign_with_companion::{SignByCompanion, SignatureMaker};
@@ -95,6 +99,46 @@ impl FromQr for Bytes {
     }
 }
 
+impl FromQr for BlindTransaction {
+    fn from_payload_prelude_cut(
+        mut payload: &[u8],
+        encryption: &Encryption,
+    ) -> Result<Self, ErrorCompanion> {
+        let signer = match payload.get(0..encryption.key_length()) {
+            Some(public_key_slice) => {
+                payload = &payload[encryption.key_length()..];
+                match encryption {
+                    Encryption::Ed25519 => MultiSigner::Ed25519(
+                        public_key_slice.try_into().expect("stable known length"),
+                    ),
+                    Encryption::Sr25519 => MultiSigner::Sr25519(
+                        public_key_slice.try_into().expect("stable known length"),
+                    ),
+                    Encryption::Ecdsa => MultiSigner::Ecdsa(
+                        public_key_slice.try_into().expect("stable known length"),
+                    ),
+                }
+            }
+            None => return Err(ErrorCompanion::TooShort),
+        };
+        if payload.len() >= H256::len_bytes() {
+            let genesis_hash = H256(
+                payload[payload.len() - H256::len_bytes()..]
+                    .try_into()
+                    .expect("stable known length"),
+            );
+            let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
+            Ok(Self {
+                genesis_hash,
+                signable_transaction,
+                signer,
+            })
+        } else {
+            Err(ErrorCompanion::TooShort)
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Action {
     Success,
@@ -119,7 +163,7 @@ impl Transmittable {
         let signature_maker = SignatureMaker::new(self.signature_maker);
         let data_with_signature = signature_maker.signed_data(encoded_data);
         let encoder = Encoder::init(&data_with_signature).map_err(|_| ErrorCompanion::LTError)?;
-        Ok(Transmit{
+        Ok(Transmit {
             data_with_signature,
             encoder: RwLock::new(encoder),
         })
@@ -142,13 +186,23 @@ impl Action {
                     .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
                 match prelude[2] {
                     a if ID_SIGNABLE.contains(&a) => {
-                        let transaction =
-                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
+                        // TODO restore this to `Transaction` after done with testing
+                        let blind_transaction =
+                            BlindTransaction::from_payload_prelude_cut(payload, &encryption)?;
                         let transmittable = Transmittable {
-                            content: TransmittableContent::SignableTransaction(transaction),
+                            content: TransmittableContent::BlindTransaction(blind_transaction),
                             signature_maker,
                         };
                         Ok(Self::Transmit(transmittable.into_transmit()?))
+                        /*
+                                                let transaction =
+                                                    Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
+                                                let transmittable = Transmittable {
+                                                    content: TransmittableContent::SignableTransaction(transaction),
+                                                    signature_maker,
+                                                };
+                                                Ok(Self::Transmit(transmittable.into_transmit()?))
+                        */
                     }
                     ID_BYTES => {
                         let bytes = Bytes::from_payload_prelude_cut(payload, &encryption)?;
@@ -217,6 +271,21 @@ impl Action {
         Ok(Self::Transmit(transmittable.into_transmit()?))
     }
 
+    pub fn new_sized_transfer(
+        length: u32,
+        signature_maker: Box<dyn SignByCompanion>,
+    ) -> Result<Self, ErrorCompanion> {
+        let mut rng = rand::thread_rng();
+        let mut msg = Vec::with_capacity(length as usize);
+        msg.try_fill(&mut rng)
+            .map_err(|_| ErrorCompanion::DataFill)?;
+        let transmittable = Transmittable {
+            content: TransmittableContent::SizedTransfer(msg.to_vec()),
+            signature_maker,
+        };
+        Ok(Self::Transmit(transmittable.into_transmit()?))
+    }
+
     pub fn make_packet(self: &Arc<Self>) -> Option<Vec<u8>> {
         match self.as_ref() {
             Action::Success => None,
@@ -232,5 +301,28 @@ impl Action {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    #[derive(Debug)]
+    struct MockSignByCompanion;
+
+    impl SignByCompanion for MockSignByCompanion {
+        fn make_signature(&self, _data: Vec<u8>) -> Vec<u8> {
+            Vec::new()
+        }
+        fn export_public_key(&self) -> Vec<u8> {
+            Vec::new()
+        }
+    }
+
+    #[test]
+    fn sized_data_test() {
+        assert!(Action::new_sized_transfer(2400, Box::new(MockSignByCompanion)).is_ok());
     }
 }

@@ -70,9 +70,11 @@ pub struct TransferData {
 
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub enum TransmittableContent {
+    BlindTransaction(BlindTransaction), // TODO delete this later, use only for tests
     Bytes(Bytes),
     Derivation(DerivationInfo),
     SignableTransaction(Transaction),
+    SizedTransfer(Vec<u8>),
     Specs(SpecsValue),
     SpecsSet(Vec<SpecsValue>),
 }
@@ -107,6 +109,13 @@ pub struct SpecsKey {
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct Bytes {
     pub bytes_uncut: Vec<u8>,
+    pub signer: MultiSigner,
+}
+
+#[derive(Debug, Decode, Encode, Eq, PartialEq)]
+pub struct BlindTransaction {
+    pub genesis_hash: H256,
+    pub signable_transaction: Vec<u8>,
     pub signer: MultiSigner,
 }
 
