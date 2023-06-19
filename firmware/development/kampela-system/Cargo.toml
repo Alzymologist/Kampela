@@ -30,7 +30,7 @@ substrate_parser = {git = "https://github.com/varovainen/substrate-parser", bran
 kampela-display-common = { path = "../kampela-display-common" }
 
 lt-codes = {git = "https://github.com/Alzymologist/LT-codes", default-features = false}
-qrcodegen = {path = "../../../../../QR-Code-generator/rust-no-heap"} #local for now, ogirinal repo has two identically named crates, only one in no_std, cargo gets confused
+qrcodegen-noheap = {git = "https://github.com/Slesarew/QR-Code-generator", branch = "patch-1"}
 
 [profile.release]
 codegen-units = 1

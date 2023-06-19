@@ -19,7 +19,7 @@ use embedded_text::{
     TextBox,
 };
 use kampela_display_common::display_def::*;
-use qrcodegen::{QrCode, QrCodeEcc, Version};
+use qrcodegen_noheap::{QrCode, QrCodeEcc, Version};
 
 use crate::devices::display::{FastDraw, FullDraw, Request, epaper_draw_stuff_differently, epaper_hw_init_cs, epaper_deep_sleep};
 

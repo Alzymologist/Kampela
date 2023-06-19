@@ -790,7 +790,7 @@ dependencies = [
  "panic-halt",
  "parity-scale-codec",
  "patches",
- "qrcodegen",
+ "qrcodegen-noheap",
  "rand",
  "rand_core 0.6.4",
  "scale-info",
@@ -1189,8 +1189,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "qrcodegen"
+name = "qrcodegen-noheap"
 version = "1.8.0"
+source = "git+https://github.com/Slesarew/QR-Code-generator?branch=patch-1#21357d72ae9e4d1f6c7692f26be9ceb27e71e916"
 
 [[package]]
 name = "quote"
