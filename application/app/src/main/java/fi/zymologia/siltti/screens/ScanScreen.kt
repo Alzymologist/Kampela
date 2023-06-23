@@ -32,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -192,6 +191,7 @@ fun ScanScreen(
             Button(
                 onClick = {
                     transmitCallback(null)
+                    cameraProviderFuture.get().unbindAll()
                     setAppState(Mode.Address)
                 },
             ) {
@@ -202,17 +202,23 @@ fun ScanScreen(
             TextField(
                 value = dummyLength.value.toString(),
                 onValueChange = { new: String ->
+                    Log.d("dummy input", new)
                     dummyLength.value = try {
                         new.trim().toUInt()
                     } catch (_: java.lang.NumberFormatException) {
                         3000u
                     }
+                    Log.d("dummy", dummyLength.value.toString())
                 },
-                label = { Text("number of payloads") }
+                label = { Text("number of payloads") },
             )
             Button(
                 onClick = {
-                    transmitCallback(Action.newSizedTransfer(dummyLength.value, Signer()))
+                    Log.d("dummy used", dummyLength.value.toString())
+                    val action = Action.newSizedTransfer(dummyLength.value, Signer())
+                    Log.d("dummy action", action.toString())
+                    transmitCallback(action)
+                    cameraProviderFuture.get().unbindAll()
                     setAppState(Mode.TX)
                 },
             ) {
