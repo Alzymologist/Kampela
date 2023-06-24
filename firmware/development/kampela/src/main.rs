@@ -5,7 +5,7 @@
 extern crate alloc;
 extern crate core;
 
-use alloc::format;
+use alloc::{format, string::ToString};
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
 use cortex_m::asm::delay;
@@ -19,7 +19,7 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, PreviousTail, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
+use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -43,6 +43,7 @@ use p256::ecdsa::{signature::{hazmat::PrehashVerifier}, Signature, VerifyingKey}
 use sha2::Digest;
 use spki::DecodePublicKey;
 use kampela_system::devices::psram::psram_read_at_address;
+use substrate_parser::ShortSpecs;
 
 lazy_static!{
     #[derive(Debug)]
@@ -107,6 +108,8 @@ fn LDMA() {
     });
 }
 
+static mut COUNTER: usize = 0;
+static mut UNPROCESSED_FRAMES: usize = 0;
 
 #[entry]
 fn main() -> ! {
@@ -116,6 +119,13 @@ fn main() -> ! {
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
+
+    let westend_specs = ShortSpecs {
+        base58prefix: 42,
+        decimals: 12,
+        name: "westend".to_string(),
+        unit: "WND".to_string(),
+    };
 
     let nfc_buffer: [u16; 4*BUF_QUARTER] = [1; 4*BUF_QUARTER];
     let nfc_transfer_block = NfcXferBlock {
@@ -191,11 +201,12 @@ fn main() -> ! {
 
         if let NfcCollector::Done(a) = nfc_collector {
             NVIC::mask(Interrupt::LDMA);
+/*
             free(|cs| {
                 let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
                 buffer_info.maybe_previous_tail = PreviousTail::Lost;
             });
-
+*/
             let nfc_payload = process_nfc_payload(a).unwrap();
 
             // calculate correct hash of the payload
@@ -225,16 +236,11 @@ fn main() -> ! {
                 .is_ok());
 
 }
-            let string_addition = match first_byte.unwrap() {
-                0 => format!("bytes"),
-                1 => format!("derivation"),
-                2 => format!("signable transaction"),
-                3 => format!("specs"),
-                4 => format!("specs set"),
-                a => format!("unexpected {a} payload"),
-            };
-
-            panic!("got valid signed payload: {string_addition}");
+            if let Some(3) = first_byte {
+                // got signable transaction
+                panic!("got signable transaction");
+            }
+            else {nfc_collector = NfcCollector::new();}
         }
         counter += 1;
     }

@@ -980,7 +980,7 @@ checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
 [[package]]
 name = "nfca-parser"
 version = "0.1.0"
-source = "git+https://github.com/Alzymologist/NfcA-parser?rev=d281dc3fbccc55a7d070263a1bf9e2cba5364984#d281dc3fbccc55a7d070263a1bf9e2cba5364984"
+source = "git+https://github.com/Alzymologist/NfcA-parser#3cefd5b01f8443f393ad412843df68552889c4cd"
 dependencies = [
  "bitvec",
  "crc",
