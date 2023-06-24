@@ -208,11 +208,11 @@ pub struct PsramAccess {
     pub total_len: usize,
 }
 use core::{any::TypeId, fmt::{Debug, Display, Formatter, Result as FmtResult}};
-use alloc::{borrow::ToOwned, string::{String, ToString}};
+use alloc::{borrow::ToOwned, collections::BTreeMap, string::{String, ToString}};
 
 use frame_metadata::v14::{ExtrinsicMetadata, PalletCallMetadata, PalletMetadata};
-use parity_scale_codec::{Compact, Decode, DecodeAll, Encode};
-use substrate_parser::{AddressableBuffer, AsMetadata, ExternalMemory, ResolveType, cards::ParsedData, compacts::find_compact, decode_all_as_type, error::{MetaVersionError, ParserError, SignableError}, special_indicators::SpecialtyPrimitive, traits::PalletCallTy};
+use parity_scale_codec::{Decode, DecodeAll};
+use substrate_parser::{AddressableBuffer, AsMetadata, ExternalMemory, ResolveType, cards::ParsedData, compacts::find_compact, decode_all_as_type, error::{MetaVersionError, ParserError, SignableError}, ResolvedTy, special_indicators::SpecialtyPrimitive, traits::PalletCallTy};
 use scale_info::{form::PortableForm, interner::UntrackedSymbol, Type};
 
 pub struct ExternalPsram<'a> {
@@ -263,13 +263,15 @@ impl <'a> AddressableBuffer<ExternalPsram<'a>> for PsramAccess {
         }
     }
 }
-#[derive(Debug)]
+
+#[derive(Clone, Debug)]
 pub struct MetalRegistry {
     pub start_address: AddressPsram,
     pub registry: Vec<EntryPsram>,
+    pub map: BTreeMap<u32, u32>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EntryPsram {
     pub position: usize,
     pub entry_len: usize,
@@ -286,7 +288,31 @@ impl <'a> ResolveType<ExternalPsram<'a>> for MetalRegistry {
             None => Err(ParserError::V14TypeNotResolved { id }),
         }
     }
+    
+    fn resolve_ty_external_id(&self, external_id: u32, ext_memory: &mut ExternalPsram<'a>) -> Result<ResolvedTy, ParserError<ExternalPsram<'a>>> {
+        if let Some(internal_id) = self.map.get(&external_id) {
+            match self.registry.get(*internal_id as usize) {
+                Some(entry_psram) => {
+                    let address = self.start_address.try_shift(entry_psram.position).map_err(ParserError::External)?;
+                    let encoded_type_data = psram_read_at_address(ext_memory.peripherals, address, entry_psram.entry_len).map_err(ParserError::External)?;
+                    Ok(
+                        ResolvedTy {
+                            ty: Type::<PortableForm>::decode_all(&mut &encoded_type_data[..]).map_err(|_| ParserError::External(MemoryError::TypeInfoDamaged{id: *internal_id}))?,
+                            id: *internal_id,
+                        }
+                    )
+                },
+                None => Err(ParserError::V14TypeNotResolved { id: *internal_id }),
+            }
+        } else {
+            Err(ParserError::V14ShortTypesIncomplete {
+                old_id: external_id,
+            })
+        }
+    }
+
 }
+
 #[derive(Debug)]
 pub struct CheckedMetadataMetal {
     pub types: MetalRegistry,
@@ -302,10 +328,11 @@ pub struct PalletMetal {
     pub calls: Option<PalletCallMetadata<PortableForm>>,
     pub index: u8,
 }
+
 impl <'a> AsMetadata<ExternalPsram<'a>> for CheckedMetadataMetal {
     type TypeRegistry = MetalRegistry;
-    fn types(&self) -> &Self::TypeRegistry {
-        &self.types
+    fn types(&self) -> Self::TypeRegistry {
+        self.types.to_owned()
     }
     fn find_calls_ty(
         &self,
@@ -330,18 +357,26 @@ impl <'a> AsMetadata<ExternalPsram<'a>> for CheckedMetadataMetal {
             None => return Err(SignableError::PalletNotFound(pallet_index)),
         };
 
-        let call_ty = match found_calls_in_pallet {
-            Some(calls_in_pallet_symbol) => self
-                .types
-                .resolve_ty(calls_in_pallet_symbol.id(), ext_memory)
-                .map_err(SignableError::Parsing)?,
+        let call_ty_id = match found_calls_in_pallet {
+            Some(calls_in_pallet_symbol) => calls_in_pallet_symbol.id,
             None => return Err(SignableError::NoCallsInPallet(pallet_name)),
         };
 
-        Ok(PalletCallTy {
-            pallet_name,
-            call_ty,
-        })
+        if let Some(call_ty_id_new) = self.types.map.get(&call_ty_id) {
+            let call_ty = self
+                .types
+                .resolve_ty(*call_ty_id_new, ext_memory)
+                .map_err(SignableError::Parsing)?;
+
+            Ok(PalletCallTy {
+                pallet_name,
+                call_ty,
+            })
+        } else {
+            Err(SignableError::Parsing(
+                ParserError::V14ShortTypesIncomplete { old_id: call_ty_id },
+            ))
+        }
     }
     fn version_printed(&self) -> Result<String, MetaVersionError> {
         Ok(self.version.to_owned())
@@ -353,6 +388,7 @@ impl <'a> AsMetadata<ExternalPsram<'a>> for CheckedMetadataMetal {
         self.ty.to_owned()
     }
 }
+
 #[derive(Decode)]
 struct Tail {
     extrinsic: ExtrinsicMetadata<PortableForm>,
@@ -363,9 +399,11 @@ fn force_decode_at<T: Decode>(psram_data: &PsramAccess, ext_memory: &mut Externa
     let mut data = Vec::with_capacity(psram_data.total_len - start_position);
     let mut out: Option<(T, usize)> = None;
     for i in 0..psram_data.total_len - start_position {
-        data.push(psram_data.read_byte(ext_memory, start_position+i).map_err(|_| err_at.to_owned())?);
+        let address = psram_data.start_address.try_shift(start_position+i).map_err(|_| err_at.to_owned())?;
+        let byte = psram_read_at_address(ext_memory.peripherals, address, 1usize).map_err(|_| err_at.to_owned())?[0];
+        data.push(byte);
         if let Ok(a) = T::decode(&mut &data[..]) {
-            out = Some((a, start_position+i+1));
+            out = Some((a, i+1));
             break;
         }
     }
@@ -376,10 +414,12 @@ fn force_decode_at<T: Decode>(psram_data: &PsramAccess, ext_memory: &mut Externa
 }
 impl <'a> CheckedMetadataMetal {
     /// Assume here that the metadata is received as SCALE-encoded
-    /// `RuntimeMetadataV14` with known length.
+    /// `RuntimeMetadataV14` with known length, corresponding `BTreeMap` is
+    /// processed separately.
     ///
     /// Provided `PsramAccess` corresponds to whole encoded metadata.
-    pub fn from(psram_data: &PsramAccess, ext_memory: &mut ExternalPsram<'a>) -> Result<Self, ReceivedMetadataError> {
+    pub fn from(psram_data: &PsramAccess, ext_memory: &mut ExternalPsram<'a>, map: BTreeMap<u32, u32>) -> Result<Self, ReceivedMetadataError> {
+        
         let mut position = 0usize;
 
         // Metadata starts with types registry, a vec of Type descriptors.
@@ -390,15 +430,11 @@ impl <'a> CheckedMetadataMetal {
         let mut registry: Vec<EntryPsram> = Vec::with_capacity(types_set_len as usize);
         position = found_compact.start_next_unit;
         
-        for entry_number in 0..types_set_len {
-            let current_address = psram_data.start_address.try_shift(position).map_err(ReceivedMetadataError::Memory)?;
-
+        for _entry_number in 0..types_set_len {
             // Each `PortableType` starts with compact of the entry number.
-            let entry_compact_encoded_expected = Compact(entry_number).encode();
-            let entry_compact_encoded_read = psram_read_at_address(ext_memory.peripherals, current_address, entry_compact_encoded_expected.len()).map_err(ReceivedMetadataError::Memory)?;
-            if entry_compact_encoded_expected != entry_compact_encoded_read {return Err(ReceivedMetadataError::RegistryFormat)}
-            position += entry_compact_encoded_expected.len();
-
+            let entry_number_compact = find_compact::<u32, PsramAccess, ExternalPsram<'a>>(psram_data, ext_memory, position).map_err(|_| ReceivedMetadataError::RegistryFormat)?;
+            position = entry_number_compact.start_next_unit;
+            
             // And is followed by encoded `Type<PortableForm>` entry.
             let (_ty, entry_len) = force_decode_at::<Type<PortableForm>>(psram_data, ext_memory, position, ReceivedMetadataError::RegistryFormat)?;
 
@@ -406,7 +442,12 @@ impl <'a> CheckedMetadataMetal {
 
             position += entry_len;
         }
-        let types = MetalRegistry {start_address: psram_data.start_address, registry};
+
+        let types = MetalRegistry {
+            start_address: psram_data.start_address, 
+            registry,
+            map,
+        };
 
         // Next, metadata contains pallet information,
         // `Vec<PalletMetadata<PortableForm>>`.
@@ -446,7 +487,7 @@ impl <'a> CheckedMetadataMetal {
             return Err(ReceivedMetadataError::NoSystemPallet);
         }
 
-        let tail_data = psram_data.read_slice(ext_memory, position, psram_data.total_len-position).map_err(|_| ReceivedMetadataError::TailFormat)?;
+        let tail_data = psram_data.read_slice(ext_memory, position, psram_data.total_len - position).map_err(|_| ReceivedMetadataError::TailFormat)?;
         let tail = Tail::decode_all(&mut &tail_data[..]).map_err(|_| ReceivedMetadataError::TailFormat)?;
         let mut spec_version = None;
         match runtime_version_data_and_ty {

@@ -13,7 +13,6 @@ extern crate std;
 #[cfg(feature = "std")]
 use std::{string::String, vec::Vec};
 
-use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{ByteArray, H256};
 
@@ -122,9 +121,9 @@ pub struct BlindTransaction {
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct Transaction {
     pub genesis_hash: H256,
-    pub meta_v14: RuntimeMetadataV14,
-    pub meta_signature: MultiSignature,
-    pub signable_transaction: Vec<u8>,
+    pub encoded_meta_v14: Vec<u8>,
+    pub encoded_map: Vec<u8>,
+    pub encoded_signable_transaction: Vec<u8>,
     pub signer: MultiSigner,
 }
 
