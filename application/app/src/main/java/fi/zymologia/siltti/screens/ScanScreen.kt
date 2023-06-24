@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,8 @@ fun ScanScreen(
     val context = LocalContext.current
     val cameraProviderFuture =
         remember { ProcessCameraProvider.getInstance(context) }
+
+    val dummyLength = remember { mutableStateOf(3000u) }
 
     if (frames.value != null) {
         KeepScreenOn()
@@ -188,10 +191,38 @@ fun ScanScreen(
             Button(
                 onClick = {
                     transmitCallback(null)
+                    cameraProviderFuture.get().unbindAll()
                     setAppState(Mode.Address)
                 },
             ) {
                 Text("Create an address")
+            }
+
+            Text("Dummy payload tools")
+            TextField(
+                value = dummyLength.value.toString(),
+                onValueChange = { new: String ->
+                    Log.d("dummy input", new)
+                    dummyLength.value = try {
+                        new.trim().toUInt()
+                    } catch (_: java.lang.NumberFormatException) {
+                        3000u
+                    }
+                    Log.d("dummy", dummyLength.value.toString())
+                },
+                label = { Text("number of payloads") },
+            )
+            Button(
+                onClick = {
+                    Log.d("dummy used", dummyLength.value.toString())
+                    val action = Action.newSizedTransfer(dummyLength.value, Signer())
+                    Log.d("dummy action", action.toString())
+                    transmitCallback(action)
+                    cameraProviderFuture.get().unbindAll()
+                    setAppState(Mode.TX)
+                },
+            ) {
+                Text("Send dummy payload")
             }
         }
     }
