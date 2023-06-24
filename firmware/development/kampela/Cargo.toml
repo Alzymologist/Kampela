@@ -29,6 +29,8 @@ scale-info = {version = "2.3.0", default-features = false}
 substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", default-features = false, features = ["embed-display"]}
 nfca-parser = { git = "https://github.com/Alzymologist/NfcA-parser", default-features = false }
 
+primitive-types = {version = "0.12.1", default-features = false}
+
 kampela-system = { path = "../kampela-system" }
 kampela-ui = { path = "../kampela-ui" , default-features = false }
 nalgebra = { version = "0.32.2", default-features = false, features = ["libm"] }

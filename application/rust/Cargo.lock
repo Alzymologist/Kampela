@@ -653,7 +653,6 @@ checksum = "453ad9f582a441959e5f0d088b02ce04cfe8d51a8eaf077f12ac6d3e94164ca6"
 name = "kampela-common"
 version = "0.1.0"
 dependencies = [
- "frame-metadata",
  "parity-scale-codec",
  "sp-core 7.0.0",
 ]

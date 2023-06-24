@@ -59,9 +59,9 @@ impl FromQrAndDb for Transaction {
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
             Ok(Self {
                 genesis_hash,
-                meta_v14: metadata_value.metadata.meta_v14,
-                map: metadata_value.metadata.map,
-                signable_transaction,
+                encoded_meta_v14: metadata_value.metadata.meta_v14.encode(),
+                encoded_map: metadata_value.metadata.map.encode(),
+                encoded_signable_transaction: signable_transaction.encode(),
                 signer,
             })
         } else {

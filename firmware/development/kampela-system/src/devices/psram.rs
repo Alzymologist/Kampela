@@ -360,7 +360,7 @@ impl <'a> AsMetadata<ExternalPsram<'a>> for CheckedMetadataMetal {
         let call_ty = match found_calls_in_pallet {
             Some(calls_in_pallet_symbol) => self
                 .types
-                .resolve_ty(calls_in_pallet_symbol.id(), ext_memory)
+                .resolve_ty(calls_in_pallet_symbol.id, ext_memory)
                 .map_err(SignableError::Parsing)?,
             None => return Err(SignableError::NoCallsInPallet(pallet_name)),
         };
@@ -404,21 +404,13 @@ fn force_decode_at<T: Decode>(psram_data: &PsramAccess, ext_memory: &mut Externa
 }
 impl <'a> CheckedMetadataMetal {
     /// Assume here that the metadata is received as SCALE-encoded
-    /// `RuntimeMetadataV14` with known length, followed by SCALE-encoded `BTreeMap` with known
-    /// length.
+    /// `RuntimeMetadataV14` with known length, corresponding `BTreeMap` is
+    /// processed separately.
     ///
     /// Provided `PsramAccess` corresponds to whole encoded metadata.
-    pub fn from(psram_data: &PsramAccess, ext_memory: &mut ExternalPsram<'a>) -> Result<Self, ReceivedMetadataError> {
+    pub fn from(psram_data: &PsramAccess, ext_memory: &mut ExternalPsram<'a>, map: BTreeMap<u32, u32>) -> Result<Self, ReceivedMetadataError> {
         
-        let compact_metadata = find_compact::<u32, PsramAccess, ExternalPsram<'a>>(psram_data, ext_memory, 0).map_err(|_| ReceivedMetadataError::RegistryFormat)?;
-        let compact_map = find_compact::<u32, PsramAccess, ExternalPsram<'a>>(psram_data, ext_memory, compact_metadata.start_next_unit + compact_metadata.compact as usize).map_err(|_| ReceivedMetadataError::RegistryFormat)?;
-
-        assert!(compact_map.start_next_unit + compact_map.compact as usize == psram_data.total_len);
-
-        let map_encoded = psram_read_at_address(ext_memory.peripherals, AddressPsram::new(compact_map.start_next_unit as u32).unwrap(), compact_map.compact as usize).map_err(ReceivedMetadataError::Memory)?;
-        let map = BTreeMap::decode(&mut &map_encoded[..]).map_err(|_| ReceivedMetadataError::RegistryFormat)?;
-
-        let mut position = compact_metadata.start_next_unit;
+        let mut position = 0usize;
 
         // Metadata starts with types registry, a vec of Type descriptors.
         // Search for compact, the number of `PortableType` entries to follow.
@@ -489,7 +481,7 @@ impl <'a> CheckedMetadataMetal {
             return Err(ReceivedMetadataError::NoSystemPallet);
         }
 
-        let tail_data = psram_data.read_slice(ext_memory, position, compact_metadata.start_next_unit + compact_metadata.compact as usize - position).map_err(|_| ReceivedMetadataError::TailFormat)?;
+        let tail_data = psram_data.read_slice(ext_memory, position, psram_data.total_len - position).map_err(|_| ReceivedMetadataError::TailFormat)?;
         let tail = Tail::decode_all(&mut &tail_data[..]).map_err(|_| ReceivedMetadataError::TailFormat)?;
         let mut spec_version = None;
         match runtime_version_data_and_ty {

@@ -287,9 +287,9 @@ pub struct TransferDataReceived {
     pub companion_public_key: Vec<u8>,
 }
 
-pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> Result<TransferDataReceived, NfcPayloadError> {
+pub fn process_nfc_payload(completed_collector: &ExternalData<AddressPsram>) -> Result<TransferDataReceived, NfcPayloadError> {
     let psram_data = PsramAccess {
-        start_address: completed_collector.start_address,
+        start_address: completed_collector.start_address.clone(),
         total_len: completed_collector.len,
     };
 

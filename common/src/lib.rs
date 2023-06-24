@@ -5,15 +5,14 @@
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "std")]
 extern crate std;
 
 #[cfg(feature = "std")]
-use std::{collections::BTreeMap, string::String, vec::Vec};
+use std::{string::String, vec::Vec};
 
-use frame_metadata::RuntimeMetadataV14;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::{ByteArray, H256};
 
@@ -122,9 +121,9 @@ pub struct BlindTransaction {
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct Transaction {
     pub genesis_hash: H256,
-    pub meta_v14: RuntimeMetadataV14,
-    pub map: BTreeMap<u32, u32>,
-    pub signable_transaction: Vec<u8>,
+    pub encoded_meta_v14: Vec<u8>,
+    pub encoded_map: Vec<u8>,
+    pub encoded_signable_transaction: Vec<u8>,
     pub signer: MultiSigner,
 }
 
