@@ -1,6 +1,6 @@
 //! Basic processing of QR inputs.
 
-use lt_codes::encoder::Encoder;
+use lt_codes::mock_worst_case::Encoder;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use std::{
