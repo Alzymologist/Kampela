@@ -211,7 +211,7 @@ use core::{any::TypeId, fmt::{Debug, Display, Formatter, Result as FmtResult}};
 use alloc::{borrow::ToOwned, collections::BTreeMap, string::{String, ToString}};
 
 use frame_metadata::v14::{ExtrinsicMetadata, PalletCallMetadata, PalletMetadata};
-use parity_scale_codec::{Compact, Decode, DecodeAll, Encode};
+use parity_scale_codec::{Decode, DecodeAll};
 use substrate_parser::{AddressableBuffer, AsMetadata, ExternalMemory, ResolveType, cards::ParsedData, compacts::find_compact, decode_all_as_type, error::{MetaVersionError, ParserError, SignableError}, ResolvedTy, special_indicators::SpecialtyPrimitive, traits::PalletCallTy};
 use scale_info::{form::PortableForm, interner::UntrackedSymbol, Type};
 
@@ -357,18 +357,26 @@ impl <'a> AsMetadata<ExternalPsram<'a>> for CheckedMetadataMetal {
             None => return Err(SignableError::PalletNotFound(pallet_index)),
         };
 
-        let call_ty = match found_calls_in_pallet {
-            Some(calls_in_pallet_symbol) => self
-                .types
-                .resolve_ty(calls_in_pallet_symbol.id, ext_memory)
-                .map_err(SignableError::Parsing)?,
+        let call_ty_id = match found_calls_in_pallet {
+            Some(calls_in_pallet_symbol) => calls_in_pallet_symbol.id,
             None => return Err(SignableError::NoCallsInPallet(pallet_name)),
         };
 
-        Ok(PalletCallTy {
-            pallet_name,
-            call_ty,
-        })
+        if let Some(call_ty_id_new) = self.types.map.get(&call_ty_id) {
+            let call_ty = self
+                .types
+                .resolve_ty(*call_ty_id_new, ext_memory)
+                .map_err(SignableError::Parsing)?;
+
+            Ok(PalletCallTy {
+                pallet_name,
+                call_ty,
+            })
+        } else {
+            Err(SignableError::Parsing(
+                ParserError::V14ShortTypesIncomplete { old_id: call_ty_id },
+            ))
+        }
     }
     fn version_printed(&self) -> Result<String, MetaVersionError> {
         Ok(self.version.to_owned())
@@ -391,9 +399,11 @@ fn force_decode_at<T: Decode>(psram_data: &PsramAccess, ext_memory: &mut Externa
     let mut data = Vec::with_capacity(psram_data.total_len - start_position);
     let mut out: Option<(T, usize)> = None;
     for i in 0..psram_data.total_len - start_position {
-        data.push(psram_data.read_byte(ext_memory, start_position+i).map_err(|_| err_at.to_owned())?);
+        let address = psram_data.start_address.try_shift(start_position+i).map_err(|_| err_at.to_owned())?;
+        let byte = psram_read_at_address(ext_memory.peripherals, address, 1usize).map_err(|_| err_at.to_owned())?[0];
+        data.push(byte);
         if let Ok(a) = T::decode(&mut &data[..]) {
-            out = Some((a, start_position+i+1));
+            out = Some((a, i+1));
             break;
         }
     }
@@ -420,15 +430,11 @@ impl <'a> CheckedMetadataMetal {
         let mut registry: Vec<EntryPsram> = Vec::with_capacity(types_set_len as usize);
         position = found_compact.start_next_unit;
         
-        for entry_number in 0..types_set_len {
-            let current_address = psram_data.start_address.try_shift(position).map_err(ReceivedMetadataError::Memory)?;
-
+        for _entry_number in 0..types_set_len {
             // Each `PortableType` starts with compact of the entry number.
-            let entry_compact_encoded_expected = Compact(entry_number).encode();
-            let entry_compact_encoded_read = psram_read_at_address(ext_memory.peripherals, current_address, entry_compact_encoded_expected.len()).map_err(ReceivedMetadataError::Memory)?;
-            if entry_compact_encoded_expected != entry_compact_encoded_read {return Err(ReceivedMetadataError::RegistryFormat)}
-            position += entry_compact_encoded_expected.len();
-
+            let entry_number_compact = find_compact::<u32, PsramAccess, ExternalPsram<'a>>(psram_data, ext_memory, position).map_err(|_| ReceivedMetadataError::RegistryFormat)?;
+            position = entry_number_compact.start_next_unit;
+            
             // And is followed by encoded `Type<PortableForm>` entry.
             let (_ty, entry_len) = force_decode_at::<Type<PortableForm>>(psram_data, ext_memory, position, ReceivedMetadataError::RegistryFormat)?;
 

@@ -249,7 +249,8 @@ fn main() -> ! {
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
                     let compact_meta = find_compact::<u32, PsramAccess, ExternalPsram>(&nfc_payload.encoded_data, &mut external_psram, position).unwrap();
-                    metadata_psram_access_option = Some(PsramAccess{start_address: AddressPsram::new(compact_meta.start_next_unit as u32).unwrap(), total_len: compact_meta.compact as usize});
+                    let start_address = nfc_payload.encoded_data.start_address.try_shift(compact_meta.start_next_unit).unwrap();
+                    metadata_psram_access_option = Some(PsramAccess{start_address, total_len: compact_meta.compact as usize});
                     position = compact_meta.start_next_unit + compact_meta.compact as usize;
                 });
                 let metadata_psram_access = metadata_psram_access_option.unwrap();
@@ -258,7 +259,8 @@ fn main() -> ! {
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
                     let compact_map = find_compact::<u32, PsramAccess, ExternalPsram>(&nfc_payload.encoded_data, &mut external_psram, position).unwrap();
-                    let map_encoded = psram_read_at_address(peripherals, AddressPsram::new(compact_map.start_next_unit as u32).unwrap(), compact_map.compact as usize).unwrap();
+                    let start_address = nfc_payload.encoded_data.start_address.try_shift(compact_map.start_next_unit).unwrap();
+                    let map_encoded = psram_read_at_address(peripherals, start_address, compact_map.compact as usize).unwrap();
                     map_option = Some(BTreeMap::<u32, u32>::decode(&mut &map_encoded[..]).unwrap());
                     position = compact_map.start_next_unit + compact_map.compact as usize;
                 });
@@ -275,7 +277,8 @@ fn main() -> ! {
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
                     let compact_transaction = find_compact::<u32, PsramAccess, ExternalPsram>(&nfc_payload.encoded_data, &mut external_psram, position).unwrap();
-                    let transaction_encoded = psram_read_at_address(peripherals, AddressPsram::new(compact_transaction.start_next_unit as u32).unwrap(), compact_transaction.compact as usize).unwrap();
+                    let start_address = nfc_payload.encoded_data.start_address.try_shift(compact_transaction.start_next_unit).unwrap();
+                    let transaction_encoded = psram_read_at_address(peripherals, start_address, compact_transaction.compact as usize).unwrap();
                     signable_transaction_option = Some(Vec::<u8>::decode(&mut &transaction_encoded[..]).unwrap());
                     position = compact_transaction.start_next_unit + compact_transaction.compact as usize;
                 });
@@ -283,7 +286,8 @@ fn main() -> ! {
                 
                 let mut encryption_byte_option = None;
                 in_free(|peripherals| {
-                    encryption_byte_option = Some(psram_read_at_address(peripherals, AddressPsram::new(position as u32).unwrap(), 1usize).unwrap()[0]);
+                    let start_address = nfc_payload.encoded_data.start_address.try_shift(position).unwrap();
+                    encryption_byte_option = Some(psram_read_at_address(peripherals, start_address, 1usize).unwrap()[0]);
                     position += 1;
                 });
                 let encryption_byte = encryption_byte_option.unwrap();
@@ -303,6 +307,7 @@ fn main() -> ! {
                         genesis_hash
                     ).unwrap();
                     let carded = decoded_transaction.card(&westend_specs);
+                    panic!("{:?}", carded.call_result.unwrap());
                     call_option = Some(carded.call_result.unwrap());
                     extensions_option = Some(carded.extensions);
                 });
