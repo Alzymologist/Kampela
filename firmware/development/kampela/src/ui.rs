@@ -83,7 +83,7 @@ impl UI {
     }
 
     pub fn handle_rx(&mut self, transaction: String, extensions: String) {
-        self.state.handle_rx(transaction, extensions);
+        self.update = self.state.handle_rx(transaction, extensions);
     }
 }
 
