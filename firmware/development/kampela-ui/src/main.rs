@@ -146,6 +146,11 @@ impl Platform for DesktopSimulator {
         (&self.seed, &mut self.display)
     }
 
+    fn set_transaction(&mut self, transaction: String, extensions: String) {
+        self.transaction = transaction;
+        self.extensions = extensions;
+    }
+
     fn transaction(&mut self) -> Option<(&str, &mut Self::Display)> {
         if self.transaction != "" {
             Some((&self.transaction, &mut self.display))

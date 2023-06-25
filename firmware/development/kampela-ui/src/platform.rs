@@ -1,9 +1,9 @@
 //! Platform definitions
 
 #[cfg(not(feature="std"))]
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 #[cfg(feature="std")]
-use std::vec::Vec;
+use std::{string::String, vec::Vec};
 
 use embedded_graphics::{pixelcolor::BinaryColor, prelude::{DrawTarget, Point}};
 use rand::Rng;
@@ -47,6 +47,8 @@ pub trait Platform {
     
     /// Getter for pincode and canvas
     fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display);
+
+    fn set_transaction(&mut self, transaction: String, extensions: String);
 
     fn transaction(&mut self) -> Option<(&str, &mut Self::Display)>;
 

@@ -1,5 +1,11 @@
 //! UI state unit; almost all inerfacing should be done through this "object"
 
+#[cfg(not(feature="std"))]
+use alloc::string::String;
+
+#[cfg(feature="std")]
+use std::string::String;
+
 use embedded_graphics::{
     prelude::Primitive,
     primitives::{
@@ -19,8 +25,6 @@ use crate::platform::Platform;
 use crate::seed_entry::SeedEntryState;
 
 use crate::restore_or_generate;
-
-use crate::transaction;
 
 pub struct EventResult {
     pub request: UpdateRequest,
@@ -196,9 +200,10 @@ impl <P: Platform> UIState<P> {
     /// Handle NFC message reception.
     /// TODO this correctly
     /// currently it is a quick demo for expo
-    pub fn handle_rx(&mut self) -> UpdateRequest
+    pub fn handle_rx(&mut self, transaction: String, extensions: String) -> UpdateRequest
     {
         let mut out = UpdateRequest::new();
+        self.platform.set_transaction(transaction, extensions);
         match self.screen {
             Screen::OnboardingRestoreOrGenerate => {
                 self.screen = Screen::ShowTransaction;
