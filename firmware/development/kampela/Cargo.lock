@@ -796,13 +796,13 @@ dependencies = [
  "embedded-text",
  "frame-metadata",
  "hex",
- "kampela-common",
  "kampela-display-common",
  "lazy_static",
  "lt-codes",
  "panic-halt",
  "parity-scale-codec",
  "patches",
+ "qrcodegen-noheap",
  "rand",
  "rand_core 0.6.4",
  "scale-info",
@@ -1196,6 +1196,11 @@ checksum = "dec2b086b7a862cf4de201096214fa870344cf922b2b30c167badb3af3195406"
 dependencies = [
  "unicode-ident",
 ]
+
+[[package]]
+name = "qrcodegen-noheap"
+version = "1.8.0"
+source = "git+https://github.com/Slesarew/QR-Code-generator?branch=patch-1#21357d72ae9e4d1f6c7692f26be9ceb27e71e916"
 
 [[package]]
 name = "quote"

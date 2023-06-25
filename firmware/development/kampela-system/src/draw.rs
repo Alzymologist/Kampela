@@ -1,6 +1,6 @@
 use alloc::string::String;
-
 use bitvec::prelude::{BitArr, Msb0, bitarr};
+use cortex_m::asm::delay;
 use efm32pg23_fix::Peripherals;
 use embedded_graphics_core::{
     draw_target::DrawTarget,
@@ -19,7 +19,7 @@ use embedded_text::{
     TextBox,
 };
 use kampela_display_common::display_def::*;
-use cortex_m::asm::delay;
+use qrcodegen_noheap::{QrCode, QrCodeEcc, Version};
 
 use crate::devices::display::{FastDraw, FullDraw, Request, epaper_draw_stuff_differently, epaper_hw_init_cs, epaper_deep_sleep};
 
@@ -75,7 +75,7 @@ impl FrameBuffer {
     }
 
     /// Start full display update sequence
-        pub fn request_full(&mut self) {
+    pub fn request_full(&mut self) {
         self.display_state = DisplayState::FullRequested(Request::<FullDraw>::new());
     }
 
@@ -228,4 +228,39 @@ pub fn burning_tank(peripherals: &mut Peripherals, text: String) {
     make_text(peripherals, &text);
     delay(10000000);
     epaper_deep_sleep(peripherals);
+}
+
+pub fn draw_qr(peripherals: &mut Peripherals, data_to_qr: &[u8]) {
+
+    let len = data_to_qr.len();
+
+    let mut outbuffer = [0u8; Version::new(18).buffer_len()].to_vec();
+    let mut dataandtemp = [0u8; Version::new(18).buffer_len()].to_vec();
+    
+    dataandtemp[..len].copy_from_slice(data_to_qr);
+    
+    let qr_code = QrCode::encode_binary(&mut dataandtemp, len, &mut outbuffer, QrCodeEcc::Low, Version::MIN, Version::new(18), None, true).unwrap();
+
+    let scaling = {
+        if qr_code.version() == Version::new(18) {2}
+        else {SCREEN_SIZE_Y as i32/qr_code.size()}
+    };
+
+    let mut buffer = FrameBuffer::new_white();
+
+    let size = qr_code.size() * scaling;
+    for y in 0..size {
+        for x in 0..size {
+            let color = {
+                if qr_code.get_module(x / scaling, y / scaling) {BinaryColor::On}
+                else {BinaryColor::Off}
+            };
+            let x_point = SCREEN_SIZE_X as i32/2 - size/2 + x;
+            let y_point = SCREEN_SIZE_Y as i32/2 - size/2 + y;
+            let point = Point::new(x_point, y_point);
+            let pixel = Pixel::<BinaryColor>(point, color);
+            pixel.draw(&mut buffer).unwrap();
+        }
+    }
+    buffer.apply(peripherals);
 }

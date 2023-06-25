@@ -30,7 +30,7 @@ substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", de
 kampela-display-common = { path = "../kampela-display-common" }
 
 lt-codes = {git = "https://github.com/Alzymologist/LT-codes", default-features = false}
-kampela-common = {path = "../../../common", default-features = false}
+qrcodegen-noheap = {git = "https://github.com/Slesarew/QR-Code-generator", branch = "patch-1"}
 
 [profile.release]
 codegen-units = 1
