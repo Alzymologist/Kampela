@@ -307,11 +307,6 @@ fn main() -> ! {
     signature_with_id[1..].copy_from_slice(&signature.to_bytes());
     let signature_into_qr: [u8; 130] = hex::encode(signature_with_id).into_bytes().try_into().expect("static known length");
 
-    /*
-    in_free(|peripherals| {
-        draw_qr(peripherals, &signature_into_qr);
-    });
-    */
     ui.handle_rx(transaction.0, transaction.1, signature_into_qr);
 
     loop {
