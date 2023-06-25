@@ -26,8 +26,10 @@ frame-metadata = {git = "https://github.com/paritytech/frame-metadata", rev = "1
 hex = {version = "0.4.3", default-features = false, features = ["alloc"]}
 parity-scale-codec = {version = "3.1.5", default-features = false, features = ["derive", "bit-vec"]}
 scale-info = {version = "2.3.0", default-features = false}
-substrate_parser = {git = "https://github.com/varovainen/substrate-parser", branch = "va-2023-03-09-traits-for-limited-ram", default-features = false, features = ["embed-display"]}
-nfca-parser = { git = "https://github.com/Alzymologist/NfcA-parser", rev = "d281dc3fbccc55a7d070263a1bf9e2cba5364984", default-features = false }
+substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", default-features = false, features = ["embed-display"]}
+nfca-parser = { git = "https://github.com/Alzymologist/NfcA-parser", default-features = false }
+
+primitive-types = {version = "0.12.1", default-features = false}
 
 kampela-system = { path = "../kampela-system" }
 kampela-ui = { path = "../kampela-ui" , default-features = false }

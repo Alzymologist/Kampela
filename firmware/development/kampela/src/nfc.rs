@@ -1,16 +1,16 @@
 //! NFC packet collector and decoder
 
-use nfca_parser::{frame::Frame, miller::*};
-use alloc::{borrow::ToOwned, vec::Vec};
+use nfca_parser::frame::Frame;
+use alloc::vec::Vec;
 
 use kampela_system::{
     PERIPHERALS, in_free, BUF_QUARTER, CH_TIM0,
 };
 use cortex_m::interrupt::free;
-use crate::BUFFER_INFO;
+use crate::{BUFFER_INFO, COUNTER, UNPROCESSED_FRAMES};
 
 use kampela_system::devices::psram::{AddressPsram, ExternalPsram, PsramAccess, psram_read_at_address};
-use lt_codes::{decoder_metal::{DecoderMetal, ExternalData}, packet::{Packet, PACKET_SIZE}};
+use lt_codes::{decoder_metal::ExternalData, mock_worst_case::DecoderMetal, packet::{Packet, PACKET_SIZE}};
 use substrate_parser::compacts::find_compact;
 
 use core::ops::DerefMut;
@@ -20,23 +20,14 @@ pub const FREQ: u16 = 22;
 #[derive(Debug)]
 pub struct BufferInfo {
     pub buffer_status: BufferStatus,
-    pub maybe_previous_tail: PreviousTail,
 }
 
 impl BufferInfo {
     pub fn new() -> Self {
         Self {
             buffer_status: BufferStatus::new(),
-            maybe_previous_tail: PreviousTail::None,
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum PreviousTail {
-    None,
-    Lost,
-    Usable(MillerTimesDown<FREQ>),
 }
 
 #[derive(Clone, Debug)]
@@ -165,17 +156,15 @@ impl BufferStatus {
 }
 
 pub static mut GOT_FRAMES: usize = 0;
-pub static mut NO_PACKETS_PREV_TURN: usize = 0;
 pub static mut PARTICIPATED_PACKETS: Vec<u16> = Vec::new();
 pub static mut IN_BUFFER: u16 = 0;
 
 pub fn turn_nfc_collector_correctly(collector: &mut NfcCollector, nfc_buffer: &[u16; 4*BUF_QUARTER]) {
     let mut read_from = None;
-    let mut maybe_previous_tail = PreviousTail::None;
     free(|cs| {
         let buffer_info = BUFFER_INFO.borrow(cs).borrow();
         read_from = buffer_info.buffer_status.read_from();
-        maybe_previous_tail = buffer_info.maybe_previous_tail.clone();
+//        maybe_previous_tail = buffer_info.maybe_previous_tail.clone();
     });
     let decoder_input = match read_from {
         Some(BufRegion::Reg0) => &nfc_buffer[..BUF_QUARTER],
@@ -184,41 +173,30 @@ pub fn turn_nfc_collector_correctly(collector: &mut NfcCollector, nfc_buffer: &[
         Some(BufRegion::Reg3) => &nfc_buffer[3*BUF_QUARTER..],
         None => return,
     };
-    let times_down = MillerTimesDown::<FREQ>::from_raw(decoder_input);
-    
-    let mut no_packets_this_turn = 0;
-    
-    let new_previous_tail = match times_down.split_first() {
-        Some((new_nose, full_frames_with_tail)) => {
-            let first_chunk_converted = match maybe_previous_tail {
-                PreviousTail::None => new_nose.convert().ok(),
-                PreviousTail::Lost => None,
-                PreviousTail::Usable(previous_tail) => new_nose.stitch_with_tail(&previous_tail).convert().ok(),
-            };
-            if let Some(miller_element_set) = first_chunk_converted {
-                process_element_set(miller_element_set, collector, &mut no_packets_this_turn)
-            }
-            match full_frames_with_tail.split_last() {
-                Some((new_tail, full_frames)) => {
-                    for chunk in full_frames.into_iter() {
-                        if let Ok(miller_element_set) = chunk.convert() {
-                            process_element_set(miller_element_set, collector, &mut no_packets_this_turn)
-                        }
-                    }
-                    PreviousTail::Usable(new_tail.to_owned())
-                },
-                None => PreviousTail::Lost,
-            }
-        },
-        None => PreviousTail::Lost,
-    };
-    if let NfcCollector::InProgress(metal_decoder) = collector {unsafe {
-        NO_PACKETS_PREV_TURN += no_packets_this_turn;
-        IN_BUFFER = metal_decoder.number_packets_in_buffer;
-    }}
+    unsafe {COUNTER += 1};
+    let frames = Frame::process_buffer_miller_skip_tails::<_, FREQ>(decoder_input, |frame| frame_selected(&frame));
+    unsafe {UNPROCESSED_FRAMES += frames.len()};
+
+    for frame in frames.into_iter() {
+        if let Frame::Standard(standard_frame) = frame {
+            let serialized_packet = standard_frame[standard_frame.len() - PACKET_SIZE..].try_into().expect("static length, always fits");
+            unsafe {GOT_FRAMES += 1}
+            in_free(|peripherals| {
+                let mut external_psram = ExternalPsram{peripherals};
+                let packet = Packet::deserialize(serialized_packet);
+                unsafe {PARTICIPATED_PACKETS.push(packet.id);}
+                collector.add_packet(&mut external_psram, packet);
+            });
+        }
+        else {unreachable!()}
+    }
+//    if let NfcCollector::InProgress(metal_decoder) = collector {unsafe {
+//        IN_BUFFER = metal_decoder.number_packets_in_buffer;
+//    }}
+
     free(|cs| {
         let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-        buffer_info.maybe_previous_tail = new_previous_tail;
+//        buffer_info.maybe_previous_tail = new_previous_tail;
         let was_write_halted = buffer_info.buffer_status.is_write_halted();
         buffer_info.buffer_status.pass_read_done().expect("to do");
         if was_write_halted & ! buffer_info.buffer_status.is_write_halted() {
@@ -230,6 +208,14 @@ pub fn turn_nfc_collector_correctly(collector: &mut NfcCollector, nfc_buffer: &[
     });
 }
 
+fn frame_selected(frame: &Frame) -> bool {
+    if let Frame::Standard(standard_frame) = frame {
+        if standard_frame.len() >= PACKET_SIZE {true}
+        else {false}
+    }
+    else {false}
+}
+/*
 fn process_element_set(miller_element_set: MillerElementSet, collector: &mut NfcCollector, no_packets_this_turn: &mut usize) {
     if let Ok(frame) = miller_element_set.collect_frame() {
         if let Frame::Standard(standard_frame) = frame {
@@ -247,7 +233,7 @@ fn process_element_set(miller_element_set: MillerElementSet, collector: &mut Nfc
         }
     }
 }
-
+*/
 pub enum NfcCollector {
     Empty,
     InProgress(DecoderMetal<AddressPsram>),
@@ -261,13 +247,18 @@ impl NfcCollector {
     pub fn add_packet(&mut self, external_psram: &mut ExternalPsram, nfc_packet: Packet) {
         match self {
             NfcCollector::Empty => {
+//                let id_clone = nfc_packet.id;
                 let decoder_metal = DecoderMetal::init(external_psram, nfc_packet).unwrap();
+//                let block_numbers = decoder_metal.block_numbers_for_id(id_clone);
+//                if block_numbers.len() == 1 {unsafe{SINGLES += 1}}
                 match decoder_metal.try_read(external_psram) {
                     None => *self = NfcCollector::InProgress(decoder_metal),
                     Some(a) => *self = NfcCollector::Done(a),
                 }
             },
             NfcCollector::InProgress(decoder_metal) => {
+//                let block_numbers = decoder_metal.block_numbers_for_id(nfc_packet.id);
+//                if block_numbers.len() == 1 {unsafe{SINGLES += 1}}
                 decoder_metal.add_packet(external_psram, nfc_packet).unwrap();
                 if let Some(a) = decoder_metal.try_read(external_psram) {
                     *self = NfcCollector::Done(a);
@@ -296,9 +287,9 @@ pub struct TransferDataReceived {
     pub companion_public_key: Vec<u8>,
 }
 
-pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> Result<TransferDataReceived, NfcPayloadError> {
+pub fn process_nfc_payload(completed_collector: &ExternalData<AddressPsram>) -> Result<TransferDataReceived, NfcPayloadError> {
     let psram_data = PsramAccess {
-        start_address: completed_collector.start_address,
+        start_address: completed_collector.start_address.clone(),
         total_len: completed_collector.len,
     };
 
@@ -349,7 +340,7 @@ pub fn process_nfc_payload(completed_collector: ExternalData<AddressPsram>) -> R
     };
 
     if position != psram_data.total_len {
-        panic!("position: {position}, total_len: {}", psram_data.total_len);
+        panic!("after decoding position not matching total length, position: {position}, total_len: {}", psram_data.total_len);
         //Err(NfcPayloadError::ExcessData)
     }
     else {Ok(TransferDataReceived{

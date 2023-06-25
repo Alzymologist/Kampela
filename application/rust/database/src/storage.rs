@@ -1,5 +1,4 @@
 //! Keys and corresponding values in companion database.
-use frame_metadata::{v14::RuntimeMetadataV14, RuntimeMetadata};
 use parity_scale_codec::{Decode, Encode};
 use sled::{open, Db, IVec, Tree};
 use sp_core::H256;
@@ -7,7 +6,10 @@ use std::{
     convert::TryInto,
     sync::{Arc, RwLock},
 };
-use substrate_parser::{compacts::find_compact, CheckedMetadata};
+use substrate_parser::{
+    compacts::find_compact,
+    traits::{AsMetadata, RuntimeMetadataV14Shortened},
+};
 
 use kampela_common::{Encryption, MultiSignature, MultiSigner, Specs, SpecsKey, SpecsValue};
 
@@ -49,8 +51,7 @@ impl DbKey for MetadataKey {
 
 #[derive(Decode, Encode)]
 pub struct MetadataValue {
-    pub metadata: RuntimeMetadataV14,
-    pub signature: MultiSignature,
+    pub metadata: RuntimeMetadataV14Shortened,
 }
 
 impl MetadataValue {
@@ -119,58 +120,24 @@ impl DbStorage for MetadataStorage {
 impl FromQr for MetadataStorage {
     fn from_payload_prelude_cut(
         payload: &[u8],
-        encryption: &Encryption,
+        _encryption: &Encryption,
     ) -> Result<Self, ErrorCompanion> {
-        let mut position = encryption.key_length();
-        let length_info = find_compact::<u32>(payload, position)
-            .map_err(|_| ErrorCompanion::MetadataQrUnexpectedStructure)?;
-        let meta_length = length_info.compact as usize;
-        position = length_info.start_next_unit;
-        match payload.get(position..position + meta_length) {
-            Some(meta_slice) => {
-                if !meta_slice.starts_with(&[109, 101, 116, 97]) {
-                    return Err(ErrorCompanion::NoMetaPrefixQr);
-                }
-                let meta_decoded = RuntimeMetadata::decode(&mut &meta_slice[4..])
-                    .map_err(|_| ErrorCompanion::MetadataQrDecode)?;
-                let metadata = match meta_decoded {
-                    RuntimeMetadata::V14(metadata) => metadata,
-                    _ => return Err(ErrorCompanion::OnlyV14SupportedQr),
-                };
-                position += meta_length;
-                match payload.get(position..position + H256::len_bytes()) {
-                    Some(hash_slice) => {
-                        let genesis_hash =
-                            H256(hash_slice.try_into().expect("stable known length"));
-                        position += H256::len_bytes();
-                        match payload.get(position..position + encryption.signature_length()) {
-                            Some(signature_slice) => {
-                                let signature = match encryption {
-                                    Encryption::Ed25519 => MultiSignature::Ed25519(
-                                        signature_slice.try_into().expect("stable known length"),
-                                    ),
-                                    Encryption::Sr25519 => MultiSignature::Sr25519(
-                                        signature_slice.try_into().expect("stable known length"),
-                                    ),
-                                    Encryption::Ecdsa => MultiSignature::Ecdsa(
-                                        signature_slice.try_into().expect("stable known length"),
-                                    ),
-                                };
-                                Ok(Self {
-                                    key: MetadataKey { genesis_hash },
-                                    value: MetadataValue {
-                                        metadata,
-                                        signature,
-                                    },
-                                })
-                            }
-                            None => Err(ErrorCompanion::TooShort),
-                        }
-                    }
-                    None => Err(ErrorCompanion::TooShort),
-                }
-            }
-            None => Err(ErrorCompanion::TooShort),
+        if payload.len() <= H256::len_bytes() {
+            Err(ErrorCompanion::TooShort)
+        } else {
+            let genesis_hash = H256(
+                payload[payload.len() - H256::len_bytes()..]
+                    .try_into()
+                    .expect("stable known length"),
+            );
+            let metadata = RuntimeMetadataV14Shortened::decode(
+                &mut &payload[..payload.len() - H256::len_bytes()],
+            )
+            .map_err(|_| ErrorCompanion::MetadataQrDecode)?;
+            Ok(Self {
+                key: MetadataKey { genesis_hash },
+                value: MetadataValue { metadata },
+            })
         }
     }
 }
@@ -251,7 +218,7 @@ impl FromQr for SpecsValue {
             }
             None => return Err(ErrorCompanion::TooShort),
         };
-        let length_info = find_compact::<u32>(payload, position)
+        let length_info = find_compact::<u32, _, _>(&payload, &mut (), position)
             .map_err(|_| ErrorCompanion::SpecsQrUnexpectedStructure)?;
         let encoded_specs_length = length_info.compact as usize;
         position = length_info.start_next_unit;
@@ -307,11 +274,12 @@ impl SpecsSelectorElement {
         };
         let metadata_version =
             match MetadataValue::try_read_from_tree(metadata_tree, key.genesis_hash)? {
-                Some(metadata_value) => {
-                    let checked_metadata = CheckedMetadata::new(metadata_value.metadata)
-                        .map_err(ErrorCompanion::MetadataVersion)?;
-                    Some(checked_metadata.version)
-                }
+                Some(metadata_value) => Some(
+                    <RuntimeMetadataV14Shortened as AsMetadata<()>>::version_printed(
+                        &metadata_value.metadata,
+                    )
+                    .map_err(ErrorCompanion::MetadataVersion)?,
+                ),
                 None => None,
             };
         Ok(Self {

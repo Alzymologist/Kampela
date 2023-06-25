@@ -1,6 +1,6 @@
 //! Basic processing of QR inputs.
 
-use lt_codes::encoder::Encoder;
+use lt_codes::mock_worst_case::Encoder;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use std::{
@@ -23,7 +23,7 @@ pub const PREFIX_SUBSTRATE: u8 = 0x53;
 
 pub const ID_SIGNABLE: &[u8] = &[0x00, 0x02];
 pub const ID_BYTES: u8 = 0x03;
-pub const ID_METADATA: u8 = 0x80;
+pub const ID_METADATA: u8 = 0xcc;
 pub const ID_SPECS: u8 = 0xc1;
 
 impl FromQrAndDb for Transaction {
@@ -59,9 +59,9 @@ impl FromQrAndDb for Transaction {
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
             Ok(Self {
                 genesis_hash,
-                meta_v14: metadata_value.metadata,
-                meta_signature: metadata_value.signature,
-                signable_transaction,
+                encoded_meta_v14: metadata_value.metadata.meta_v14.encode(),
+                encoded_map: metadata_value.metadata.map.encode(),
+                encoded_signable_transaction: signable_transaction.encode(),
                 signer,
             })
         } else {
@@ -182,29 +182,21 @@ impl Action {
                 if prelude[0] != PREFIX_SUBSTRATE {
                     return Err(ErrorCompanion::NotSubstrate);
                 }
-                let encryption = Encryption::decode(&mut &prelude[1..2])
-                    .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
                 match prelude[2] {
                     a if ID_SIGNABLE.contains(&a) => {
-                        // TODO restore this to `Transaction` after done with testing
-                        let blind_transaction =
-                            BlindTransaction::from_payload_prelude_cut(payload, &encryption)?;
+                        let encryption = Encryption::decode(&mut &prelude[1..2])
+                            .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
+                        let transaction =
+                            Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
                         let transmittable = Transmittable {
-                            content: TransmittableContent::BlindTransaction(blind_transaction),
+                            content: TransmittableContent::SignableTransaction(transaction),
                             signature_maker,
                         };
                         Ok(Self::Transmit(transmittable.into_transmit()?))
-                        /*
-                                                let transaction =
-                                                    Transaction::from_payload_prelude_cut(payload, &encryption, db_path)?;
-                                                let transmittable = Transmittable {
-                                                    content: TransmittableContent::SignableTransaction(transaction),
-                                                    signature_maker,
-                                                };
-                                                Ok(Self::Transmit(transmittable.into_transmit()?))
-                        */
                     }
                     ID_BYTES => {
+                        let encryption = Encryption::decode(&mut &prelude[1..2])
+                            .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
                         let bytes = Bytes::from_payload_prelude_cut(payload, &encryption)?;
                         let transmittable = Transmittable {
                             content: TransmittableContent::Bytes(bytes),
@@ -213,12 +205,16 @@ impl Action {
                         Ok(Self::Transmit(transmittable.into_transmit()?))
                     }
                     ID_METADATA => {
-                        let metadata_storage =
-                            MetadataStorage::from_payload_prelude_cut(payload, &encryption)?;
+                        let metadata_storage = MetadataStorage::from_payload_prelude_cut(
+                            payload,
+                            &Encryption::Sr25519,
+                        )?;
                         metadata_storage.write_in_db(db_path)?;
                         Ok(Self::Success)
                     }
                     ID_SPECS => {
+                        let encryption = Encryption::decode(&mut &prelude[1..2])
+                            .map_err(|_| ErrorCompanion::UnknownSigningAlgorithm(prelude[1]))?;
                         let specs_value =
                             SpecsValue::from_payload_prelude_cut(payload, &encryption)?;
                         specs_value.write_in_db(db_path)?;
