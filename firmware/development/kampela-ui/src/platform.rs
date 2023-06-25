@@ -1,15 +1,16 @@
 //! Platform definitions
 
 #[cfg(not(feature="std"))]
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 #[cfg(feature="std")]
-use std::vec::Vec;
+use std::{string::String, vec::Vec};
 
 use embedded_graphics::{pixelcolor::BinaryColor, prelude::{DrawTarget, Point}};
 use rand::Rng;
 use crate::pin::Pincode;
 use crate::uistate::EventResult;
 use crate::backup::draw_backup_screen;
+use crate::transaction;
 
 const ENTROPY_LEN: usize = 32; //TODO: move to appropriate place
 
@@ -46,6 +47,12 @@ pub trait Platform {
     
     /// Getter for pincode and canvas
     fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display);
+
+    fn set_transaction(&mut self, transaction: String, extensions: String);
+
+    fn transaction(&mut self) -> Option<(&str, &mut Self::Display)>;
+
+    fn extensions(&mut self) -> Option<(&str, &mut Self::Display)>;
    
     //----derivatives----
 
@@ -77,6 +84,22 @@ pub trait Platform {
     fn draw_backup(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
         let (s, d) = self.entropy_display();
         draw_backup_screen(s, d)
+    }
+
+    fn draw_transaction(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
+        if let Some((s, d)) = self.transaction() {
+            transaction::draw(s, d)
+        } else {
+            Ok(())
+        }
+    }
+    
+    fn draw_extensions(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
+        if let Some((s, d)) = self.extensions() {
+            transaction::draw(s, d)
+        } else {
+            Ok(())
+        }
     }
 }
 

@@ -312,13 +312,14 @@ fn main() -> ! {
                         genesis_hash
                     ).unwrap();
                     let carded = decoded_transaction.card(&westend_specs);
-                    panic!("{:?}", carded.call_result.unwrap());
+                    //panic!("{:?}", carded.call_result.unwrap());
                     call_option = Some(carded.call_result.unwrap());
                     extensions_option = Some(carded.extensions);
                 });
                 let call = call_option.unwrap();
                 let extensions = extensions_option.unwrap();
-                panic!("{:?}\n{:?}", call, extensions);
+
+                ui.handle_rx(format!("{:?}", call), format!("{:?}", extensions));
             }
             else {nfc_collector = NfcCollector::new();}
         }

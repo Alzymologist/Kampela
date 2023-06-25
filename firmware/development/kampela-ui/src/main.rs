@@ -38,11 +38,16 @@ use uistate::UIState;
 mod data_state;
 use data_state::{AppStateInit, NFCState, DataInit, StorageState};
 
+mod transaction;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[arg(short = 'I')]
-    key_was_created: bool
+    key_was_created: bool,
+
+    #[arg(short = 'T')]
+    transaction_received: bool,
 }
 
 impl DataInit<Args> for AppStateInit {
@@ -51,8 +56,14 @@ impl DataInit<Args> for AppStateInit {
             key_created: params.key_was_created,
         };
 
+        let nfc = if params.transaction_received {
+            NFCState::Transaction
+        } else {
+            NFCState::Empty
+        };
+
         AppStateInit {
-            nfc: NFCState::Empty,
+            nfc: nfc,
             storage: storage,
         }
     }
@@ -76,16 +87,28 @@ struct DesktopSimulator {
     pin: Pincode,
     display: SimulatorDisplay<BinaryColor>,
     seed: Vec<u8>,
+    transaction: String,
+    extensions: String,
 }
 
 impl DesktopSimulator {
-    pub fn new(h: &mut HALHandle) -> Self {
+    pub fn new(init_state: &AppStateInit, h: &mut HALHandle) -> Self {
         let pin = Pincode::new(&mut h.rng, false);
         let display = SimulatorDisplay::new(Size::new(SCREEN_SIZE_X, SCREEN_SIZE_Y));
+        let transaction = match init_state.nfc {
+            NFCState::Empty => String::new(),
+            NFCState::Transaction => String::from("Hello, this is a transaction!"),
+        };
+        let extensions = match init_state.nfc {
+            NFCState::Empty => String::new(),
+            NFCState::Transaction => String::from("Hello, this is a transaction!"),
+        };
         Self {
             pin: pin,
             display: display,
             seed: Vec::new(),
+            transaction: transaction,
+            extensions: extensions,
         }
     }
 }
@@ -123,6 +146,26 @@ impl Platform for DesktopSimulator {
         (&self.seed, &mut self.display)
     }
 
+    fn set_transaction(&mut self, transaction: String, extensions: String) {
+        self.transaction = transaction;
+        self.extensions = extensions;
+    }
+
+    fn transaction(&mut self) -> Option<(&str, &mut Self::Display)> {
+        if self.transaction != "" {
+            Some((&self.transaction, &mut self.display))
+        } else {
+            None
+        }
+    }
+
+    fn extensions(&mut self) -> Option<(&str, &mut Self::Display)> {
+        if self.extensions != "" {
+            Some((&self.extensions, &mut self.display))
+        } else {
+            None
+        }
+    }
 }
 
 
@@ -138,7 +181,7 @@ fn main() {
 */
 
     let mut h = HALHandle::new();
-    let desktop = DesktopSimulator::new(&mut h);
+    let desktop = DesktopSimulator::new(&init_data_state, &mut h);
 
     let mut state = UIState::new(desktop);
 

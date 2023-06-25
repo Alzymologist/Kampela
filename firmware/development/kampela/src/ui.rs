@@ -2,6 +2,7 @@
 
 use nalgebra::{Affine2, OMatrix, Point2, RowVector3};
 use alloc::vec::Vec;
+use alloc::string::String;
 use lazy_static::lazy_static;
 
 use kampela_system::{
@@ -79,7 +80,10 @@ impl UI {
         ).unwrap() {
             self.status = UIStatus::TouchOperation(Read::new());
         };
+    }
 
+    pub fn handle_rx(&mut self, transaction: String, extensions: String) {
+        self.update = self.state.handle_rx(transaction, extensions);
     }
 }
 
@@ -100,6 +104,8 @@ struct Hardware {
     pin: Pincode,
     entropy: Vec<u8>,
     display: FrameBuffer,
+    transaction: Option<String>,
+    extensions: Option<String>,
 }
 
 impl Hardware {
@@ -112,6 +118,8 @@ impl Hardware {
             pin: pin,
             entropy: entropy,
             display: display,
+            transaction: None,
+            extensions: None,
         }
     }
 }
@@ -147,6 +155,27 @@ impl <'a> Platform for Hardware {
 
     fn entropy_display(&mut self) -> (&Vec<u8>, &mut <Self as Platform>::Display) {
         (&self.entropy, &mut self.display)
+    }
+
+    fn set_transaction(&mut self, transaction: String, extensions: String) {
+        self.transaction = Some(transaction);
+        self.extensions = Some(extensions);
+    }
+
+    fn transaction(&mut self) -> Option<(&str, &mut <Self as Platform>::Display)> {
+        if let Some(ref a) = self.transaction {
+            Some((a, &mut self.display))
+        } else {
+            None
+        }
+    }
+
+    fn extensions(&mut self) -> Option<(&str, &mut <Self as Platform>::Display)> {
+        if let Some(ref a) = self.extensions {
+            Some((a, &mut self.display))
+        } else {
+            None
+        }
     }
 }
 

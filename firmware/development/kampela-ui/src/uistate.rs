@@ -1,5 +1,11 @@
 //! UI state unit; almost all inerfacing should be done through this "object"
 
+#[cfg(not(feature="std"))]
+use alloc::string::String;
+
+#[cfg(feature="std")]
+use std::string::String;
+
 use embedded_graphics::{
     prelude::Primitive,
     primitives::{
@@ -35,7 +41,7 @@ impl UpdateRequest {
         UpdateRequest {
             fast: false,
             slow: false,
-        }
+}
     }
 
     pub fn set_slow(&mut self) {
@@ -91,6 +97,9 @@ pub enum Screen {
     OnboardingRestore(SeedEntryState),
     OnboardingBackup,
     PinRepeat,
+    ShowTransaction,
+    ShowExtension,
+    QR,
     Locked,
     End,
 }
@@ -121,7 +130,14 @@ impl <P: Platform> UIState<P> {
             Screen::PinEntry => {
                 let res = self.platform.handle_pin_event(point, h)?;
                 out = res.request;
-                new_screen = res.state;
+                // TODO this properly, expo hack
+                new_screen = match res.state {
+                    Some(a) => match self.platform.transaction() {
+                        Some(_) => Some(Screen::ShowTransaction),
+                        None => Some(a),
+                    },
+                    None => None,
+                };
             }
             Screen::OnboardingRestoreOrGenerate => match point.x {
                 0..=100 => {
@@ -143,16 +159,35 @@ impl <P: Platform> UIState<P> {
                 }
                 out = res.request;
                 new_screen = res.state;
-            }
+            },
             Screen::OnboardingBackup => {
                 new_screen = Some(Screen::PinRepeat);
                 out.set_slow();
-            }
+            },
             Screen::PinRepeat => {
                 let res = self.platform.handle_pin_event_repeat(point, h)?;
                 out = res.request;
                 new_screen = res.state;
+            },
+            Screen::ShowTransaction => match point.x {
+                150..=300 => {
+                    new_screen = Some(Screen::ShowExtension);
+                    out.set_slow();
+                }
+                _ => {},
+            },
+            Screen::ShowExtension => match point.x {
+                0..=100 => {
+                    new_screen = Some(Screen::ShowTransaction);
+                    out.set_slow();
+                }
+                150..=300 => {
+                    new_screen = Some(Screen::QR);
+                    out.set_slow();
+                }
+                _ => {},
             }
+            Screen::QR => (),
             Screen::Locked => (),
             Screen::End => (),
         }
@@ -160,6 +195,23 @@ impl <P: Platform> UIState<P> {
            self.screen = a;
         }
         Ok(out)
+    }
+
+    /// Handle NFC message reception.
+    /// TODO this correctly
+    /// currently it is a quick demo for expo
+    pub fn handle_rx(&mut self, transaction: String, extensions: String) -> UpdateRequest
+    {
+        let mut out = UpdateRequest::new();
+        self.platform.set_transaction(transaction, extensions);
+        match self.screen {
+            Screen::OnboardingRestoreOrGenerate => {
+                self.screen = Screen::ShowTransaction;
+                out.set_slow();
+            },
+            _ => {},
+        }
+        out
     }
 
     /// Display new screen state; should be called only when needed, is slow
@@ -198,7 +250,13 @@ impl <P: Platform> UIState<P> {
             }
             Screen::PinRepeat => {
                 self.platform.draw_pincode()?;
+            },
+            Screen::ShowTransaction => {
+                self.platform.draw_transaction()?
+            },
+            Screen::ShowExtension => {
             }
+            Screen::QR => (),
             _ => {}
         }
         Ok(())
