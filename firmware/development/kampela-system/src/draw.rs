@@ -212,7 +212,7 @@ impl Drawable for TextToPrint<'_> {
         let character_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
         let textbox_style = TextBoxStyleBuilder::new()
             .height_mode(HeightMode::FitToText)
-            .alignment(HorizontalAlignment::Justified)
+            .alignment(HorizontalAlignment::Left)
             .paragraph_spacing(5)
             .build();
         let bounds = Rectangle::new(Point::zero(), Size::new(SCREEN_SIZE_X, 0));
