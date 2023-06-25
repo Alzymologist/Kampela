@@ -200,10 +200,10 @@ impl <P: Platform> UIState<P> {
     /// Handle NFC message reception.
     /// TODO this correctly
     /// currently it is a quick demo for expo
-    pub fn handle_rx(&mut self, transaction: String, extensions: String) -> UpdateRequest
+    pub fn handle_rx(&mut self, transaction: String, extensions: String, signature: [u8; 130]) -> UpdateRequest
     {
         let mut out = UpdateRequest::new();
-        self.platform.set_transaction(transaction, extensions);
+        self.platform.set_transaction(transaction, extensions, signature);
         match self.screen {
             Screen::OnboardingRestoreOrGenerate => {
                 self.screen = Screen::ShowTransaction;
@@ -255,8 +255,11 @@ impl <P: Platform> UIState<P> {
                 self.platform.draw_transaction()?
             },
             Screen::ShowExtension => {
+                self.platform.draw_extensions()?
             }
-            Screen::QR => (),
+            Screen::QR => {
+                self.platform.draw_qr()?
+            },
             _ => {}
         }
         Ok(())

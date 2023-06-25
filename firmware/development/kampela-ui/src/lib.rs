@@ -10,6 +10,7 @@ pub mod backup;
 mod restore_or_generate;
 
 pub mod transaction;
+pub mod qr;
 
 #[macro_use]
 extern crate lazy_static;
