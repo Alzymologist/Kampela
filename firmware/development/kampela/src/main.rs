@@ -5,7 +5,7 @@
 extern crate alloc;
 extern crate core;
 
-use alloc::{collections::BTreeMap, format, string::ToString, vec::Vec};
+use alloc::{collections::BTreeMap, format, string::{String, ToString}, vec::Vec};
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
 use cortex_m::asm::delay;
@@ -20,15 +20,14 @@ use efm32pg23_fix::{interrupt, Interrupt, NVIC, Peripherals};
 mod ui;
 use ui::UI;
 mod nfc;
-use nfc::{BufferInfo, turn_nfc_collector_correctly, NfcCollector, process_nfc_payload, GOT_FRAMES, IN_BUFFER};
+use nfc::{BufferStatus, turn_nfc_collector_correctly, NfcCollector, process_nfc_payload};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
-    devices::{power::ADC, psram::{AddressPsram, CheckedMetadataMetal, ExternalPsram, PsramAccess}},
-//    devices::{psram::ExternalPsram, se_rng, touch::{FT6X36_REG_NUM_TOUCHES, LEN_NUM_TOUCHES}},
+    devices::{power::ADC, psram::{psram_read_at_address, CheckedMetadataMetal, ExternalPsram, PsramAccess}, se_rng::SeRng},
     draw::{burning_tank, draw_qr}, 
     init::init_peripherals,
     parallel::Operation,
@@ -40,15 +39,19 @@ use core::ops::DerefMut;
 use cortex_m::interrupt::free;
 use cortex_m::interrupt::Mutex;
 
-use p256::ecdsa::{signature::{hazmat::PrehashVerifier}, Signature, VerifyingKey};
-use sha2::Digest;
-use spki::DecodePublicKey;
-use kampela_system::devices::psram::psram_read_at_address;
-use substrate_parser::{ShortSpecs, compacts::find_compact, parse_transaction};
+//use p256::ecdsa::{signature::{hazmat::PrehashVerifier}, Signature, VerifyingKey};
+//use sha2::Digest;
+//use spki::DecodePublicKey;
+use substrate_parser::{MarkedData, ShortSpecs, compacts::find_compact, parse_transaction};
+use schnorrkel::{
+    context::attach_rng,
+    keys::Keypair,
+    signing_context,
+};
 
 lazy_static!{
     #[derive(Debug)]
-    static ref BUFFER_INFO: Mutex<RefCell<BufferInfo>> = Mutex::new(RefCell::new(BufferInfo::new()));
+    static ref BUFFER_STATUS: Mutex<RefCell<BufferStatus>> = Mutex::new(RefCell::new(BufferStatus::new()));
 }
 
 /*
@@ -61,7 +64,7 @@ static mut READER: Option<[u8;5]> = None;
 
 #[alloc_error_handler]
 fn oom(l: Layout) -> ! {
-    panic!("out of memory: {:?}, heap used: {}, free: {}, got frames: {}, frames in buffer: {}", l, HEAP.used(), HEAP.free(), unsafe {GOT_FRAMES}, unsafe {IN_BUFFER});
+    panic!("out of memory: {:?}, heap used: {}, free: {}", l, HEAP.used(), HEAP.free());
 }
 
 #[panic_handler]
@@ -81,36 +84,22 @@ fn LDMA() {
     free(|cs| {
         if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
             peripherals.LDMA_S.if_.reset();
-            let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-//            let buffer_info_old = buffer_info.buffer_status.clone();
-            match buffer_info.buffer_status.pass_if_done7() {
+            let mut buffer_status = BUFFER_STATUS.borrow(cs).borrow_mut();
+            match buffer_status.pass_if_done7() {
                 Ok(_) => {
-                    if !buffer_info.buffer_status.is_write_halted() {
+                    if !buffer_status.is_write_halted() {
                         peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1 << CH_TIM0));
                     }
                 },
-/*
-                if buffer_info.buffer_status.is_write_halted() {
-                    NVIC::mask(Interrupt::LDMA);
-                }
-                else {
-                    if let Some(ref mut peripherals) = PERIPHERALS.borrow(cs).borrow_mut().deref_mut() {
-                        peripherals.LDMA_S.if_.reset();
-                        peripherals.LDMA_S.linkload.write(|w_reg| w_reg.linkload().variant(1<<7));
-//                        panic!("has reset ldma flags");
-                    }
-                    else {unreachable!()} // TODO
-                }
-*/
-                Err(_) => {}//panic!("old: {:?}, current: {:?}", buffer_info_old, buffer_info) //TODO
+                Err(_) => {}
             }
         }
-        else {panic!("can not borrow peripherals in ldms interrupt")}
+        else {panic!("can not borrow peripherals in ldma interrupt")}
     });
 }
 
-static mut COUNTER: usize = 0;
-static mut UNPROCESSED_FRAMES: usize = 0;
+const ALICE_KAMPELA_KEY: &[u8] = &[24, 79, 109, 158, 13, 45, 121, 126, 185, 49, 212, 255, 134, 18, 243, 96, 119, 210, 175, 115, 48, 181, 19, 238, 61, 135, 28, 186, 185, 31, 59, 9, 172, 24, 200, 176, 25, 207, 214, 199, 221, 214, 171, 143, 80, 246, 86, 104, 48, 40, 21, 99, 114, 3, 232, 85, 101, 7, 128, 198, 36, 11, 101, 63, 180, 120, 97, 66, 191, 43, 74, 35, 69, 3, 219, 194, 72, 141, 68, 185, 188, 177, 117, 246, 178, 250, 89, 134, 116, 20, 248, 247, 151, 45, 130, 59];
+const SIGNING_CTX: &[u8] = b"substrate";
 
 #[entry]
 fn main() -> ! {
@@ -179,44 +168,35 @@ fn main() -> ! {
         PERIPHERALS.borrow(cs).replace(Some(peripherals));
     });
 
+    let pair_derived = Keypair::from_bytes(ALICE_KAMPELA_KEY).unwrap();
+
 //    let mut touch_data = [0; LEN_NUM_TOUCHES];
 //    let mut touched = false;
 
-    in_free(|peripherals| {
-        let data = b"01d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27de143f23803ac50e8f6f8e62695d1ce9e4e1d68aa36c1cd2cfd15340213f3423e";
-        draw_qr(peripherals, data.as_slice());
-    });
-
     let mut nfc_collector = NfcCollector::new();
-
-//    panic!("was still alive!");
 
     let mut ui = UI::init();
     let mut adc = ADC::new();
 
-    let mut counter = 0usize;
-//    let mut counter_frames = 0usize;
-
+    let mut got_transaction = None;
 
     loop {
         adc.advance(());
         ui.advance(adc.read());
-        if HEAP.free() < 1000 {panic!("heap ending! {}; counter: {counter}", HEAP.free())}
         
         turn_nfc_collector_correctly(&mut nfc_collector, &nfc_buffer);
 
         if let NfcCollector::Done(ref a) = nfc_collector {
             NVIC::mask(Interrupt::LDMA);
-/*
-            free(|cs| {
-                let mut buffer_info = BUFFER_INFO.borrow(cs).borrow_mut();
-                buffer_info.maybe_previous_tail = PreviousTail::Lost;
-            });
-*/
+
             let nfc_payload = process_nfc_payload(a).unwrap();
 
-            // calculate correct hash of the payload
             let mut first_byte: Option<u8> = None;
+            in_free(|peripherals| {
+                first_byte = Some(psram_read_at_address(peripherals, nfc_payload.encoded_data.start_address, 1usize).unwrap()[0]);
+            });
+            
+/* // calculate correct hash of the payload
 {
             let mut hasher = sha2::Sha256::new();
             in_free(|peripherals| {
@@ -239,6 +219,8 @@ fn main() -> ! {
                 .is_ok());
 
 }
+*/
+
             if let Some(3) = first_byte {
                 // got signable transaction
                 // panic!("got signable transaction");
@@ -289,22 +271,25 @@ fn main() -> ! {
                 });
                 let signable_transaction = signable_transaction_option.unwrap();
                 
-                let mut encryption_byte_option = None;
                 in_free(|peripherals| {
                     let start_address = nfc_payload.encoded_data.start_address.try_shift(position).unwrap();
-                    encryption_byte_option = Some(psram_read_at_address(peripherals, start_address, 1usize).unwrap()[0]);
-                    position += 1;
+                    let public_key = psram_read_at_address(peripherals, start_address, 33usize).unwrap();
+                    assert!(public_key.starts_with(&[1u8]) & (public_key[1..] == ALICE_KAMPELA_KEY[64..]), "Unknown address.");
                 });
-                let encryption_byte = encryption_byte_option.unwrap();
-                if encryption_byte == 1 {
-                    assert_eq!(position + 32, nfc_payload.encoded_data.total_len, "Unexpected address format.");
-                }
-                else {panic!("Unknown address.")}
+
+                let mut public_key_option: Option<[u8;32]> = None;
+                in_free(|peripherals| {
+                    let start_address = nfc_payload.encoded_data.start_address.try_shift(position).unwrap();
+                    public_key_option = Some(psram_read_at_address(peripherals, start_address, 32usize).unwrap().try_into().expect("static length, always fits"));
+                });
+                let public_key = public_key_option.unwrap();
+                assert!(public_key == &ALICE_KAMPELA_KEY[64..]);
                 
-                let mut call_option = None;
-                let mut extensions_option = None;
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
+                    let binding = signable_transaction.as_ref();
+                    let marked_data: MarkedData<'_, &[u8], ()> = MarkedData::mark(&binding, &mut ()).unwrap();
+                    let data_to_sign = binding[marked_data.call_start()..].to_vec();
                     let decoded_transaction = parse_transaction(
                         &signable_transaction.as_ref(),
                         &mut external_psram,
@@ -312,18 +297,30 @@ fn main() -> ! {
                         genesis_hash
                     ).unwrap();
                     let carded = decoded_transaction.card(&westend_specs);
-                    //panic!("{:?}", carded.call_result.unwrap());
-                    call_option = Some(carded.call_result.unwrap());
-                    extensions_option = Some(carded.extensions);
+                    got_transaction = Some((
+                        carded.call_result.unwrap().iter().map(|card| card.show()).collect::<Vec<String>>().join("\n"),
+                        carded.extensions.iter().map(|card| card.show()).collect::<Vec<String>>().join("\n"),
+                        data_to_sign
+                    ));
                 });
-                let call = call_option.unwrap();
-                let extensions = extensions_option.unwrap();
-
-                ui.handle_rx(format!("{:?}", call), format!("{:?}", extensions));
             }
             else {nfc_collector = NfcCollector::new();}
         }
-        counter += 1;
+        if got_transaction.is_some() {break}
     }
+    let transaction = got_transaction.unwrap();
+    let context = signing_context(SIGNING_CTX);
+    let signature = pair_derived.sign(attach_rng(context.bytes(&transaction.2), &mut SeRng{}));
+    let mut signature_with_id: [u8; 65] = [1; 65];
+    signature_with_id[1..].copy_from_slice(&signature.to_bytes());
+    let signature_into_qr: [u8; 130] = hex::encode(signature_with_id).into_bytes().try_into().expect("static known length");
+
+    in_free(|peripherals| {
+        draw_qr(peripherals, &signature_into_qr);
+    });
+
+    ui.handle_rx(transaction.0, transaction.1);
+
+    loop {}
 }
 
