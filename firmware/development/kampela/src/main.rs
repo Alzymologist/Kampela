@@ -276,14 +276,6 @@ fn main() -> ! {
                     let public_key = psram_read_at_address(peripherals, start_address, 33usize).unwrap();
                     assert!(public_key.starts_with(&[1u8]) & (public_key[1..] == ALICE_KAMPELA_KEY[64..]), "Unknown address.");
                 });
-
-                let mut public_key_option: Option<[u8;32]> = None;
-                in_free(|peripherals| {
-                    let start_address = nfc_payload.encoded_data.start_address.try_shift(position).unwrap();
-                    public_key_option = Some(psram_read_at_address(peripherals, start_address, 32usize).unwrap().try_into().expect("static length, always fits"));
-                });
-                let public_key = public_key_option.unwrap();
-                assert!(public_key == &ALICE_KAMPELA_KEY[64..]);
                 
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
@@ -315,12 +307,11 @@ fn main() -> ! {
     signature_with_id[1..].copy_from_slice(&signature.to_bytes());
     let signature_into_qr: [u8; 130] = hex::encode(signature_with_id).into_bytes().try_into().expect("static known length");
 
-    in_free(|peripherals| {
-        draw_qr(peripherals, &signature_into_qr);
-    });
+    ui.handle_rx(transaction.0, transaction.1, signature_into_qr);
 
-    ui.handle_rx(transaction.0, transaction.1);
-
-    loop {}
+    loop {
+        adc.advance(());
+        ui.advance(adc.read());
+    }
 }
 

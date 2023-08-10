@@ -11,6 +11,7 @@ use crate::pin::Pincode;
 use crate::uistate::EventResult;
 use crate::backup::draw_backup_screen;
 use crate::transaction;
+use crate::qr;
 
 const ENTROPY_LEN: usize = 32; //TODO: move to appropriate place
 
@@ -48,11 +49,13 @@ pub trait Platform {
     /// Getter for pincode and canvas
     fn entropy_display(&mut self) -> (&Vec<u8>, &mut Self::Display);
 
-    fn set_transaction(&mut self, transaction: String, extensions: String);
+    fn set_transaction(&mut self, transaction: String, extensions: String, signature: [u8; 130]);
 
     fn transaction(&mut self) -> Option<(&str, &mut Self::Display)>;
 
     fn extensions(&mut self) -> Option<(&str, &mut Self::Display)>;
+
+    fn signature(&mut self) -> (&[u8; 130], &mut Self::Display);
    
     //----derivatives----
 
@@ -100,6 +103,11 @@ pub trait Platform {
         } else {
             Ok(())
         }
+    }
+
+    fn draw_qr(&mut self) -> Result<(), <Self::Display as DrawTarget>::Error> {
+        let (s, d) = self.signature();
+        qr::draw(s, d)
     }
 }
 

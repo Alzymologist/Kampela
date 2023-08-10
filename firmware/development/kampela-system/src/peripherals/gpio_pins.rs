@@ -293,6 +293,7 @@ fn map_gpio(gpio: &mut GPIO_S) {
 /// Set GPIO pins to their starting values
 fn set_gpio_pins(gpio: &mut GPIO_S) {
     mcu_ok_clear(gpio);
+    mcu_ok_clear(gpio);
     pow_set(gpio);
     delay(100000); // wait after power set! (epaper manual for 2.8V setup)
     display_chip_select_set(gpio);
