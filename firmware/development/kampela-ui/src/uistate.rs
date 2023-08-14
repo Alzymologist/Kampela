@@ -24,7 +24,9 @@ use crate::platform::Platform;
 
 use crate::seed_entry::SeedEntryState;
 
-use crate::restore_or_generate;
+// use crate::restore_or_generate;
+
+use crate::end_screen;
 
 pub struct EventResult {
     pub request: UpdateRequest,
@@ -138,37 +140,37 @@ impl <P: Platform> UIState<P> {
                     },
                     None => None,
                 };
-            }
-            Screen::OnboardingRestoreOrGenerate => match point.x {
-                0..=100 => {
-                    new_screen = Some(Screen::OnboardingRestore(SeedEntryState::new()));
-                    out.set_slow();
-                }
-                150..=300 => {
-                    self.platform.generate_seed(h);
-                    new_screen = Some(Screen::OnboardingBackup);
-                    out.set_slow();
-                }
-                _ => {},
             },
-            Screen::OnboardingRestore(ref mut a) => {
-                let mut seed = None;
-                let res = a.handle_event(point, &mut seed, fast_display)?;
-                if let Some(b) = seed {
-                    self.platform.set_entropy(&b);
-                }
-                out = res.request;
-                new_screen = res.state;
-            },
-            Screen::OnboardingBackup => {
-                new_screen = Some(Screen::PinRepeat);
-                out.set_slow();
-            },
-            Screen::PinRepeat => {
-                let res = self.platform.handle_pin_event_repeat(point, h)?;
-                out = res.request;
-                new_screen = res.state;
-            },
+            // Screen::OnboardingRestoreOrGenerate => match point.x {
+            //     0..=100 => {
+            //         new_screen = Some(Screen::OnboardingRestore(SeedEntryState::new()));
+            //         out.set_slow();
+            //     }
+            //     150..=300 => {
+            //         self.platform.generate_seed(h);
+            //         new_screen = Some(Screen::OnboardingBackup);
+            //         out.set_slow();
+            //     }
+            //     _ => {},
+            // },
+            // Screen::OnboardingRestore(ref mut a) => {
+            //     let mut seed = None;
+            //     let res = a.handle_event(point, &mut seed, fast_display)?;
+            //     if let Some(b) = seed {
+            //         self.platform.set_entropy(&b);
+            //     }
+            //     out = res.request;
+            //     new_screen = res.state;
+            // },
+            // Screen::OnboardingBackup => {
+            //     new_screen = Some(Screen::PinRepeat);
+            //     out.set_slow();
+            // },
+            // Screen::PinRepeat => {
+            //     let res = self.platform.handle_pin_event_repeat(point, h)?;
+            //     out = res.request;
+            //     new_screen = res.state;
+            // },
             Screen::ShowTransaction => match point.x {
                 150..=300 => {
                     new_screen = Some(Screen::ShowExtension);
@@ -186,10 +188,11 @@ impl <P: Platform> UIState<P> {
                     out.set_slow();
                 }
                 _ => {},
-            }
-            Screen::QR => (),
-            Screen::Locked => (),
-            Screen::End => (),
+            },
+            // Screen::QR => (),
+            // Screen::Locked => (),
+            // Screen::End => (),
+            _ => (),
         }
         if let Some(a) = new_screen {
            self.screen = a;
@@ -205,7 +208,7 @@ impl <P: Platform> UIState<P> {
         let mut out = UpdateRequest::new();
         self.platform.set_transaction(transaction, extensions, signature);
         match self.screen {
-            Screen::OnboardingRestoreOrGenerate => {
+            Screen::End => {
                 self.screen = Screen::ShowTransaction;
                 out.set_slow();
             },
@@ -223,42 +226,45 @@ impl <P: Platform> UIState<P> {
         match self.screen {
             Screen::PinEntry => {
                 self.platform.draw_pincode()?;
-            }
-            Screen::OnboardingRestoreOrGenerate => {
-                restore_or_generate::draw(display)?;
-            }
-            Screen::OnboardingRestore(ref entry) => {
-                entry.draw(display)?;
-            }
-            Screen::Locked => {
-                let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
-                Line::new(
-                    Point::new(0, 0),
-                    Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32),
-                )
-                .into_styled(linestyle)
-                .draw(display)?;
-                Line::new(
-                    Point::new(SCREEN_SIZE_X as i32, 0),
-                    Point::new(0, SCREEN_SIZE_Y as i32),
-                )
-                .into_styled(linestyle)
-                .draw(display)?;
-            }
-            Screen::OnboardingBackup => {
-                self.platform.draw_backup()?;
-            }
-            Screen::PinRepeat => {
-                self.platform.draw_pincode()?;
             },
+            // Screen::OnboardingRestoreOrGenerate => {
+            //     restore_or_generate::draw(display)?;
+            // }
+            // Screen::OnboardingRestore(ref entry) => {
+            //     entry.draw(display)?;
+            // }
+            // Screen::Locked => {
+            //     let linestyle = PrimitiveStyle::with_stroke(BinaryColor::On, 5);
+            //     Line::new(
+            //         Point::new(0, 0),
+            //         Point::new(SCREEN_SIZE_X as i32, SCREEN_SIZE_Y as i32),
+            //     )
+            //     .into_styled(linestyle)
+            //     .draw(display)?;
+            //     Line::new(
+            //         Point::new(SCREEN_SIZE_X as i32, 0),
+            //         Point::new(0, SCREEN_SIZE_Y as i32),
+            //     )
+            //     .into_styled(linestyle)
+            //     .draw(display)?;
+            // },
+            // Screen::OnboardingBackup => {
+            //     self.platform.draw_backup()?;
+            // },
+            // Screen::PinRepeat => {
+            //     self.platform.draw_pincode()?;
+            // },
             Screen::ShowTransaction => {
                 self.platform.draw_transaction()?
             },
             Screen::ShowExtension => {
                 self.platform.draw_extensions()?
-            }
+            },
             Screen::QR => {
                 self.platform.draw_qr()?
+            },
+            Screen::End => {
+                end_screen::draw(display)?;
             },
             _ => {}
         }

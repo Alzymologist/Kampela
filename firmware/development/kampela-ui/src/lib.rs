@@ -8,6 +8,7 @@ pub mod pin;
 mod seed_entry;
 pub mod backup;
 mod restore_or_generate;
+mod end_screen;
 
 pub mod transaction;
 pub mod qr;

@@ -12,7 +12,7 @@ use embedded_graphics_core::{
     pixelcolor::BinaryColor,
 };
 use embedded_text::{
-    alignment::{HorizontalAlignment, VerticalAlignment},
+    alignment::HorizontalAlignment,
     style::{HeightMode, TextBoxStyleBuilder},
     TextBox,
 };
