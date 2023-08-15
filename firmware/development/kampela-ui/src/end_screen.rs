@@ -19,7 +19,7 @@ use embedded_text::{
 
 use crate::display_def::*;
 
-/// Draw the screen asking the user wherther to restore seed or generate random one
+/// End of operation placeholder screen
 pub fn draw<D>(display: &mut D) -> Result<(), D::Error>
 where
     D: DrawTarget<Color = BinaryColor>,
