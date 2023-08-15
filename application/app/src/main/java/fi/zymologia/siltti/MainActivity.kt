@@ -9,6 +9,7 @@ import android.nfc.NfcAdapter.EXTRA_TAG
 import android.nfc.Tag
 import android.nfc.TagLostException
 import android.nfc.tech.NfcA
+import android.os.Build
 import android.os.Bundle
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -165,7 +166,11 @@ class MainActivity : ComponentActivity() {
     public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
-            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            } else {
+                intent.getParcelableExtra(EXTRA_TAG)
+            }
             Log.d("NFC tag", tag.toString())
 
             transmitData?.let { action: Action ->
