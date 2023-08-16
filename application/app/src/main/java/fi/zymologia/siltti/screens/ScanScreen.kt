@@ -41,6 +41,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import fi.zymologia.siltti.*
+import fi.zymologia.siltti.components.ScanProgressBar
 import fi.zymologia.siltti.uniffi.*
 import fi.zymologia.siltti.uniffi.Collection
 

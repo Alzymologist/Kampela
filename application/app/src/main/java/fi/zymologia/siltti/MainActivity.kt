@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
                     ScreenScaffold(
                         dbName,
                         count,
-                        {packagesSent.disable()}
+                        { packagesSent.disable() },
                     ) { newAction: Action? ->
                         transmitData = newAction
                     }
@@ -163,12 +163,14 @@ class MainActivity : ComponentActivity() {
     }
 
     // TODO: move to bg thread
+    @OptIn(ExperimentalUnsignedTypes::class)
     public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
             val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
             } else {
+                @Suppress("DEPRECATION")
                 intent.getParcelableExtra(EXTRA_TAG)
             }
             Log.d("NFC tag", tag.toString())
@@ -202,7 +204,7 @@ class MainActivity : ComponentActivity() {
                     }
                     Log.d("NFC TX", "done")
                 }
-                //packagesSent.disable()
+                // packagesSent.disable()
             }
         }
 
