@@ -1,34 +1,48 @@
-Wee are trying to build:
+# Requirements
+We assume that you have linux.
 
-cargo build --release
+Set of packages as well as commands could vary depending on your distribution.
+Following is valid for ArchLinux.
 
-... and get error that we don't have `thumbv8m.main-none-eabihf` target.
-So, we are going to add this target:
-
-rustup target add thumbv8m.main-none-eabihf
-
-And here we can see that wee installed wrong rust package (rust), so we have to remove it and install rustup instead:
-
-pacman -R rust
-
-pacman -S rustup arm-none-eabi-gcc
+Install rustup and ARM toolchain:
+```sh
+[sudo] pacman -S rustup arm-none-eabi-gcc arm-none-eabi-binutils
 rustup update
 rustup default stable
+```
 
-Also we installed arm-none-eabi-gcc which is required for build.
-And finally:
+Also you will need a program for flashing.
+
+For Pilkki flasher look [here](https://github.com/Alzymologist/pilkki).
+
+For Segger you need to install [simplicity-commander](https://www.silabs.com/developers/mcu-programming-options).
+In case of ArchLinux there is [AUR package](https://aur.archlinux.org/packages/simplicity-commander).
+
+# Preparations
+
+```sh
 rustup target add thumbv8m.main-none-eabihf
 cargo install flip-link
-cardo build --release
+```
 
-You will need simplicity commander, so, install AUR package manager:
-cargo install rua
-UPD: aur package is outdated.
-Get PKGBUILD here:
-https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=simplicity-commander
 
-run `makepkg`, it will downliad zip file, then run `sha256sum <zip file>`  and replace in PKGBUILD.
+# Build
 
-and then run `makepkg -i`
+```sh
+cargo build --release
+```
 
-Run ./binarize.sh to upload firmware.
+## Flashing
+
+In case of Pilkki:
+```sh
+./binarize.sh --pilkki
+```
+
+And in case of Segger
+```sh
+./binarize.sh --segger
+```
+
+
+
