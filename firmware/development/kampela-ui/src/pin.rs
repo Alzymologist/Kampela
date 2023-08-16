@@ -196,7 +196,7 @@ where
     Ok(())
 }
 
-const PIN_CODE_MOCK: [u4; PIN_LEN] = [u4::new(0); PIN_LEN];
+// const PIN_CODE_MOCK: [u4; PIN_LEN] = [u4::new(0); PIN_LEN];
 
 /// UI state for pin code entry stage
 #[derive(Debug)]
@@ -324,15 +324,14 @@ impl Pincode {
     fn check_pin(&mut self) -> Option<Screen> {
         if self.position == PIN_LEN {
             self.reset_position();
-            if self.pin_set {
-                if self.code == PIN_CODE_MOCK {
+                if self.code[0] == self.code[1] 
+                    && self.code[1] == self.code[2] 
+                    && self.code[2] == self.code[3]
+                {
                     Some(Screen::End)
                 } else {
-                    Some(Screen::Locked)
+                    Some(Screen::PinEntry)
                 }
-            } else {
-                Some(Screen::OnboardingRestoreOrGenerate)
-            }
         } else {
             None
         }

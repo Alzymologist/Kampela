@@ -18,6 +18,7 @@ lazy_static = { version = "1.4.0", default_features = false }
 patches = { path = "../kampela_experiments_efm32pg23/patches" }
 kampela-display-common = { path = "../kampela-display-common" }
 clap = { version = "4.2.1", features = ["derive"], optional = true }
+qrcodegen-noheap = {git = "https://github.com/Slesarew/QR-Code-generator", branch = "patch-1"}
 
 [features]
 default = ["std"]

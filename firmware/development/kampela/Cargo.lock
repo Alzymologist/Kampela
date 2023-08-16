@@ -831,6 +831,7 @@ dependencies = [
  "kampela-display-common",
  "lazy_static",
  "patches",
+ "qrcodegen-noheap",
  "rand",
  "rand_core 0.6.4",
  "ux",

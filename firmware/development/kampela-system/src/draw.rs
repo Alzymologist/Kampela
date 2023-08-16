@@ -35,7 +35,7 @@ pub enum DisplayError {}
 ///
 //TODO tune these values for prod; something like 12k and 8k
 const FAST_REFRESH_POWER: i32 = 4000;
-const FULL_REFRESH_POWER: i32 = 4000;
+const FULL_REFRESH_POWER: i32 = 6000;
 
 /// Virtual display data storage
 type PixelData = BitArr!(for SCREEN_SIZE_VALUE, in u8, Msb0);

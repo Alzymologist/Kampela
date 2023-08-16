@@ -82,8 +82,8 @@ impl UI {
         };
     }
 
-    pub fn handle_rx(&mut self, transaction: String, extensions: String) {
-        self.update = self.state.handle_rx(transaction, extensions);
+    pub fn handle_rx(&mut self, transaction: String, extensions: String, signature: [u8; 130]) {
+        self.update = self.state.handle_rx(transaction, extensions, signature);
     }
 }
 
@@ -106,6 +106,7 @@ struct Hardware {
     display: FrameBuffer,
     transaction: Option<String>,
     extensions: Option<String>,
+    signature: Option<[u8; 130]>,
 }
 
 impl Hardware {
@@ -120,6 +121,7 @@ impl Hardware {
             display: display,
             transaction: None,
             extensions: None,
+            signature: None,
         }
     }
 }
@@ -157,9 +159,10 @@ impl <'a> Platform for Hardware {
         (&self.entropy, &mut self.display)
     }
 
-    fn set_transaction(&mut self, transaction: String, extensions: String) {
+    fn set_transaction(&mut self, transaction: String, extensions: String, signature: [u8; 130]) {
         self.transaction = Some(transaction);
         self.extensions = Some(extensions);
+        self.signature = Some(signature);
     }
 
     fn transaction(&mut self) -> Option<(&str, &mut <Self as Platform>::Display)> {
@@ -175,6 +178,14 @@ impl <'a> Platform for Hardware {
             Some((a, &mut self.display))
         } else {
             None
+        }
+    }
+
+    fn signature(&mut self) -> (&[u8; 130], &mut <Self as Platform>::Display) {
+        if let Some(ref a) = self.signature {
+            (a, &mut self.display)
+        } else {
+            panic!("qr generation failed");
         }
     }
 }
