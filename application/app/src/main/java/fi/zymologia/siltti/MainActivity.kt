@@ -9,7 +9,6 @@ import android.nfc.NfcAdapter.EXTRA_TAG
 import android.nfc.Tag
 import android.nfc.TagLostException
 import android.nfc.tech.IsoDep
-import android.nfc.tech.Ndef
 import android.nfc.tech.NfcA
 import android.os.Build
 import android.os.Bundle
@@ -28,6 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import fi.zymologia.siltti.ui.theme.SilttiTheme
 import fi.zymologia.siltti.uniffi.Action
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -35,6 +38,7 @@ import java.security.KeyStore
 class MainActivity : ComponentActivity() {
     private var transmitData: Action? = null
     private val packagesSent by viewModels<PackagesSent>()
+    private val scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -168,52 +172,56 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalUnsignedTypes::class)
     public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Thread(
-            Runnable {
-                if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
-                    val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(EXTRA_TAG)
-                    }
-                    Log.d("NFC tag", tag.toString())
+        // Should not leak or block as its lifecycle is really bound to NFC
+        scope.launch { nfcThrower(intent) }
 
-                    transmitData?.let { action: Action ->
-                        IsoDep.get(tag)?.let { tech ->
+        Log.d("NFC", "intent processed")
+    }
+
+    private fun nfcThrower(intent: Intent) {
+        if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
+            val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(EXTRA_TAG)
+            }
+            Log.d("NFC tag", tag.toString())
+
+            transmitData?.let { action: Action ->
+                IsoDep.get(tag)?.let { tech ->
+                    try {
+                        tech.connect()
+                        while (true) {
                             try {
-                                tech.connect()
-                                while (true) {
-                                    try {
-                                        action.makePacket()?.let {
-                                            Log.d("======> ", it.toString())
-                                            tech.transceive(it.toUByteArray().toByteArray())
-                                        }
-                                    } catch (e: TagLostException) {
-                                        Log.d("Tag lost", "message $e")
-                                        break
-                                    } catch (e: IOException) {
-                                        Log.d("IOException", "message $e")
+                                action.makePacket()?.let {
+                                    Log.d("======> ", it.toString())
+                                    tech.transceive(it.toUByteArray().toByteArray())
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        mainExecutor.execute { packagesSent.inc() }
                                     }
-                                    Log.d("sent: ", packagesSent.count.value.toString())
                                 }
-                            } catch (e: IOException) {
-                                Log.d("NFC link crashed", e.message ?: "unknown")
-                            }
-                            try {
-                                tech.close()
+                            } catch (e: TagLostException) {
+                                Log.d("Tag lost", "message $e")
+                                break
                             } catch (e: IOException) {
                                 Log.d("IOException", "message $e")
                             }
-                            Log.d("NFC TX", "done")
+                            Log.d("sent: ", packagesSent.count.value.toString())
                         }
-                        // packagesSent.disable()
+                    } catch (e: IOException) {
+                        Log.d("NFC link crashed", e.message ?: "unknown")
                     }
+                    try {
+                        tech.close()
+                    } catch (e: IOException) {
+                        Log.d("IOException", "message $e")
+                    }
+                    Log.d("NFC TX", "done")
                 }
-            },
-        ).start()
-
-        Log.d("NFC", "intent processed")
+                // packagesSent.disable()
+            }
+        }
     }
 }
 
