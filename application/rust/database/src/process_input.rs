@@ -24,7 +24,7 @@ pub const PREFIX_SUBSTRATE: u8 = 0x53;
 
 pub const ID_SIGNABLE: &[u8] = &[0x00, 0x02];
 pub const ID_BYTES: u8 = 0x03;
-pub const ID_METADATA: u8 = 0xcc;
+pub const ID_METADATA: u8 = 0x80;
 pub const ID_SPECS: u8 = 0xc1;
 
 impl FromQrAndDb for Transaction {
