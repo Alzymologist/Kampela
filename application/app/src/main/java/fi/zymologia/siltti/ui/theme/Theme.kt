@@ -14,7 +14,7 @@ private val DarkColorPalette = darkColors(
     background = BrandBg,
     surface = BrandSecondary,
     onPrimary = BrandOnPrimary,
-    onBackground = BrandOnBackground
+    onBackground = BrandOnBackground,
 )
 
 private val LightColorPalette = lightColors(
@@ -25,7 +25,7 @@ private val LightColorPalette = lightColors(
     background = BrandBg,
     surface = BrandSecondary,
     onPrimary = BrandOnPrimary,
-    onBackground = BrandOnBackground
+    onBackground = BrandOnBackground,
 
     /* Other default colors to override
     background = Color.White,
@@ -49,6 +49,6 @@ fun SilttiTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable
         colors = colors,
         typography = Typography,
         shapes = Shapes,
-        content = content
+        content = content,
     )
 }

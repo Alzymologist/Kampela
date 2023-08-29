@@ -1,4 +1,4 @@
-package fi.zymologia.siltti
+package fi.zymologia.siltti.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
