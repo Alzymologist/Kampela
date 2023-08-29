@@ -90,6 +90,7 @@ class Signer : SignByCompanion {
         return signature.toUByteArray().toList()
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     override fun exportPublicKey(): List<UByte> {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply {
             load(null)

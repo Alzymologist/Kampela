@@ -8,7 +8,9 @@ import android.nfc.NfcAdapter
 import android.nfc.NfcAdapter.EXTRA_TAG
 import android.nfc.Tag
 import android.nfc.TagLostException
+import android.nfc.tech.IsoDep
 import android.nfc.tech.NfcA
+import android.os.Build
 import android.os.Bundle
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -25,6 +27,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import fi.zymologia.siltti.ui.theme.SilttiTheme
 import fi.zymologia.siltti.uniffi.Action
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -32,6 +38,7 @@ import java.security.KeyStore
 class MainActivity : ComponentActivity() {
     private var transmitData: Action? = null
     private val packagesSent by viewModels<PackagesSent>()
+    private val scope = CoroutineScope(Job() + Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,7 +122,7 @@ class MainActivity : ComponentActivity() {
                     ScreenScaffold(
                         dbName,
                         count,
-                        {packagesSent.disable()}
+                        { packagesSent.disable() },
                     ) { newAction: Action? ->
                         transmitData = newAction
                     }
@@ -162,14 +169,27 @@ class MainActivity : ComponentActivity() {
     }
 
     // TODO: move to bg thread
+    @OptIn(ExperimentalUnsignedTypes::class)
     public override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Should not leak or block as its lifecycle is really bound to NFC
+        scope.launch { nfcThrower(intent) }
+
+        Log.d("NFC", "intent processed")
+    }
+
+    private fun nfcThrower(intent: Intent) {
         if (NfcAdapter.ACTION_TECH_DISCOVERED == intent.action) {
-            val tag = intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            val tag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(EXTRA_TAG, Tag::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(EXTRA_TAG)
+            }
             Log.d("NFC tag", tag.toString())
 
             transmitData?.let { action: Action ->
-                NfcA.get(tag)?.let { tech ->
+                IsoDep.get(tag)?.let { tech ->
                     try {
                         tech.connect()
                         while (true) {
@@ -177,6 +197,9 @@ class MainActivity : ComponentActivity() {
                                 action.makePacket()?.let {
                                     Log.d("======> ", it.toString())
                                     tech.transceive(it.toUByteArray().toByteArray())
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        mainExecutor.execute { packagesSent.inc() }
+                                    }
                                 }
                             } catch (e: TagLostException) {
                                 Log.d("Tag lost", "message $e")
@@ -184,7 +207,6 @@ class MainActivity : ComponentActivity() {
                             } catch (e: IOException) {
                                 Log.d("IOException", "message $e")
                             }
-                            packagesSent.inc()
                             Log.d("sent: ", packagesSent.count.value.toString())
                         }
                     } catch (e: IOException) {
@@ -197,11 +219,9 @@ class MainActivity : ComponentActivity() {
                     }
                     Log.d("NFC TX", "done")
                 }
-                //packagesSent.disable()
+                // packagesSent.disable()
             }
         }
-
-        Log.d("NFC", "intent processed")
     }
 }
 
