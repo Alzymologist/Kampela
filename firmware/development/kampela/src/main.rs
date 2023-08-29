@@ -5,7 +5,7 @@
 extern crate alloc;
 extern crate core;
 
-use alloc::{collections::BTreeMap, format, string::{String, ToString}, vec::Vec};
+use alloc::{format, string::{String, ToString}, vec::Vec};
 use core::{alloc::Layout, panic::PanicInfo};
 use core::ptr::addr_of;
 use cortex_m::asm::delay;
@@ -28,7 +28,7 @@ static HEAP: Heap = Heap::empty();
 use kampela_system::{
     PERIPHERALS, CORE_PERIPHERALS, in_free,
     devices::{power::ADC, psram::{psram_read_at_address, CheckedMetadataMetal, ExternalPsram, PsramAccess}, se_rng::SeRng},
-    draw::{burning_tank, draw_qr}, 
+    draw::burning_tank, 
     init::init_peripherals,
     parallel::Operation,
     BUF_QUARTER, CH_TIM0, LINK_1, LINK_2, LINK_DESCRIPTORS, TIMER0_CC0_ICF, NfcXfer, NfcXferBlock,
@@ -242,21 +242,10 @@ fn main() -> ! {
                 });
                 let metadata_psram_access = metadata_psram_access_option.unwrap();
                 
-                let mut map_option = None;
-                in_free(|peripherals| {
-                    let mut external_psram = ExternalPsram{peripherals};
-                    let compact_map = find_compact::<u32, PsramAccess, ExternalPsram>(&nfc_payload.encoded_data, &mut external_psram, position).unwrap();
-                    let start_address = nfc_payload.encoded_data.start_address.try_shift(compact_map.start_next_unit).unwrap();
-                    let map_encoded = psram_read_at_address(peripherals, start_address, compact_map.compact as usize).unwrap();
-                    map_option = Some(BTreeMap::<u32, u32>::decode(&mut &map_encoded[..]).unwrap());
-                    position = compact_map.start_next_unit + compact_map.compact as usize;
-                });
-                let map = map_option.unwrap();
-                
                 let mut checked_metadata_metal_option = None;
                 in_free(|peripherals| {
                     let mut external_psram = ExternalPsram{peripherals};
-                    checked_metadata_metal_option = Some(CheckedMetadataMetal::from(&metadata_psram_access, &mut external_psram, map.clone()).unwrap());
+                    checked_metadata_metal_option = Some(CheckedMetadataMetal::from(&metadata_psram_access, &mut external_psram).unwrap());
                 });
                 let checked_metadata_metal = checked_metadata_metal_option.unwrap();
                 

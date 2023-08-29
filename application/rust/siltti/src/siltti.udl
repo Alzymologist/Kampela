@@ -106,6 +106,7 @@ enum ErrorCompanion {
     "DecodeDbSpecsKey",
     "DecodeDbSpecsValue",
     "LTError",
+    "MetaCut",
     "MetadataQrDecode",
     "MetadataQrUnexpectedStructure",
     "MetadataVersion",

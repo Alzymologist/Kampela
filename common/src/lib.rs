@@ -121,8 +121,7 @@ pub struct BlindTransaction {
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct Transaction {
     pub genesis_hash: H256,
-    pub encoded_meta_v14: Vec<u8>,
-    pub encoded_map: Vec<u8>,
+    pub encoded_short_meta: Vec<u8>,
     pub encoded_signable_transaction: Vec<u8>,
     pub signer: MultiSigner,
 }
