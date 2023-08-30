@@ -7,6 +7,7 @@ use std::{
     convert::TryInto,
     sync::{Arc, RwLock},
 };
+use substrate_parser::cut_metadata::cut_metadata;
 
 use kampela_common::{
     BlindTransaction, Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue,
@@ -23,7 +24,7 @@ pub const PREFIX_SUBSTRATE: u8 = 0x53;
 
 pub const ID_SIGNABLE: &[u8] = &[0x00, 0x02];
 pub const ID_BYTES: u8 = 0x03;
-pub const ID_METADATA: u8 = 0xcc;
+pub const ID_METADATA: u8 = 0x80;
 pub const ID_SPECS: u8 = 0xc1;
 
 impl FromQrAndDb for Transaction {
@@ -57,10 +58,10 @@ impl FromQrAndDb for Transaction {
             );
             let metadata_value = MetadataValue::read_from_db(db_path, genesis_hash)?;
             let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
+            let short_metadata = cut_metadata(&signable_transaction.as_ref(), &mut (), &metadata_value.metadata).map_err(ErrorCompanion::MetaCut)?;
             Ok(Self {
                 genesis_hash,
-                encoded_meta_v14: metadata_value.metadata.meta_v14.encode(),
-                encoded_map: metadata_value.metadata.map.encode(),
+                encoded_short_meta: short_metadata.encode(),
                 encoded_signable_transaction: signable_transaction.encode(),
                 signer,
             })

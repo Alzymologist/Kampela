@@ -1,6 +1,6 @@
 //! Errors occuring in companion.
 use sp_core::H256;
-use substrate_parser::error::MetaVersionError;
+use substrate_parser::error::{MetaCutError, MetaVersionError};
 
 use kampela_common::Encryption;
 
@@ -32,6 +32,9 @@ pub enum ErrorCompanion {
 
     #[error("Error generating LT codes.")]
     LTError,
+
+    #[error("Error cutting metadata for signable transaction. {0}")]
+    MetaCut(MetaCutError<()>),
 
     #[error("Metadata from scanned QR could not be decoded.")]
     MetadataQrDecode,

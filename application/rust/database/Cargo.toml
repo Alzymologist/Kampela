@@ -6,11 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+frame-metadata = {version = "16.0.0", default-features = false, features = ["current", "decode"]}
 hex = "0.4.3"
 parity-scale-codec = "3.1.5"
 sled = "0.34.7"
 sp-core = {version = "9.0.0", default-features = false, features = ["full_crypto"]}
-substrate_parser = {git = "https://github.com/Alzymologist/substrate-parser", default-features = false}
+substrate_parser = { git = "https://github.com/Alzymologist/substrate-parser", default-features = false, features = ["embed-display"] }
 thiserror = "1.0.35"
 
 kampela-common = {path = "../../../common"}
