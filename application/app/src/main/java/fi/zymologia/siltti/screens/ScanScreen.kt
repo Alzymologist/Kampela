@@ -126,12 +126,22 @@ fun ScanScreen(
                                         transmitCallback(
                                             transmittable,
                                         )
-                                        // Thanks to very smart electrical engineers in certain
-                                        // smartphone companies,
-                                        // NFC stops working when camera is on sometimes.
-                                        // This is too funny to be true but here we are.
-                                        cameraProvider.unbindAll()
-                                        setAppState(Mode.TX)
+
+                                        if (transmittable == null ) {
+                                            Toast
+                                                .makeText(
+                                                    context,
+                                                    "payload accepted",
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                        } else {
+                                            // Thanks to very smart electrical engineers in certain
+                                            // smartphone companies,
+                                            // NFC stops working when camera is on sometimes.
+                                            // This is too funny to be true but here we are.
+                                            cameraProvider.unbindAll()
+                                            setAppState(Mode.TX)
+                                        }
                                     },
                                     collection::processFrame,
                                     {
