@@ -42,11 +42,14 @@ enum ErrorQr {
 };
 
 interface Action {
+    [Name=new_kampela_stop, Throws=ErrorCompanion]
+    constructor(SignByCompanion signature_maker);
+
     [Name=new_payload, Throws=ErrorCompanion]
     constructor([ByRef] sequence<u8> payload, [ByRef] string db_path, SignByCompanion signature_maker);
     
     [Name=new_derivation, Throws=ErrorCompanion]
-    constructor(sequence<SpecsKey> specs_key_set, string cut_path, boolean has_pwd, SignByCompanion signature_maker);
+    constructor(string cut_path, boolean has_pwd, SignByCompanion signature_maker);
     
     [Name=new_specs_set, Throws=ErrorCompanion]
     constructor(sequence<SpecsValue> specs_value_set, SignByCompanion signature_maker);

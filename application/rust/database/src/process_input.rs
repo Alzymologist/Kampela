@@ -10,7 +10,7 @@ use std::{
 use substrate_parser::cut_metadata::cut_metadata;
 
 use kampela_common::{
-    BlindTransaction, Bytes, DerivationInfo, Encryption, MultiSigner, SpecsKey, SpecsValue,
+    Bytes, DerivationInfo, Encryption, MultiSigner, SpecsValue,
     Transaction, TransmittableContent,
 };
 use rand::Fill;
@@ -100,46 +100,6 @@ impl FromQr for Bytes {
     }
 }
 
-impl FromQr for BlindTransaction {
-    fn from_payload_prelude_cut(
-        mut payload: &[u8],
-        encryption: &Encryption,
-    ) -> Result<Self, ErrorCompanion> {
-        let signer = match payload.get(0..encryption.key_length()) {
-            Some(public_key_slice) => {
-                payload = &payload[encryption.key_length()..];
-                match encryption {
-                    Encryption::Ed25519 => MultiSigner::Ed25519(
-                        public_key_slice.try_into().expect("stable known length"),
-                    ),
-                    Encryption::Sr25519 => MultiSigner::Sr25519(
-                        public_key_slice.try_into().expect("stable known length"),
-                    ),
-                    Encryption::Ecdsa => MultiSigner::Ecdsa(
-                        public_key_slice.try_into().expect("stable known length"),
-                    ),
-                }
-            }
-            None => return Err(ErrorCompanion::TooShort),
-        };
-        if payload.len() >= H256::len_bytes() {
-            let genesis_hash = H256(
-                payload[payload.len() - H256::len_bytes()..]
-                    .try_into()
-                    .expect("stable known length"),
-            );
-            let signable_transaction = payload[..payload.len() - H256::len_bytes()].to_vec();
-            Ok(Self {
-                genesis_hash,
-                signable_transaction,
-                signer,
-            })
-        } else {
-            Err(ErrorCompanion::TooShort)
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum Action {
     Success,
@@ -172,6 +132,16 @@ impl Transmittable {
 }
 
 impl Action {
+    pub fn new_kampela_stop(
+        signature_maker: Box<dyn SignByCompanion>,
+    ) -> Result<Self, ErrorCompanion> {
+        let transmittable = Transmittable {
+            content: TransmittableContent::KampelaStop,
+            signature_maker,
+        };
+        Ok(Self::Transmit(transmittable.into_transmit()?))
+    }
+
     pub fn new_payload(
         mut payload: &[u8],
         db_path: &str,
@@ -233,16 +203,11 @@ impl Action {
     }
 
     pub fn new_derivation(
-        specs_key_set: Vec<Arc<SpecsKey>>,
         cut_path: String,
         has_pwd: bool,
         signature_maker: Box<dyn SignByCompanion>,
     ) -> Result<Self, ErrorCompanion> {
         let derivation = DerivationInfo {
-            chains: specs_key_set
-                .iter()
-                .map(|a| a.as_ref().to_owned())
-                .collect(),
             cut_path,
             has_pwd,
         };

@@ -69,13 +69,20 @@ pub struct TransferData {
 
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub enum TransmittableContent {
-    BlindTransaction(BlindTransaction), // TODO delete this later, use only for tests
+    #[codec(index = 0)]
+    KampelaStop,
+    #[codec(index = 1)]
     Bytes(Bytes),
+    #[codec(index = 2)]
     Derivation(DerivationInfo),
+    #[codec(index = 3)]
     SignableTransaction(Transaction),
-    SizedTransfer(Vec<u8>),
-    Specs(SpecsValue),
-    SpecsSet(Vec<SpecsValue>),
+    #[codec(index = 128)]
+    SizedTransfer(Vec<u8>), // to be retired
+    #[codec(index = 129)]
+    Specs(SpecsValue), // to be retired
+    #[codec(index = 130)]
+    SpecsSet(Vec<SpecsValue>), // to be retired
 }
 
 #[derive(Clone, Debug, Decode, Encode, Eq, PartialEq)]
@@ -112,13 +119,6 @@ pub struct Bytes {
 }
 
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
-pub struct BlindTransaction {
-    pub genesis_hash: H256,
-    pub signable_transaction: Vec<u8>,
-    pub signer: MultiSigner,
-}
-
-#[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct Transaction {
     pub genesis_hash: H256,
     pub encoded_short_meta: Vec<u8>,
@@ -128,7 +128,6 @@ pub struct Transaction {
 
 #[derive(Debug, Decode, Encode, Eq, PartialEq)]
 pub struct DerivationInfo {
-    pub chains: Vec<SpecsKey>,
     pub cut_path: String,
     pub has_pwd: bool,
 }
