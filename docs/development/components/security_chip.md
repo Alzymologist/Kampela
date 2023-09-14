@@ -93,7 +93,7 @@ Document on usage: <https://www.nxp.com/docs/en/application-note/AN12324.pdf>
 1. We do not protect the user secret after it was decoded from side channel attacks, because at this point it could be read on backup.
 We only protect from the unauthorized decoding itself.
 
-2. How good is PUF actually? (i.e. how much enthropy it really provides? what about these articles claiming PUF can be predicted? what kind of PUFs are there after all in each case?)
+2. How good is PUF actually? (i.e. how much entropy it really provides? what about these articles claiming PUF can be predicted? what kind of PUFs are there after all in each case?)
 
 3. All microcontrollers are based on 32-bit ARM Cortex-M4F, or -M33, or -M4.
 
