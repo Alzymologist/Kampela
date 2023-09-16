@@ -2,6 +2,24 @@
 Hardware signer and key storage for Substrate ecosystem.
 https://kampe.la
 
+-------------------------------------------------
+As of September 2023, this monorepo became really hard to work with, and had been splitted into multiple ones under the new [Kalapaja](https://github.com/Kalapaja) organisation.  
+⚠️ This repo is kept up for archival reasons, please submit any issues and pull requests in that new org instead.
+
+The new repository structure under Kalapaja is the following:
+
+| New repository | Original subfolder | Description |
+|----------------|--------------------|-------------|
+|[kampela-firmware](https://github.com/Kalapaja/kampela-firmware)|[`firmware/development`](https://github.com/Alzymologist/Kampela/tree/main/firmware/development)|Firmware sources and associated software projects|
+|[kampela-hardware](https://github.com/Kalapaja/kampela-hardware)|['hardware/development'](https://github.com/Alzymologist/Kampela/tree/main/hardware/development)|Hardware design schematics and supplementary files|
+|[kampela-common](https://github.com/Kalapaja/kampela-common)|['common'](https://github.com/Alzymologist/Kampela/tree/main/common)|Collection of shared libraries used by both "hot" and "cold" side of the project|
+|[siltti](https://github.com/Kalapaja/siltti)|[application](https://github.com/Alzymologist/Kampela/tree/main/application)|Android companion app to interface with the device|
+|[docs](https://github.com/Kalapaja/docs)|[docs/development](https://github.com/Alzymologist/Kampela/tree/main/docs/development)|Miscellaneous docs documenting different aspects of the project|
+
+
+
+-------------------------------------------------
+
 ## Project summary
 Kampela is a hardware version of Parity Signer. It is a small card-shaped device (ideally comparable to a credit card form factor, to be carried in a wallet when needed) that accepts data through unidirectional NFC port and shows output on a monochrome electronic paper screen. It has cryptographic strongbox with elliptic curves supported by Substrate —  which only stores private keys (after initial import) and performs all signing operations on-chip.
 
